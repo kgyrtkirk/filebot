@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.Element;
+import net.sf.ehcache.config.CacheConfiguration;
 
 public abstract class AbstractCachedResource<R, T extends Serializable> {
 
@@ -48,8 +49,10 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 		long lastUpdateTime = 0;
 
 		try {
-			element = getCache().get(cacheKey);
+			Cache cache = getCache();
+			element = cache.get(cacheKey);
 
+			System.out.println("XxX" +element);
 			// sanity check ehcache diskcache problems
 			if (element != null && !cacheKey.equals(element.getKey().toString())) {
 				element = null;
@@ -77,7 +80,7 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 			URL url = getResourceLocation(resource);
 
 			// DEBUG
-			// System.out.println(String.format("CachedResource.resourceLocation => %s (If-Modified-Since: %s)", url, java.time.Instant.ofEpochMilli(lastModified)));
+			 System.out.println(String.format("CachedResource.resourceLocation => %s (If-Modified-Since: %s)", url, java.time.Instant.ofEpochMilli(lastModified)));
 
 			data = fetch(url, lastModified, element != null ? 0 : retryCountLimit);
 		} catch (IOException e) {
@@ -105,7 +108,9 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 
 		try {
 			if (element != null) {
-				getCache().put(element);
+				Cache cache = getCache();
+				cache.put(element);
+				cache.dispose();;
 			}
 		} catch (Exception e) {
 			Logger.getLogger(getClass().getName()).log(Level.FINEST, e.getMessage());
@@ -120,7 +125,6 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 			// just log error and continue with cached data
 			Logger.getLogger(getClass().getName()).log(Level.WARNING, networkException.toString());
 		}
-
 		return product;
 	}
 
