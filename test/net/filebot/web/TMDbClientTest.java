@@ -76,7 +76,8 @@ public class TMDbClientTest {
 		assertEquals("Transformers", movie.getName());
 		assertEquals("2007-07-02", movie.getReleased().toString());
 		assertEquals("PG-13", movie.getCertification());
-		assertEquals("[en, es]", movie.getSpokenLanguages().toString());
+		assertTrue(movie.getSpokenLanguages().contains(new Locale("en")));
+		assertTrue(movie.getSpokenLanguages().contains(new Locale("es")));
 		assertEquals("Shia LaBeouf", movie.getActors().get(0));
 		assertEquals("Michael Bay", movie.getDirector());
 	}

@@ -52,7 +52,6 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 			Cache cache = getCache();
 			element = cache.get(cacheKey);
 
-			System.out.println("XxX" +element);
 			// sanity check ehcache diskcache problems
 			if (element != null && !cacheKey.equals(element.getKey().toString())) {
 				element = null;
@@ -110,7 +109,6 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 			if (element != null) {
 				Cache cache = getCache();
 				cache.put(element);
-				cache.dispose();;
 			}
 		} catch (Exception e) {
 			Logger.getLogger(getClass().getName()).log(Level.FINEST, e.getMessage());
