@@ -2,7 +2,7 @@
 	<!--
 	Persistent disk store location
 	-->
-	<diskStore path="ehcache.disk.store.dir" />
+	<diskStore path="/tmp/LX1" />
 	
 	<!--
 	Mandatory Default Cache configuration. These settings will be applied to caches

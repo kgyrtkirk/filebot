@@ -40,5 +40,8 @@
 		<dependency org="org.apache.httpcomponents" name="httpmime" rev="4.5.1" />
 		<dependency org="org.apache.httpcomponents" name="httpclient" rev="4.5.1" />
 		<dependency org="org.glassfish" name="javax.json" rev="1.0.4" />
+		
+		<dependency org="info.debatty" name="java-string-similarity" rev="0.13" />
+
 	</dependencies>
 </ivy-module>
