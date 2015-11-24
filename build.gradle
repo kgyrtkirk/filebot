@@ -1,0 +1,28 @@
+apply plugin:'java'
+apply plugin:'eclipse'
+
+sourceSets {
+	main {
+		java.srcDir 'source'
+		resources.srcDir 'source'
+	}
+	test {
+		java.srcDir 'test'
+		resources.srcDir 'test'
+	}
+}
+
+repositories{
+	mavenCentral()
+}
+
+dependencies {
+
+	def x=new XmlSlurper().parseText(new File('ivy.xml').text)
+	x.dependencies.dependency.each {  dep ->
+		compile "${dep.@org}:${dep.@name}:${dep.@rev}"
+	}
+	fileTree('lib/jars').files.each { f -> 
+		compile files(f)
+	}
+}
