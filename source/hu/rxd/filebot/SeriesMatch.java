@@ -7,6 +7,10 @@ import java.util.PriorityQueue;
 
 import org.junit.Test;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
 import net.filebot.cli.CmdlineOperations;
@@ -82,31 +86,58 @@ public class SeriesMatch {
 	private double distance;
 	public void asd(String s) throws Exception{
 		
+	
+	}
+
+	LoadingCache<String, IndexEntry<SearchResult>>	c=CacheBuilder.newBuilder()
+			.maximumSize(1000)
+			.build(new SeriesLookup());
+	
+	public static class SeriesLookup extends CacheLoader<String, IndexEntry<SearchResult>>{
+
+		@Override
+		public IndexEntry<SearchResult> load(String key) throws Exception {
+			List<IndexEntry<SearchResult>> si = MediaDetection.getSeriesIndex();
+			Ex1Comparator comparator = new Ex1Comparator(key);
+			PriorityQueue<IndexEntry<SearchResult>> pq = new PriorityQueue<IndexEntry<SearchResult>>(comparator);
+			pq.addAll(si);
+			IndexEntry<SearchResult> e;
+			e=pq.poll();
+			return e;
+		}
+		
 	}
 	
 	public SeriesMatch(String name) throws Exception {
+//		SeriesNameMatcher strictSeriesNameMatcher = new SeriesNameMatcher(Locale.getDefault(), false);
+//		String s = strictSeriesNameMatcher.matchByEpisodeIdentifier(name);
+//		
+//		List<IndexEntry<SearchResult>> si = MediaDetection.getSeriesIndex();
 		SeriesNameMatcher strictSeriesNameMatcher = new SeriesNameMatcher(Locale.getDefault(), false);
 		String s = strictSeriesNameMatcher.matchByEpisodeIdentifier(name);
 		
-		List<IndexEntry<SearchResult>> si = MediaDetection.getSeriesIndex();
-		Ex1Comparator comparator = new Ex1Comparator(s!=null?s:name);
-		PriorityQueue<IndexEntry<SearchResult>> pq = new PriorityQueue<IndexEntry<SearchResult>>(comparator);
-		pq.addAll(si);
-		IndexEntry<SearchResult> e;
-//		for(int i=0;i<10;i++){
-		//System.out.println(
-				e=pq.poll();
-				//);
-		System.out.println(comparator.debug(e));
-		System.out.println(e.getObject().getEffectiveNames());
-//		}
-		bestMatch=e;
+		String key = s!=null?s:name;
+		Ex1Comparator comparator = new Ex1Comparator(key);
+//		PriorityQueue<IndexEntry<SearchResult>> pq = new PriorityQueue<IndexEntry<SearchResult>>(comparator);
+//		pq.addAll(si);
+//		IndexEntry<SearchResult> e;
+////		for(int i=0;i<10;i++){
+//		//System.out.println(
+//				e=pq.poll();
+//				//);
+////		System.out.println(comparator.debug(e));
+////		System.out.println(e.getObject().getEffectiveNames());
+////		}
+		bestMatch=c.get(key);
 		distance=comparator.distance(bestMatch);
 //		System.out.println(s);
 	}
 
 	public boolean isMatch() {
 		return distance<0.0001;
+	}
+	public double getDistance() {
+		return distance;
 	}
 
 	public IndexEntry<SearchResult> getR() {

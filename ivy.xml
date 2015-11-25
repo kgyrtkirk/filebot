@@ -42,6 +42,7 @@
 		<dependency org="org.glassfish" name="javax.json" rev="1.0.4" />
 		
 		<dependency org="info.debatty" name="java-string-similarity" rev="0.13" />
+		<dependency org="com.google.guava" name="guava" rev="18.0"/>
 
 	</dependencies>
 </ivy-module>

@@ -1,15 +1,10 @@
 package hu.rxd.filebot;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Locale;
 
-import net.filebot.MediaTypes;
-import net.filebot.cli.CmdlineOperations;
-import net.filebot.similarity.SeriesNameMatcher;
-import net.filebot.util.FileUtilities.ExtensionFileFilter;
+import hu.rxd.filebot.MediaSection.ISection;
+import net.filebot.media.SmartSeasonEpisodeMatcher;
+import net.filebot.similarity.SeasonEpisodeMatcher;
 
 public class DirectoryScanner {
 
@@ -17,39 +12,64 @@ public class DirectoryScanner {
 
 	public DirectoryScanner(File rootDir, File dir) throws Exception {
 		this.rootDir = rootDir;
-		rwalk(dir);
-	    
-//		Files.walk(dir.toPath()).filter(Files::isRegularFile).forEach(f -> checkFile(f));
+		MediaSection.Root root = new MediaSection.Root(dir.getPath());
+		rwalk(dir, root);
+
+//		runClassifier(root, new ExtensionClassifier());
+		new BasicVisitorRunner(new ExtensionClassifier()).run(root);;
+		new BasicVisitorRunner(new JunkClassifier()).run(root);;
+		new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);;
+		// subtitle
+		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
+		
+//		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);;
+
+		
+//		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
+		new BasicVisitorRunner(new SeriesMatcher())
+			.having(TypeTags.VIDEO)
+			.exclude(TypeTags.JUNK)
+			.run(root);;
+		
+		
+//		new ExtensionClassifier().run(root);
+//		new JunkClassifier().run(root);
+		
 	}
 
-	private void rwalk(File dir) throws Exception {
-	    File[] children = dir.listFiles();
-	    for (File child : children) {
-	    	if(child.isDirectory()){
-	    		rwalk(child);
-	    	}    	else{
-	    		ExtensionFileFilter ff = MediaTypes.VIDEO_FILES;
-	    		if(ff.accept(child)){
-	    			if(child.getName().startsWith("sample-") || child.getParentFile().getName().equalsIgnoreCase("Sample")){
-	    			System.out.println("skip:"+child);	
-	    			}else{
-	    			checkFile(child);
-	    			}
-	    		}
-	    }}
+
+	private void rwalk(File dir, ISection iSection) throws Exception {
+		File[] children = dir.listFiles();
+		for (File child : children) {
+			if (child.isDirectory()) {
+				rwalk(child, iSection.getSubsection(child.getName()));
+			} else {
+				ISection entry = iSection.getEntry(child.getName());
+				
+//				ExtensionFileFilter ff = MediaTypes.VIDEO_FILES;
+//				if (ff.accept(child)) {
+//					if (child.getName().startsWith("sample-")
+//							|| child.getParentFile().getName().equalsIgnoreCase("Sample")) {
+//						System.out.println("skip:" + child);
+//					} else {
+//						checkFile(child);
+//					}
+//				}
+			}
+		}
 	}
 
 	private Object checkFile(File child) throws Exception {
 		File f = child;
 		String key = getKeyFor(f);
-//		System.out.println(key);
-		
+		// System.out.println(key);
+
 		SeriesMatch sm = new SeriesMatch(f.getName());
-		if(!sm.isMatch()){
+		if (!sm.isMatch()) {
 			System.out.println(f);
 			System.out.println(f.getName());
 			System.out.println(sm.getR());
-			f=f.getParentFile();
+			f = f.getParentFile();
 			sm = new SeriesMatch(f.getName());
 			System.out.println(f);
 			System.out.println(f.getName());
