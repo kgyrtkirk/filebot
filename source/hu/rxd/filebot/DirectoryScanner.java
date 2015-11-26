@@ -7,13 +7,13 @@ import hu.rxd.filebot.classifiers.JunkClassifier;
 import hu.rxd.filebot.classifiers.MiscDataClassifier;
 import hu.rxd.filebot.classifiers.ReleasePrefixClassifier;
 import hu.rxd.filebot.classifiers.SeasonEpisodeClassifier;
+import hu.rxd.filebot.classifiers.SeriesDirClassifier;
+import hu.rxd.filebot.classifiers.SeriesDirParentPopulator;
 import hu.rxd.filebot.classifiers.SeriesMatcher;
 import hu.rxd.filebot.tree.MediaSection;
-import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.BasicVisitorRunner;
-import net.filebot.media.SmartSeasonEpisodeMatcher;
-import net.filebot.similarity.SeasonEpisodeMatcher;
 
 public class DirectoryScanner {
 
@@ -24,26 +24,40 @@ public class DirectoryScanner {
 		MediaSection.Root root = new MediaSection.Root(dir.getPath());
 		rwalk(dir, root);
 
-//		runClassifier(root, new ExtensionClassifier());
-		new BasicVisitorRunner(new ExtensionClassifier()).run(root);;
-		new BasicVisitorRunner(new JunkClassifier()).run(root);;
-		new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);;
-		// subtitle
-		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
-		
-		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);;
-
-		
-//		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
-		new BasicVisitorRunner(new SeriesMatcher())
-			.having(TypeTags.VIDEO)
-			.exclude(TypeTags.JUNK)
-			.run(root);;
+tagDecorator1(root);
 		
 		
 //		new ExtensionClassifier().run(root);
 //		new JunkClassifier().run(root);
 		
+	}
+
+
+	public static void tagDecorator1(MediaSection.Root root) throws Exception {
+		//		runClassifier(root, new ExtensionClassifier());
+				new BasicVisitorRunner(new ExtensionClassifier()).run(root);
+				new BasicVisitorRunner(new JunkClassifier()).run(root);
+				new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);
+				// subtitle
+				new BasicVisitorRunner(new MiscDataClassifier()).run(root);
+				
+				
+				new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
+
+				new BasicVisitorRunner(new SeriesDirClassifier())
+				.having(TypeTags.DIRECTORY)
+				.run(root);
+
+				new BasicVisitorRunner(new SeriesDirParentPopulator())
+				.having(TypeTags.ENTRY)
+				.run(root);
+		
+				
+		//		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
+				new BasicVisitorRunner(new SeriesMatcher())
+					.having(TypeTags.VIDEO)
+					.exclude(TypeTags.JUNK)
+					.run(root);;
 	}
 
 

@@ -118,6 +118,7 @@ public class SeriesMatch {
 		
 		String key = s!=null?s:name;
 		Ex1Comparator comparator = new Ex1Comparator(key);
+		
 //		PriorityQueue<IndexEntry<SearchResult>> pq = new PriorityQueue<IndexEntry<SearchResult>>(comparator);
 //		pq.addAll(si);
 //		IndexEntry<SearchResult> e;

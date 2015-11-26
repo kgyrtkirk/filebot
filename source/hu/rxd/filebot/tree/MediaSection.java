@@ -19,7 +19,9 @@ public class MediaSection {
 		String getName();
 		String getOriginalName();
 
+		@Deprecated
 		void tag(MediaTag tag);
+		void addTag(MediaTag tag);
 
 		java.util.Collection<ISection> getChildren();
 
@@ -29,9 +31,15 @@ public class MediaSection {
 
 		ISection getParent();
 
+		@Deprecated
+		MediaTag getTagByName(String string);
+		@Deprecated
 		boolean hasTag(MediaTag junk);
+		
+		boolean hasTag(MediaTagKey junk);
 
 		void addNormalization(INormalization suffixRemoval);
+		MediaTag getTag(MediaTagKey series);
 		
 	}
 //	public static class  Entry implements ISection{
@@ -54,7 +62,7 @@ public class MediaSection {
 		private String path;
 		protected Collection parent;
 		private Map<String,ISection> children=new HashMap<>();
-		private Set<MediaTag> tags=new HashSet<>();
+		private Map<MediaTagKey,MediaTag> tags=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
 		
@@ -93,7 +101,7 @@ public class MediaSection {
 		}
 		@Override
 		public void tag(MediaTag tag) {
-			tags.add(tag);
+			tags.put(tag.getKey(), tag);
 			
 		}
 		@Override
@@ -107,7 +115,7 @@ public class MediaSection {
 		}
 		@Override
 		public boolean hasTag(MediaTag junk) {
-			return tags.contains(junk);
+			return tags.containsKey(junk.getKey());
 		}
 
 		@Override
@@ -128,6 +136,22 @@ public class MediaSection {
 			}
 			normalizedName=c;
 			
+		}
+		@Override
+		public MediaTag getTagByName(String string) {
+			return tags.get(MediaTagKey.valueOf(string));
+		}
+		@Override
+		public boolean hasTag(MediaTagKey junk) {
+			return tags.get(junk)!=null;
+		}
+		@Override
+		public void addTag(MediaTag tag) {
+			tag(tag);
+		}
+		@Override
+		public MediaTag getTag(MediaTagKey key) {
+			return tags.get(key);
 		}
 	}
 	public static class Root extends Collection{

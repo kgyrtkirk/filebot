@@ -4,6 +4,7 @@ import com.google.common.base.Objects;
 
 public class MediaTag implements Comparable<MediaTag>{
 
+	@Deprecated
 	private String tagName;
 	private String value;
 
@@ -19,6 +20,10 @@ public class MediaTag implements Comparable<MediaTag>{
 		this.tagName = string;
 		this.value = value;
 		
+	}
+
+	public MediaTag(MediaTagKey key) {
+		tagName=key.toString();
 	}
 
 	@Override
@@ -45,6 +50,18 @@ public class MediaTag implements Comparable<MediaTag>{
 	@Override
 	public int hashCode() {
 		return Objects.hashCode(tagName,value);
+	}
+
+	public String getTagName() {
+		return tagName;
+	}
+	
+	public String getValue() {
+		return value;
+	}
+
+	public MediaTagKey getKey() {
+		return MediaTagKey.valueOf(tagName);
 	}
 
 }

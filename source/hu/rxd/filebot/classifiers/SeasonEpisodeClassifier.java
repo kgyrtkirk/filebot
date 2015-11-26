@@ -29,7 +29,9 @@ public class SeasonEpisodeClassifier implements ISectionVisitor {
 			node.tag(new MediaTag("season", String.valueOf(f.season)));
 			}
 			String head = sem.head(name);
-			node.tag(new MediaTag("series", head ));
+			if(head!=null) {
+				node.tag(new MediaTag("series", head ));
+			}
 		}
 
 	}
