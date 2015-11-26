@@ -13,14 +13,6 @@ public class MediaTag implements Comparable<MediaTag>{
 			throw new RuntimeException();
 		this.tagName = string;
 	}
-
-	public MediaTag(String string, String value) {
-		if(string==null)
-			throw new RuntimeException();
-		this.tagName = string;
-		this.value = value;
-		
-	}
 	public MediaTag(MediaTagKey key, String value) {
 		this.tagName = key.toString();
 		this.value = value;

@@ -3,6 +3,7 @@ package hu.rxd.filebot.classifiers;
 import hu.rxd.filebot.normalization.PrefixRemoval;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
@@ -16,7 +17,7 @@ public class ReleasePrefixClassifier implements ISectionVisitor {
 		if(pp.length>1 && np.length>1){
 			String pCand = pp[pp.length-1];
 			String nCand = np[0];
-			MediaTag tag = new MediaTag("releasePrefix",nCand);
+			MediaTag tag = new MediaTag(MediaTagKey.releasePrefix,nCand);
 			if(pCand.equalsIgnoreCase(nCand)){
 				node.tag(tag);
 				node.addNormalization(new PrefixRemoval(tag, nCand));

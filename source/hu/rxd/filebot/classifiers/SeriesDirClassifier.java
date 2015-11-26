@@ -28,7 +28,7 @@ public class SeriesDirClassifier implements ISectionVisitor {
 			Matcher m = pattern.matcher(name);
 			if(m.find()){
 				String matchedSeasonPart = m.group(0);
-				MediaTag tag = new MediaTag("season",m.group(1).replaceFirst("0+", ""));
+				MediaTag tag = new MediaTag(MediaTagKey.season,m.group(1).replaceFirst("0+", ""));
 				node.tag(tag);
 				node.tag(new MediaTag(MediaTagKey.canBeSeries));
 
