@@ -68,6 +68,7 @@ import net.filebot.web.SearchResult;
 import net.filebot.web.SeriesInfo;
 import net.filebot.web.SimpleDate;
 import net.filebot.web.TheTVDBSearchResult;
+import net.sf.ehcache.CacheManager;
 
 public class MediaDetection {
 
@@ -457,6 +458,7 @@ public class MediaDetection {
 
 	public static List<IndexEntry<SearchResult>> getSeriesIndex() throws IOException {
 		synchronized (seriesIndex) {
+			installEHShutdownHook();
 			if (seriesIndex.isEmpty()) {
 				seriesIndex.ensureCapacity(100000);
 				try {
@@ -473,6 +475,29 @@ public class MediaDetection {
 			}
 			return seriesIndex;
 		}
+	}
+
+	private static boolean shutdownHookInstalled=false;
+	private static void installEHShutdownHook() {
+		if(shutdownHookInstalled)
+			return;
+		synchronized (MediaDetection.class) {
+			if(!shutdownHookInstalled){
+				Runtime.getRuntime().addShutdownHook(new Thread() {
+					
+					@Override
+					public void run() {
+						try {
+							CacheManager.getInstance().shutdown();
+						} catch (Exception e) {
+							// ignore, shutting down anyway
+						}
+					}
+				});
+				shutdownHookInstalled=true;
+			}
+		}
+		
 	}
 
 	private static final ArrayList<IndexEntry<SearchResult>> animeIndex = new ArrayList<IndexEntry<SearchResult>>();
