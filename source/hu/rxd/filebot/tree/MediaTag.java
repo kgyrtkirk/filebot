@@ -21,6 +21,11 @@ public class MediaTag implements Comparable<MediaTag>{
 		this.value = value;
 		
 	}
+	public MediaTag(MediaTagKey key, String value) {
+		this.tagName = key.toString();
+		this.value = value;
+		
+	}
 
 	public MediaTag(MediaTagKey key) {
 		tagName=key.toString();

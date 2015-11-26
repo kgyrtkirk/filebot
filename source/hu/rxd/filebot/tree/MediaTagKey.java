@@ -10,6 +10,8 @@ public enum MediaTagKey {
 	isArchive,
 	misc,
 	
+	releasePrefix,
+	
 	series,
 	season,
 	episode,

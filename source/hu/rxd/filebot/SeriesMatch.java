@@ -1,9 +1,12 @@
 package hu.rxd.filebot;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.PriorityQueue;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.Test;
 
@@ -89,7 +92,7 @@ public class SeriesMatch {
 	
 	}
 
-	LoadingCache<String, IndexEntry<SearchResult>>	c=CacheBuilder.newBuilder()
+	static LoadingCache<String, IndexEntry<SearchResult>>	c=CacheBuilder.newBuilder()
 			.maximumSize(1000)
 			.build(new SeriesLookup());
 	
@@ -107,15 +110,42 @@ public class SeriesMatch {
 		}
 		
 	}
+	public static final class MatchResult implements Comparable<MatchResult>{
+		public MatchResult(String key) throws ExecutionException {
+			result=c.get(key);
+			distance=new Ex1Comparator(key).distance(result);
+		}
+		public double						distance;
+		public IndexEntry<SearchResult>	result;
+		@Override
+		public int compareTo(MatchResult o) {
+			return Double.compare(distance, o.distance);
+		}
+		
+		@Override
+		public String toString() {
+			return "d:"+distance+" ; "+result;
+		}
+	}
+	
+	public static MatchResult lookup(String key) throws Exception{
+		return new MatchResult(key);
+	}
 	
 	public SeriesMatch(String name) throws Exception {
 //		SeriesNameMatcher strictSeriesNameMatcher = new SeriesNameMatcher(Locale.getDefault(), false);
 //		String s = strictSeriesNameMatcher.matchByEpisodeIdentifier(name);
 //		
 //		List<IndexEntry<SearchResult>> si = MediaDetection.getSeriesIndex();
+		List<String>	searchKeys=new ArrayList<>();
+		
 		SeriesNameMatcher strictSeriesNameMatcher = new SeriesNameMatcher(Locale.getDefault(), false);
+
 		String s = strictSeriesNameMatcher.matchByEpisodeIdentifier(name);
 		
+		if(s!=null){
+			searchKeys.add(s);
+		}
 		String key = s!=null?s:name;
 		Ex1Comparator comparator = new Ex1Comparator(key);
 		

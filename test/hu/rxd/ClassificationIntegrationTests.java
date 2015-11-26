@@ -50,7 +50,7 @@ public class ClassificationIntegrationTests {
 		ISection leaf = getLeaf(root);
 		assertEquals("20",leaf.getTag(MediaTagKey.episode).getValue());
 		assertEquals("5",leaf.getTag(MediaTagKey.season).getValue());
-		assertEquals("5",leaf.getTag(MediaTagKey.series).getValue());
+		assertEquals("The Good Wife",leaf.getTag(MediaTagKey.series).getValue());
 //		assertEquals("20",leaf.getTagByName("series").getValue());
 
 	}
