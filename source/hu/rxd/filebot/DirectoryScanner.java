@@ -6,6 +6,7 @@ import hu.rxd.filebot.classifiers.ExtensionClassifier;
 import hu.rxd.filebot.classifiers.JunkClassifier;
 import hu.rxd.filebot.classifiers.MiscDataClassifier;
 import hu.rxd.filebot.classifiers.ReleasePrefixClassifier;
+import hu.rxd.filebot.classifiers.SeasonEpisodeClassifier;
 import hu.rxd.filebot.classifiers.SeriesMatcher;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.TypeTags;
@@ -30,7 +31,7 @@ public class DirectoryScanner {
 		// subtitle
 		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
 		
-//		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);;
+		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);;
 
 		
 //		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
