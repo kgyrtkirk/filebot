@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.tree;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -8,8 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import hu.rxd.filebot.MediaSection.ISection;
-import hu.rxd.filebot.MediaSection.Root;
+import hu.rxd.filebot.normalization.INormalization;
+import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.tree.MediaSection.Root;
 
 public class MediaSection {
 

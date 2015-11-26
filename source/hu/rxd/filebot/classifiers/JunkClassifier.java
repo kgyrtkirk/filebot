@@ -1,7 +1,12 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.classifiers;
 
-import hu.rxd.filebot.MediaSection.ISection;
-import hu.rxd.filebot.MediaSection.Root;
+import hu.rxd.filebot.normalization.PrefixRemoval;
+import hu.rxd.filebot.normalization.SuffixRemoval;
+import hu.rxd.filebot.tree.MediaSection;
+import hu.rxd.filebot.tree.TypeTags;
+import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.tree.MediaSection.Root;
+import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class JunkClassifier implements ISectionVisitor {
 

@@ -1,4 +1,6 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.normalization;
+
+import hu.rxd.filebot.tree.MediaTag;
 
 public class PrefixRemoval implements INormalization {
 

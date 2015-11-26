@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.normalization;
 
 public interface INormalization {
 

@@ -1,10 +1,12 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.visitor;
 
 import java.util.ArrayList;
 import java.util.Collection;
 
-import hu.rxd.filebot.MediaSection.ISection;
-import hu.rxd.filebot.MediaSection.Root;
+import hu.rxd.filebot.tree.MediaSection;
+import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.tree.MediaSection.Root;
 import net.filebot.MediaTypes;
 
 public class BasicVisitorRunner {

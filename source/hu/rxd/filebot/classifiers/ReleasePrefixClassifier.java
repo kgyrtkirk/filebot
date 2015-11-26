@@ -1,6 +1,10 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.classifiers;
 
-import hu.rxd.filebot.MediaSection.ISection;
+import hu.rxd.filebot.normalization.PrefixRemoval;
+import hu.rxd.filebot.tree.MediaSection;
+import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class ReleasePrefixClassifier implements ISectionVisitor {
 

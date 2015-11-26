@@ -2,7 +2,15 @@ package hu.rxd.filebot;
 
 import java.io.File;
 
-import hu.rxd.filebot.MediaSection.ISection;
+import hu.rxd.filebot.classifiers.ExtensionClassifier;
+import hu.rxd.filebot.classifiers.JunkClassifier;
+import hu.rxd.filebot.classifiers.MiscDataClassifier;
+import hu.rxd.filebot.classifiers.ReleasePrefixClassifier;
+import hu.rxd.filebot.classifiers.SeriesMatcher;
+import hu.rxd.filebot.tree.MediaSection;
+import hu.rxd.filebot.tree.TypeTags;
+import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.visitor.BasicVisitorRunner;
 import net.filebot.media.SmartSeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher;
 

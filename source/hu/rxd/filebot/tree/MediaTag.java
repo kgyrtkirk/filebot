@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.tree;
 
 public class MediaTag implements Comparable<MediaTag>{
 
