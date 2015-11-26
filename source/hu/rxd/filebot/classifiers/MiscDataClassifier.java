@@ -19,7 +19,7 @@ public class MiscDataClassifier implements ISectionVisitor {
 	public void visit(ISection node) throws Exception {
 		
 		
-		Pattern pat = compile("(REPACK|DVDRip|BDRIP|HDTV|hdtv|720p|720p|x264|Hdtv).+", CASE_INSENSITIVE | UNICODE_CHARACTER_CLASS);
+		Pattern pat = compile("(REPACK|DVDRip|BDRIP|HDTV|hdtv|720p|1080p|x264|Hdtv).*", CASE_INSENSITIVE | UNICODE_CHARACTER_CLASS);
 
 //		String startPatterns[]={"DVDRip","BDRIP","HDTV","hdtv","720p","720p","x264","Hdtv"};
 		String n = node.getName();

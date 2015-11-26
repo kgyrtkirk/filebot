@@ -33,6 +33,10 @@ public class SeriesMatcher implements ISectionVisitor {
 				searchKeys.add(sn);
 			searchKeys.add(parent.getName());
 		}
+		searchKeys.addAll(node.getSearchKeys(MediaTagKey.series));
+		if(parent.hasTag(MediaTagKey.canBeSeries)){
+			searchKeys.add(parent.getName());
+		}
 
 		searchKeys.add(node.getName());
 		

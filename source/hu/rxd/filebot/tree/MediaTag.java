@@ -2,63 +2,50 @@ package hu.rxd.filebot.tree;
 
 import com.google.common.base.Objects;
 
-public class MediaTag implements Comparable<MediaTag>{
+public class MediaTag {
 
-	@Deprecated
-	private String tagName;
 	private String value;
+	private final MediaTagKey key;
 
-	public MediaTag(String string) {
-		if(string==null)
-			throw new RuntimeException();
-		this.tagName = string;
-	}
+
 	public MediaTag(MediaTagKey key, String value) {
-		this.tagName = key.toString();
+		this.key = key;
 		this.value = value;
 		
 	}
 
 	public MediaTag(MediaTagKey key) {
-		tagName=key.toString();
+		this.key=key;
 	}
 
 	@Override
-	public int compareTo(MediaTag o) {
-		return tagName.compareTo(o.tagName);
-	}
-	@Override
 	public String toString() {
 		if(value==null)
-			return tagName;
+			return key.toString();
 		else
-		return String.format("%s[%s]", tagName,value);
+		return String.format("%s[%s]", key,value);
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
 		if(obj instanceof MediaTag){
 			MediaTag o = (MediaTag) obj;
-			return Objects.equal(tagName, o.tagName) && Objects.equal(value, o.value);
+			return Objects.equal(key, o.key) && Objects.equal(value, o.value);
 		}
 		return false;
 	}
 	
 	@Override
 	public int hashCode() {
-		return Objects.hashCode(tagName,value);
+		return Objects.hashCode(key,value);
 	}
 
-	public String getTagName() {
-		return tagName;
-	}
-	
 	public String getValue() {
 		return value;
 	}
 
 	public MediaTagKey getKey() {
-		return MediaTagKey.valueOf(tagName);
+		return key;
 	}
 
 }

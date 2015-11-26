@@ -24,14 +24,14 @@ public class SeasonEpisodeClassifier implements ISectionVisitor {
 		if(a!=null && a.size() > 0){
 			SxE f = a.get(0);
 			if(f.episode>=0){
-			node.tag(new MediaTag(MediaTagKey.episode, String.valueOf(f.episode)));
+			node.addTag(new MediaTag(MediaTagKey.episode, String.valueOf(f.episode)));
 			}
 			if(f.season>=0){
-			node.tag(new MediaTag(MediaTagKey.season, String.valueOf(f.season)));
+			node.addTag(new MediaTag(MediaTagKey.season, String.valueOf(f.season)));
 			}
 			String head = sem.head(name);
 			if(head!=null) {
-				node.tag(new MediaTag(MediaTagKey.series, head ));
+				node.addSearchKey(MediaTagKey.series,head );
 			}
 		}
 

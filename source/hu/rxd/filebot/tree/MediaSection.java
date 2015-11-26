@@ -2,6 +2,7 @@ package hu.rxd.filebot.tree;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -40,6 +41,8 @@ public class MediaSection {
 
 		void addNormalization(INormalization suffixRemoval);
 		MediaTag getTag(MediaTagKey series);
+		void addSearchKey(MediaTagKey tag, String head);
+		java.util.Collection<String> getSearchKeys(MediaTagKey series);
 		
 	}
 //	public static class  Entry implements ISection{
@@ -65,6 +68,7 @@ public class MediaSection {
 		private Map<MediaTagKey,MediaTag> tags=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
+		private Map<MediaTagKey, List<String>> searchKeys =new HashMap<>();
 		
 
 		Collection(Collection parent, String name) {
@@ -131,11 +135,15 @@ public class MediaSection {
 			String c=path;
 			for (INormalization iNormalization : normalizations) {
 				c=iNormalization.apply(c);
-				c=c.replaceAll("^[.\\-_ ]+", "");
-				c=c.replaceAll("[.\\-_ ]+$", "");
+				c = generalTrimmer(c);
 			}
 			normalizedName=c;
 			
+		}
+		private String generalTrimmer(String c) {
+			c=c.replaceAll("^[.\\-_ ]+", "");
+			c=c.replaceAll("[.\\-_ ]+$", "");
+			return c;
 		}
 		@Override
 		public MediaTag getTagByName(String string) {
@@ -152,6 +160,22 @@ public class MediaSection {
 		@Override
 		public MediaTag getTag(MediaTagKey key) {
 			return tags.get(key);
+		}
+		@Override
+		public void addSearchKey(MediaTagKey tag, String key) {
+			List<String> li = searchKeys.get(tag);
+			if(li==null){
+				searchKeys.put(tag,li=new ArrayList<>());
+			}
+			li.add(generalTrimmer(key));
+		}
+		@Override
+		public java.util.Collection<String> getSearchKeys(MediaTagKey tag) {
+			List<String> li = searchKeys.get(tag);
+			if(li==null){
+				return new ArrayList<>();
+			}
+			return li;
 		}
 	}
 	public static class Root extends Collection{
