@@ -169,6 +169,16 @@ public class PresetEditor extends JDialog {
 		matchModeCombo.setSelectedItem(p.getMatchMode() == null ? RenamePanel.MATCH_MODE_OPPORTUNISTIC : p.getMatchMode());
 		actionCombo.setSelectedItem(p.getRenameAction() == null ? StandardRenameAction.MOVE : p.getRenameAction());
 
+		// ugly hack, since Language objects only do object equality
+		if (p.getLanguage() != null && !p.getLanguage().getCode().equals(((Language) languageCombo.getSelectedItem()).getCode())) {
+			for (int i = 0; i < languageCombo.getModel().getSize(); i++) {
+				if (p.getLanguage().getCode().equals(languageCombo.getModel().getElementAt(i).getCode())) {
+					languageCombo.setSelectedIndex(i);
+					break;
+				}
+			}
+		}
+
 		selectRadio.setSelected(p.getInputFolder() != null);
 		updateComponentStates();
 	}
@@ -368,7 +378,7 @@ public class PresetEditor extends JDialog {
 		}
 	};
 
-	private final Action listFiles = new AbstractAction("List Files", ResourceManager.getIcon("action.list")) {
+	private final Action listFiles = new AbstractAction("List Files", ResourceManager.getIcon("action.search")) {
 
 		private JMenuItem createListItem(ActionEvent evt, File f) {
 			JMenuItem m = new JMenuItem(f.getPath());

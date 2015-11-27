@@ -6,7 +6,6 @@ import static net.filebot.util.ui.SwingUI.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.util.List;
-import java.util.Locale;
 
 import net.filebot.Language;
 import net.filebot.Settings;
@@ -145,8 +144,8 @@ public class Preset {
 		}
 	}
 
-	public Locale getLanguage() {
-		return language == null || language.isEmpty() ? null : new Locale(language);
+	public Language getLanguage() {
+		return language == null || language.isEmpty() ? null : Language.getLanguage(language);
 	}
 
 	public StandardRenameAction getRenameAction() {

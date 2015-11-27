@@ -3,35 +3,53 @@ package net.filebot;
 import static java.util.Arrays.*;
 
 import java.awt.Image;
-import java.io.IOException;
+import java.awt.Toolkit;
 import java.net.URL;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
+import net.filebot.util.WeakValueHashMap;
+
 public final class ResourceManager {
+
+	private static final WeakValueHashMap<String, Icon> cache = new WeakValueHashMap<String, Icon>(256);
 
 	public static Icon getIcon(String name) {
 		return getIcon(name, null);
 	}
 
 	public static Icon getIcon(String name, String def) {
+		Icon icon = null;
+
+		// try cache
+		synchronized (cache) {
+			icon = cache.get(name);
+			if (icon != null) {
+				return icon;
+			}
+		}
+
 		URL resource = getImageResource(name, def);
-
-		if (resource == null)
+		if (resource == null) {
 			return null;
+		}
 
-		return new ImageIcon(resource);
+		Image image = getImage(resource);
+		icon = new ImageIcon(image);
+
+		// update cache
+		synchronized (cache) {
+			cache.put(name, icon);
+		}
+
+		return icon;
 	}
 
 	public static List<Image> getApplicationIcons() {
-		Image[] images = new Image[3];
-		images[0] = ResourceManager.getImage("window.icon.small");
-		images[1] = ResourceManager.getImage("window.icon.medium");
-		images[2] = ResourceManager.getImage("window.icon.large");
-		return asList(images);
+		return getApplicationIconURLs().stream().map(ResourceManager::getImage).collect(Collectors.toList());
 	}
 
 	public static List<URL> getApplicationIconURLs() {
@@ -43,15 +61,12 @@ public final class ResourceManager {
 	}
 
 	public static Icon getFlagIcon(String languageCode) {
-		return getIcon(String.format("flags/%s", languageCode));
+		return getIcon("flags/" + languageCode);
 	}
 
-	public static Image getImage(String name) {
-		try {
-			return ImageIO.read(getImageResource(name));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+	private static Image getImage(URL resource) {
+		// load sun.awt.image.ToolkitImage or sun.awt.image.MultiResolutionToolkitImage (via @2x convention)
+		return Toolkit.getDefaultToolkit().getImage(resource);
 	}
 
 	/**

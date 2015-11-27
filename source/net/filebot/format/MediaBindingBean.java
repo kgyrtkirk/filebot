@@ -44,6 +44,7 @@ import net.filebot.mediainfo.MediaInfo;
 import net.filebot.mediainfo.MediaInfo.StreamKind;
 import net.filebot.similarity.SimilarityComparator;
 import net.filebot.util.FileUtilities;
+import net.filebot.util.WeakValueHashMap;
 import net.filebot.web.AudioTrack;
 import net.filebot.web.Episode;
 import net.filebot.web.EpisodeListProvider;
@@ -628,8 +629,8 @@ public class MediaBindingBean {
 	}
 
 	@Define("bitrate")
-	public Float getBitRate() {
-		return new Float(getMediaInfo(StreamKind.General, 0, "OverallBitRate"));
+	public Long getBitRate() {
+		return new Double(getMediaInfo(StreamKind.General, 0, "OverallBitRate")).longValue();
 	}
 
 	@Define("duration")
@@ -776,7 +777,9 @@ public class MediaBindingBean {
 	public String getUserDefinedLabel() throws IOException {
 		for (Entry<String, String> it : getUserDefinedArguments().entrySet()) {
 			if (it.getKey().endsWith("label")) {
-				return it.getValue();
+				if (it.getValue() != null && it.getValue().length() > 0) {
+					return it.getValue();
+				}
 			}
 		}
 		return null;
@@ -876,19 +879,28 @@ public class MediaBindingBean {
 		}
 	}
 
+	private static final Map<File, MediaInfo> sharedMediaInfoObjects = new WeakValueHashMap<File, MediaInfo>(64);
+
 	private synchronized MediaInfo getMediaInfo() {
+		// make sure media file is defined
+		checkMediaFile();
+
+		// lazy initialize
 		if (mediaInfo == null) {
-			// make sure media file is defined
-			checkMediaFile();
-
-			MediaInfo newMediaInfo = new MediaInfo();
-
 			// use inferred media file (e.g. actual movie file instead of subtitle file)
-			if (!newMediaInfo.open(getInferredMediaFile())) {
-				throw new RuntimeException("Cannot open media file: " + mediaFile);
-			}
+			File inferredMediaFile = getInferredMediaFile();
 
-			mediaInfo = newMediaInfo;
+			synchronized (sharedMediaInfoObjects) {
+				mediaInfo = sharedMediaInfoObjects.get(inferredMediaFile);
+				if (mediaInfo == null) {
+					MediaInfo mi = new MediaInfo();
+					if (!mi.open(inferredMediaFile)) {
+						throw new RuntimeException("Cannot open media file: " + inferredMediaFile);
+					}
+					sharedMediaInfoObjects.put(inferredMediaFile, mi);
+					mediaInfo = mi;
+				}
+			}
 		}
 
 		return mediaInfo;
@@ -956,7 +968,7 @@ public class MediaBindingBean {
 
 	private String crc32(File file) throws IOException, InterruptedException {
 		// try to get checksum from cache
-		Cache cache = Cache.getCache("checksum");
+		Cache cache = Cache.getCache(Cache.EPHEMERAL);
 
 		String hash = cache.get(file, String.class);
 		if (hash != null) {

@@ -126,6 +126,7 @@
 ^Organize$
 ^other$
 ^Part$
+^Películas$
 ^Pictures$
 ^Piece$
 ^Plexserv$
@@ -162,6 +163,7 @@
 ^Sex$
 ^share$
 ^shared$
+^Shorts$
 ^show$
 ^Soaps$
 ^sort$
@@ -297,6 +299,7 @@ HD
 HDRip
 HebSubs
 Hi10P
+HiDef
 Hindi
 History.Channel
 HORiZON-ArtSubs
@@ -323,6 +326,7 @@ LIMITED
 LMAO
 lol
 Los.Sustitutos
+LowDef
 M.HD
 MegaPack
 MkvCage

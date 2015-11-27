@@ -124,7 +124,7 @@ new File('omdbMovies.txt').eachLine('Windows-1252'){
 		def rating = tryQuietly{ line[12].toFloat() } ?: 0
 		def votes = tryQuietly{ line[13].replaceAll(/\D/, '').toInteger() } ?: 0
 		
-		if (!(genres =~ /Short/ || votes <= 50 || rating <= 2) && ((year >= 1970 && (runtime =~ /(\d.h)|(\d{3}.min)/ || votes >= 500)) || (year >= 1950 && votes >= 20000))) {
+		if (!(genres =~ /Short/ || votes <= 100 || rating <= 2) && ((year >= 1970 && (runtime =~ /(\d.h)|(\d{2,3}.min)/ || votes >= 1000)) || (year >= 1950 && votes >= 20000))) {
 			omdb << [imdbid.pad(7), name, year]
 		}
 	}
@@ -146,7 +146,7 @@ omdb.each{ m ->
 		def info = WebServices.TheMovieDB.getMovieInfo("tt${m[0]}", Locale.ENGLISH, true)
 
 		if (info.votes <= 1 || info.rating <= 2)
-			throw new FileNotFoundException('Insufficient movie data')
+			throw new IllegalArgumentException('Insufficient movie data: ' + info)
 
 		def names = [info.name, info.originalName] + info.alternativeTitles
 		[info?.released?.year, m[2]].findResults{ it?.toInteger() }.unique().each{ y ->
@@ -154,7 +154,8 @@ omdb.each{ m ->
 			println row
 			tmdb << row
 		}
-	} catch(FileNotFoundException e) {
+	} catch(IllegalArgumentException | FileNotFoundException e) {
+		printException(e, false)
 		def row = [sync, m[0].pad(7), 0, m[2], m[1]]
 		println row
 		tmdb << row
