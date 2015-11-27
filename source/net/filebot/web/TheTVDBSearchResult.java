@@ -2,6 +2,8 @@ package net.filebot.web;
 
 public class TheTVDBSearchResult extends SearchResult {
 
+	private static final long serialVersionUID = 1L;
+	
 	protected int seriesId;
 
 	protected TheTVDBSearchResult() {
