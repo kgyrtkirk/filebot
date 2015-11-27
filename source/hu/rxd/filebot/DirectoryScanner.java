@@ -9,11 +9,16 @@ import hu.rxd.filebot.classifiers.ReleasePrefixClassifier;
 import hu.rxd.filebot.classifiers.SeasonEpisodeClassifier;
 import hu.rxd.filebot.classifiers.SeriesDirClassifier;
 import hu.rxd.filebot.classifiers.SeriesDirParentPopulator;
+import hu.rxd.filebot.classifiers.SeriesIdentifactor;
 import hu.rxd.filebot.classifiers.SeriesMatcher;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.BasicVisitorRunner;
+import net.filebot.WebServices;
+import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
 
 public class DirectoryScanner {
 
@@ -24,7 +29,7 @@ public class DirectoryScanner {
 		MediaSection.Root root = new MediaSection.Root(dir.getPath());
 		rwalk(dir, root);
 
-tagDecorator1(root);
+		tagDecorator1(root);
 		
 		
 //		new ExtensionClassifier().run(root);
@@ -58,6 +63,13 @@ tagDecorator1(root);
 					.having(TypeTags.VIDEO)
 					.exclude(TypeTags.JUNK)
 					.run(root);;
+					
+				new BasicVisitorRunner(new SeriesIdentifactor())
+				.having(new MediaTag(MediaTagKey.canBeSeries))
+				.having(new MediaTag(MediaTagKey.entry))
+					.exclude(TypeTags.JUNK)
+					.run(root);;
+
 	}
 
 

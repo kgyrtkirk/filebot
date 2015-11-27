@@ -14,6 +14,7 @@ import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.similarity.SeriesNameMatcher;
+import sun.reflect.annotation.TypeAnnotation.TypeAnnotationTarget;
 
 public class SeriesMatcher implements ISectionVisitor {
 
@@ -46,6 +47,7 @@ public class SeriesMatcher implements ISectionVisitor {
 		}
 		MatchResult best = results.peek();
 		if(best.distance < 0.01){
+			node.addTag(new MediaTag(MediaTagKey.canBeSeries));
 			node.addTag(new MediaTag(MediaTagKey.series,best.result.getLenientName()));
 		}else{
 			System.out.println("---");

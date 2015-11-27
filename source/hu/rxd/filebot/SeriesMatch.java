@@ -52,7 +52,38 @@ public class SeriesMatch {
 		}
 		
 	}
+public	static class KeyDistance {
+		private NormalizedStringDistance cs;
+		private String key;
+		public KeyDistance(String key) {
+			this.key = key;
+			cs=new NormalizedLevenshtein();
+		}
 
+		public double distance(String o) {
+			return cs.distance(key, o);
+		}
+	}
+
+//	static class KeyDistanceCompare implements Comparator<String>{
+//
+//		private NormalizedStringDistance cs;
+//		private String key;
+//		public KeyDistanceCompare(KeyDistance c) {
+//			this.key = key.toLowerCase();
+//			cs=new NormalizedLevenshtein();
+//			
+//		}
+//
+//		@Override
+//		public int compare(String o1, String o2) {
+//			// TODO Auto-generated method stub
+//			Double.compare(d1, d2)
+//			double v1 = cs.distance(key,o1.getLenientName().toLowerCase());
+//			return 0;
+//		}
+//		
+//	}
 	
 	static class Ex1Comparator implements Comparator<IndexEntry<SearchResult>>{
 		private String key;
