@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.PriorityQueue;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.jsoup.select.Collector;
@@ -20,6 +21,7 @@ import net.filebot.WebServices;
 import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
 import net.filebot.format.ExpressionFormat;
 import net.filebot.format.MediaBindingBean;
+import net.filebot.util.FileUtilities;
 import net.filebot.web.Episode;
 import net.filebot.web.SearchResult;
 import net.filebot.web.SortOrder;
@@ -73,6 +75,8 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
 				String a = ef.format(mbb);
 				a+="."+node.getTag(MediaTagKey.extension).getValue();
+				Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
+				a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
 				node.addTag(new MediaTag(MediaTagKey.seriesOutput,a));
 //				node.tag(new MediaTag(MediaTagKey.));
 //				System.out.println(a);

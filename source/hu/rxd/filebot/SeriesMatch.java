@@ -15,6 +15,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
+import info.debatty.java.stringsimilarity.QGram;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
 import net.filebot.cli.CmdlineOperations;
 import net.filebot.media.MediaDetection;
@@ -84,6 +85,24 @@ public	static class KeyDistance {
 //		}
 //		
 //	}
+
+//	static class StringDistanceMapper {
+//		private String key;
+//		private double minDistance;
+//		private NormalizedStringDistance cs;
+//		
+//		public StringDistanceMapper(String key,double minDistance) {
+//			this.key = key;
+//			this.minDistance = minDistance;
+//			cs=new NormalizedLevenshtein();
+//		}
+//		public double distance(String s) {
+//			return cs.distance(key,s);
+//		}
+//		
+//	}
+
+
 	
 	static class Ex1Comparator implements Comparator<IndexEntry<SearchResult>>{
 		private String key;
@@ -159,7 +178,7 @@ public	static class KeyDistance {
 		}
 	}
 	
-	public static MatchResult lookup(String key) throws Exception{
+	public static MatchResult lookup(String key, double maxDist) throws Exception{
 		return new MatchResult(key);
 	}
 	
