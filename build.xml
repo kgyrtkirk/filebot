@@ -83,6 +83,14 @@
 			<zipfileset src="${dir.dist}/filebot.jar" />
 
 			<!-- include libs -->
+			<zipfileset src="${dir.lib}/ivy/bundle/guava.jar">
+				<include name="**" />
+			</zipfileset>
+
+			<zipfileset src="${dir.lib}/ivy/jar/java-string-similarity.jar">
+				<include name="**" />
+			</zipfileset>
+
 			<zipfileset src="${dir.lib}/ivy/bundle/json-simple.jar">
 				<include name="org/json/simple/**" />
 			</zipfileset>
