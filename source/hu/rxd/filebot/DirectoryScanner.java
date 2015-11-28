@@ -62,10 +62,17 @@ public class DirectoryScanner {
 				new BasicVisitorRunner(new SeriesMatcher())
 					.having(TypeTags.VIDEO)
 					.exclude(TypeTags.JUNK)
-					.run(root);;
+					.run(root);
 					
 				new BasicVisitorRunner(new SeriesIdentifactor())
 				.having(new MediaTag(MediaTagKey.canBeSeries))
+				.having(new MediaTag(MediaTagKey.entry))
+					.exclude(TypeTags.JUNK)
+					.run(root);
+				
+				new BasicVisitorRunner(new PrintThem())
+				.exclude(new MediaTag(MediaTagKey.seriesOutput))
+				.having(new MediaTag(MediaTagKey.isVideo))
 				.having(new MediaTag(MediaTagKey.entry))
 					.exclude(TypeTags.JUNK)
 					.run(root);;

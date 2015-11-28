@@ -33,7 +33,7 @@ public class SeriesDirClassifier implements ISectionVisitor {
 				node.tag(new MediaTag(MediaTagKey.canBeSeries));
 
 				node.addNormalization(new SuffixRemoval(tag, matchedSeasonPart));
-				System.out.println(node);
+//				System.out.println(node);
 				return;
 			}
 		}

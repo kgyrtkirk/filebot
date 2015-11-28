@@ -39,7 +39,7 @@ public class MiscDataClassifier implements ISectionVisitor {
 //		}
 //		if(start>=0){
 //		}
-		System.out.println(node);
+//		System.out.println(node);
 
 	}
 

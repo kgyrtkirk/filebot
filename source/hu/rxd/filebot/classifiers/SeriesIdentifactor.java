@@ -60,16 +60,9 @@ public class SeriesIdentifactor implements ISectionVisitor {
 			if(res.distance>0.1){
 				break;
 			}
-			System.out.println("dist: " + res.distance);
-			System.out.println("search: " + res.result);
 			List<Episode> episodeList = db.getEpisodeList(res.result, sortOrder, language);
 			List<Episode> el=new ArrayList<>();
 			for (Episode e : episodeList) {
-				System.out.println(e.getEpisode() +" " + e.getSeason());
-				if(e.getSeason()==null){
-					int asd=2;
-					asd++;
-				}
 				if(Objects.equals(e.getEpisode() , episode) && Objects.equals(e.getSeason() , season)){
 					el.add(e);
 				}
