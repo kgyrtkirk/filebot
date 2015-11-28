@@ -7,10 +7,7 @@ import java.util.TreeSet;
 
 import com.google.common.base.Function;
 
-import hu.rxd.sdi.StringDistanceIndex.Result;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
-import net.filebot.media.MediaDetection.IndexEntry;
-import net.filebot.web.SearchResult;
 
 public class StringDistanceIndex<S, K extends Function<S, String>> {
 
