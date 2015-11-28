@@ -1,10 +1,13 @@
 package hu.rxd.filebot.classifiers;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
+
+import org.jsoup.select.Collector;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.SeriesMatch.KeyDistance;
@@ -40,7 +43,7 @@ public class SeriesIdentifactor implements ISectionVisitor {
 	public void visit(ISection node) throws Exception {
 		TheTVDBClientWithLocalSearch db = WebServices.TheTVDB;
 
-		SortOrder sortOrder = SortOrder.Absolute;
+		SortOrder sortOrder = SortOrder.DVD;
 		Locale language = Locale.getDefault();
 		MediaTag seriesTag = node.getTag(MediaTagKey.series);
 		List<SearchResult> results = db.search(seriesTag.getValue(), language);
@@ -48,14 +51,31 @@ public class SeriesIdentifactor implements ISectionVisitor {
 		KeyDistance distanceFn = new KeyDistance(seriesTag.getValue());
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
+		Integer	episode=Integer.parseInt(node.getTag(MediaTagKey.episode).getValue());
+		Integer	season=Integer.parseInt(node.getTag(MediaTagKey.season).getValue());
 		for (ScoredResult res : pq) {
 			if(res.distance>0.1){
 				break;
 			}
 			System.out.println("dist: " + res.distance);
 			System.out.println("search: " + res.result);
-			List<Episode> el = db.getEpisodeList(res.result, sortOrder, language);
-			System.out.println(el);
+			List<Episode> episodeList = db.getEpisodeList(res.result, sortOrder, language);
+			List<Episode> el=new ArrayList<>();
+			for (Episode e : episodeList) {
+				System.out.println(e.getEpisode() +" " + e.getSeason());
+				if(e.getSeason()==null){
+					int asd=2;
+					asd++;
+				}
+				if(e.getEpisode() == episode && e.getSeason() == season){
+					el.add(e);
+				}
+			}
+			if(el.size()==1){
+//				node.tag(new MediaTag(MediaTagKey.));
+				
+			}
+//			System.out.println(el);
 		}
 
 	}
