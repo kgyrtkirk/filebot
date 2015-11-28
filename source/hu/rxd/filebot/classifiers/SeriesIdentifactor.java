@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
@@ -17,6 +18,8 @@ import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.WebServices;
 import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
+import net.filebot.format.ExpressionFormat;
+import net.filebot.format.MediaBindingBean;
 import net.filebot.web.Episode;
 import net.filebot.web.SearchResult;
 import net.filebot.web.SortOrder;
@@ -67,12 +70,17 @@ public class SeriesIdentifactor implements ISectionVisitor {
 					int asd=2;
 					asd++;
 				}
-				if(e.getEpisode() == episode && e.getSeason() == season){
+				if(Objects.equals(e.getEpisode() , episode) && Objects.equals(e.getSeason() , season)){
 					el.add(e);
 				}
 			}
 			if(el.size()==1){
 //				node.tag(new MediaTag(MediaTagKey.));
+				Episode s = el.get(0);
+				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
+				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
+				String a = ef.format(mbb);
+				System.out.println(a);
 				
 			}
 //			System.out.println(el);
