@@ -62,19 +62,5 @@ public class ScanBot {
 		}
 	}
 
-//	private static void addEHCacheShutdownHook() {
-//		// make sure to orderly shutdown cache
-//		Runtime.getRuntime().addShutdownHook(new Thread() {
-//
-//			@Override
-//			public void run() {
-//				try {
-//					CacheManager.getInstance().shutdown();
-//				} catch (Exception e) {
-//					// ignore, shutting down anyway
-//				}
-//			}
-//		});
-//	}
 
 }

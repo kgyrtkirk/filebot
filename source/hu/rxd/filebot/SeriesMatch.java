@@ -17,6 +17,7 @@ import com.google.common.cache.LoadingCache;
 import hu.rxd.sdi.StringDistanceIndex;
 import hu.rxd.sdi.StringDistanceIndex.Result;
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
+import info.debatty.java.stringsimilarity.SorensenDice;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
 import net.filebot.media.MediaDetection;
 import net.filebot.media.MediaDetection.IndexEntry;
