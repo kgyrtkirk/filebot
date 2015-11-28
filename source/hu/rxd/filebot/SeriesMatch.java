@@ -1,23 +1,23 @@
 package hu.rxd.filebot;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.PriorityQueue;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 
-import org.junit.Test;
-
+import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
+import hu.rxd.sdi.StringDistanceIndex;
+import hu.rxd.sdi.StringDistanceIndex.Result;
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
-import info.debatty.java.stringsimilarity.QGram;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
-import net.filebot.cli.CmdlineOperations;
 import net.filebot.media.MediaDetection;
 import net.filebot.media.MediaDetection.IndexEntry;
 import net.filebot.similarity.SeriesNameMatcher;
@@ -137,14 +137,35 @@ public	static class KeyDistance {
 
 	private IndexEntry<SearchResult> bestMatch;
 	private double distance;
-	public void asd(String s) throws Exception{
-		
 	
+	public static class IndexEntryExtractor implements Function<IndexEntry<SearchResult>, String>{
+
+		@Override
+		public String apply(IndexEntry<SearchResult> input) {
+			return input.getLenientName().toLowerCase();
+		}
+	}
+	
+	static StringDistanceIndex<IndexEntry<SearchResult>, Function<IndexEntry<SearchResult>,String>>	sdiSeries;
+	
+	static StringDistanceIndex<IndexEntry<SearchResult>, Function<IndexEntry<SearchResult>, String>> getSdiSeries() throws IOException{
+		if(sdiSeries==null){
+			sdiSeries=			new StringDistanceIndex<>(
+					MediaDetection.getSeriesIndex(),
+					new IndexEntryExtractor(),
+					new NormalizedLevenshtein());
+
+		}
+		return sdiSeries;
 	}
 
 	static LoadingCache<String, IndexEntry<SearchResult>>	c=CacheBuilder.newBuilder()
 			.maximumSize(1000)
 			.build(new SeriesLookup());
+
+	static LoadingCache<String, Result<IndexEntry<SearchResult>>>	c2=CacheBuilder.newBuilder()
+			.maximumSize(1000)
+			.build(new SeriesLookup2());
 	
 	public static class SeriesLookup extends CacheLoader<String, IndexEntry<SearchResult>>{
 
@@ -160,10 +181,29 @@ public	static class KeyDistance {
 		}
 		
 	}
+	
+	public static class SeriesLookup2 extends CacheLoader<String, Result<IndexEntry<SearchResult>>>{
+
+		@Override
+		public Result<IndexEntry<SearchResult>> load(String key) throws Exception {
+			Result<IndexEntry<SearchResult>> res = getSdiSeries().queryBest(key);
+			return res;
+//			if(res.size()>0)
+//				return res.first();
+//			return null;
+		}
+		
+	}
+	
 	public static final class MatchResult implements Comparable<MatchResult>{
 		public MatchResult(String key) throws ExecutionException {
-			result=c.get(key);
-			distance=new Ex1Comparator(key).distance(result);
+//			result=c.get(key.toLowerCase());
+			Result<IndexEntry<SearchResult>> result0 = c2.get(key.toLowerCase());
+//			if(result0 != null){
+				result=result0.getPayload();
+				distance=result0.getDistance();
+//				distance=new Ex1Comparator(key).distance(result);
+//			}
 		}
 		public double						distance;
 		public IndexEntry<SearchResult>	result;

@@ -24,12 +24,12 @@ public class SeriesOutputLinker implements ISectionVisitor {
 		
 		Path sourceFile = node.getPath();
 		Path targetFile = new File(seriesOutputDir+"/"+targetRelativeName).toPath();
-		if(Files.exists(targetFile)){
+		if(Files.exists(targetFile) || Files.isSymbolicLink(targetFile)){
 			if(!Files.isSymbolicLink(targetFile)){
 				throw new RuntimeException("target exists and not a symlink");
 			}
 			Path target = Files.readSymbolicLink(targetFile);
-			if(target == sourceFile){
+			if(target.equals(sourceFile)){
 				// already points to the right target
 				return;
 			}
