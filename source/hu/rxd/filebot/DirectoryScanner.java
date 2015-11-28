@@ -23,10 +23,11 @@ import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
 public class DirectoryScanner {
 
 	private File rootDir;
+	private MediaSection.Root root;
 
 	public DirectoryScanner(File rootDir, File dir) throws Exception {
 		this.rootDir = rootDir;
-		MediaSection.Root root = new MediaSection.Root(dir.getPath());
+		root = new MediaSection.Root(dir.getPath());
 		rwalk(dir, root);
 
 		tagDecorator1(root);
@@ -37,6 +38,9 @@ public class DirectoryScanner {
 		
 	}
 
+	public MediaSection.Root getRoot() {
+		return root;
+	}
 
 	public static void tagDecorator1(MediaSection.Root root) throws Exception {
 		//		runClassifier(root, new ExtensionClassifier());

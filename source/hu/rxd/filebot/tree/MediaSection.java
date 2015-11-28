@@ -1,6 +1,7 @@
 package hu.rxd.filebot.tree;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ public class MediaSection {
 	public static interface ISection {
 
 		String getName();
+		File getAbsoluteFile();
 		String getOriginalName();
 
 		@Deprecated
@@ -43,6 +45,7 @@ public class MediaSection {
 		MediaTag getTag(MediaTagKey series);
 		void addSearchKey(MediaTagKey tag, String head);
 		java.util.Collection<String> getSearchKeys(MediaTagKey series);
+		Path getPath();
 		
 	}
 //	public static class  Entry implements ISection{
@@ -62,7 +65,7 @@ public class MediaSection {
 //	}
 
 	public static class  Collection implements ISection{
-		private String path;
+		protected String path;
 		protected Collection parent;
 		private Map<String,ISection> children=new HashMap<>();
 		private Map<MediaTagKey,MediaTag> tags=new HashMap<>();
@@ -177,6 +180,15 @@ public class MediaSection {
 			}
 			return li;
 		}
+		@Override
+		public Path getPath() {
+			File f=getAbsoluteFile();
+			return f.toPath();
+		}
+		@Override
+		public File getAbsoluteFile() {
+			return new File(getParent().getAbsoluteFile(),getOriginalName());
+		}
 	}
 	public static class Root extends Collection{
 
@@ -188,6 +200,9 @@ public class MediaSection {
 		@Override
 		public void tag(MediaTag tag) {
 			System.out.println("ignoring tag on root: "+tag);
+		}
+		public File getAbsoluteFile() {
+			return new File(path);
 		}
 	}
 
