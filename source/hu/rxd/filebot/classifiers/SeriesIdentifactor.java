@@ -75,12 +75,16 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				}
 			}
 			if(el.size()==1){
-//				node.tag(new MediaTag(MediaTagKey.));
 				Episode s = el.get(0);
 				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
 				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
 				String a = ef.format(mbb);
-				System.out.println(a);
+				a+="."+node.getTag(MediaTagKey.extension).getValue();
+				node.addTag(new MediaTag(MediaTagKey.seriesOutput,a));
+//				node.tag(new MediaTag(MediaTagKey.));
+//				System.out.println(a);
+				break;
+//				node.addTag(new MediaTag(key));
 				
 			}
 //			System.out.println(el);

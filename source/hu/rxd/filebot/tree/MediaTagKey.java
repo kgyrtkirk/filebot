@@ -17,5 +17,8 @@ public enum MediaTagKey {
 	episode,
 	
 	canBeSeries,
+	
+	seriesOutput, 
+	extension,
 	;
 }

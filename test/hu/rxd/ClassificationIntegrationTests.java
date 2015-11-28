@@ -74,6 +74,8 @@ public class ClassificationIntegrationTests {
 		assertEquals("15",leaf.getTag(MediaTagKey.episode).getValue());
 		assertEquals("3",leaf.getTag(MediaTagKey.season).getValue());
 		assertEquals("Psych",leaf.getTag(MediaTagKey.series).getValue());
+		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
+//		assertEquals(expected, actual);
 	}
 	private ISection getLeaf(Root root) {
 		ISection curr = root;

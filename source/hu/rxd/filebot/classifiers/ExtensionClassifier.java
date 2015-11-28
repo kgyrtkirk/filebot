@@ -7,6 +7,7 @@ import java.util.Collection;
 import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaSection.Root;
@@ -37,8 +38,9 @@ public class ExtensionClassifier implements ISectionVisitor {
 	}
 
 	private void removeExt(ISection node, MediaTag tag) {
-		node.tag(tag);
-		String ext = node.getName().substring(node.getName().lastIndexOf("."));
+		node.addTag(tag);
+		String ext = node.getName().substring(node.getName().lastIndexOf(".")+1);
+		node.addTag(new MediaTag(MediaTagKey.extension,ext));
 		node.addNormalization(new SuffixRemoval(tag,ext));
 	}
 
