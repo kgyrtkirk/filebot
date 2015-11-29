@@ -18,7 +18,6 @@ import net.sf.ehcache.CacheManager;
 public class ScanBot {
 	
 	public static void main(String...args) throws Exception{
-//		addEHCacheShutdownHook();
 		ScanBot bot = new ScanBot();
 		
 		CmdLineParser parser = new CmdLineParser(bot);
@@ -27,8 +26,6 @@ public class ScanBot {
 			System.out.println(bot.srcDirs);
 			System.out.println(bot.seriesOutputDir);
 			bot.run();
-//			DirectoryScanner ds = new DirectoryScanner(new File("d1/series"),new File("d1/series/Minority.Report.S01E03.HDTV.x264-FLEET"));
-//		DirectoryScanner ds2 = new DirectoryScanner(new File("d1/series"),new File("d1/series/Minority.Report.S01E03.HDTV.x264-FLEET//Minority.Report.S01E03.HDTV.x264-FLEET.mp4"));
 		}catch(CmdLineException e){
             System.err.println(e.getMessage());
             parser.printUsage(System.err);
