@@ -195,6 +195,7 @@ public class MediaSection {
 		public Root(String path) {
 			super(null,path);
 			super.tag(TypeTags.DIRECTORY);
+			super.tag(new MediaTag(MediaTagKey.isRoot));
 			parent=this;
 		}
 		@Override

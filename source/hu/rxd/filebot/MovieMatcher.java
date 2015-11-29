@@ -45,7 +45,9 @@ public class MovieMatcher implements ISectionVisitor {
 		List<String> searchKeys = new ArrayList<>();
 
 		
-		searchKeys.add(node.getParent().getName());
+		if(!node.getParent().hasTag(MediaTagKey.isRoot)){
+			searchKeys.add(node.getParent().getName());
+		}
 		if(node.hasTag(MediaTagKey.year)){
 			searchKeys.add(node.getName()+ " "+node.getTag(MediaTagKey.year).getValue());
 		}

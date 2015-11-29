@@ -1,19 +1,12 @@
 package hu.rxd.filebot.classifiers;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
-
 import hu.rxd.filebot.normalization.SuffixRemoval;
-import hu.rxd.filebot.tree.MediaSection;
+import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.TypeTags;
-import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaSection.Root;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.MediaTypes;
-import net.filebot.util.FileUtilities.ExtensionFileFilter;
 
 public class ExtensionClassifier implements ISectionVisitor {
 
