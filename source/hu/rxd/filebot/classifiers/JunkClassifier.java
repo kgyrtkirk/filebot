@@ -23,10 +23,6 @@ public class JunkClassifier implements ISectionVisitor {
 
 	private boolean isJunk(ISection node) {
 		String n = node.getName();
-		if (n.equalsIgnoreCase("sample") ){
-			node.addNormalization(new PrefixRemoval(TypeTags.JUNK, "sample"));
-			return true;
-		}
 		if (n.startsWith("sample-") ){
 			node.addNormalization(new PrefixRemoval(TypeTags.JUNK, "sample-"));
 			return true;
@@ -35,7 +31,7 @@ public class JunkClassifier implements ISectionVisitor {
 			node.addNormalization(new SuffixRemoval(TypeTags.JUNK, "-sample"));
 			return true;
 		}
-		if (node.hasTag(TypeTags.DIRECTORY) && node.getName().equalsIgnoreCase("sample") ){
+		if (node.getName().equalsIgnoreCase("sample") ){
 			return true;
 		}
 		if(node.getParent().hasTag(TypeTags.JUNK)){
