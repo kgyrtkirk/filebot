@@ -48,38 +48,53 @@ public class DirectoryScanner {
 				new BasicVisitorRunner(new JunkClassifier()).run(root);
 				new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);
 				// subtitle
+				
 				new BasicVisitorRunner(new MiscDataClassifier()).run(root);
 				
+				new BasicVisitorRunner(new YearIdentifier()).run(root);
 				
 				new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
 
 				new BasicVisitorRunner(new SeriesDirClassifier())
-				.having(TypeTags.DIRECTORY)
-				.run(root);
+					.having(TypeTags.DIRECTORY)
+					.run(root);
 
 				new BasicVisitorRunner(new SeriesDirParentPopulator())
-				.having(TypeTags.ENTRY)
-				.run(root);
+					.having(TypeTags.ENTRY)
+					.run(root);
 		
+				
+				new BasicVisitorRunner(new MovieMatcher())
+					.having(TypeTags.VIDEO)
+					.exclude(TypeTags.JUNK)
+					.run(root);
 				
 		//		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
 				new BasicVisitorRunner(new SeriesMatcher())
 					.having(TypeTags.VIDEO)
 					.exclude(TypeTags.JUNK)
 					.run(root);
-					
+				
+				
 				new BasicVisitorRunner(new SeriesIdentifactor())
 				.having(new MediaTag(MediaTagKey.canBeSeries))
+				.having(new MediaTag(MediaTagKey.season))
+				.having(new MediaTag(MediaTagKey.episode))
 				.having(new MediaTag(MediaTagKey.entry))
 					.exclude(TypeTags.JUNK)
 					.run(root);
 				
+				System.out.println("positive:");
 				new BasicVisitorRunner(new PrintThem())
-				.exclude(new MediaTag(MediaTagKey.seriesOutput))
-				.having(new MediaTag(MediaTagKey.isVideo))
-				.having(new MediaTag(MediaTagKey.entry))
-					.exclude(TypeTags.JUNK)
+				.having(new MediaTag(MediaTagKey.canBeMovie))
 					.run(root);;
+				
+//				new BasicVisitorRunner(new PrintThem())
+//				.exclude(new MediaTag(MediaTagKey.seriesOutput))
+//				.having(new MediaTag(MediaTagKey.isVideo))
+//				.having(new MediaTag(MediaTagKey.entry))
+//					.exclude(TypeTags.JUNK)
+//					.run(root);;
 
 	}
 

@@ -139,10 +139,10 @@ public	static class KeyDistance {
 	private IndexEntry<SearchResult> bestMatch;
 	private double distance;
 	
-	public static class IndexEntryExtractor implements Function<IndexEntry<SearchResult>, String>{
+	public static class IndexEntryExtractor<T> implements Function<IndexEntry<T>, String>{
 
 		@Override
-		public String apply(IndexEntry<SearchResult> input) {
+		public String apply(IndexEntry<T> input) {
 			return input.getLenientName().toLowerCase();
 		}
 	}
@@ -153,7 +153,7 @@ public	static class KeyDistance {
 		if(sdiSeries==null){
 			sdiSeries=			new StringDistanceIndex<>(
 					MediaDetection.getSeriesIndex(),
-					new IndexEntryExtractor(),
+					new IndexEntryExtractor<>(),
 					new NormalizedLevenshtein());
 
 		}

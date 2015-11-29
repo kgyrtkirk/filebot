@@ -77,6 +77,20 @@ public class ClassificationIntegrationTests {
 		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
 //		assertEquals(expected, actual);
 	}
+	
+	@Test
+	public void dom() throws Exception {
+		Root root = basicSections("d1","movies","Daddy.or.Mommy.2015.PROPER.RETAiL.DVDRip.x264.HuN-No1","dom.dvdrip.x264-no1.mkv");
+		DirectoryScanner.tagDecorator1(root);
+		ISection leaf = getLeaf(root);
+		assertEquals("Daddy or Mommy",leaf.getTag(MediaTagKey.movie).getValue());
+//		assertEquals("3",leaf.getTag(MediaTagKey.season).getValue());
+//		assertEquals("Psych",leaf.getTag(MediaTagKey.series).getValue());
+//		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
+//		assertEquals(expected, actual);
+	}
+	
+	
 	private ISection getLeaf(Root root) {
 		ISection curr = root;
 		while (curr.getChildren().size() > 0) {

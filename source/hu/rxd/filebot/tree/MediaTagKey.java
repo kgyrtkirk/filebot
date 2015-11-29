@@ -19,6 +19,6 @@ public enum MediaTagKey {
 	canBeSeries,
 	
 	seriesOutput, 
-	extension,
+	extension, canBeMovie, movie, year,
 	;
 }

@@ -37,6 +37,11 @@ public class StringDistanceIndex<S, K extends Function<S, String>> {
 		public S getPayload() {
 			return payload;
 		}
+		
+		@Override
+		public String toString() {
+			return "[distance: "+distance+ ", payload: "+payload+"]";
+		}
 	}
 
 	private List<Entry<S>> entries;
