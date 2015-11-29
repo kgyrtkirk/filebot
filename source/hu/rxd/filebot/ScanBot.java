@@ -2,12 +2,9 @@ package hu.rxd.filebot;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.kohsuke.args4j.CmdLineException;
@@ -20,6 +17,7 @@ import com.cedarsoftware.util.io.JsonWriter;
 import hu.rxd.filebot.classifiers.ExtensionClassifier;
 import hu.rxd.filebot.classifiers.JunkClassifier;
 import hu.rxd.filebot.classifiers.MiscDataClassifier;
+import hu.rxd.filebot.classifiers.MovieIdentifactor;
 import hu.rxd.filebot.classifiers.ReleasePrefixClassifier;
 import hu.rxd.filebot.classifiers.SeasonEpisodeClassifier;
 import hu.rxd.filebot.classifiers.SeriesDirClassifier;
@@ -27,13 +25,12 @@ import hu.rxd.filebot.classifiers.SeriesDirParentPopulator;
 import hu.rxd.filebot.classifiers.SeriesIdentifactor;
 import hu.rxd.filebot.classifiers.SeriesMatcher;
 import hu.rxd.filebot.classifiers.SeriesOutputLinker;
-import hu.rxd.filebot.tree.MediaSection.Root;
 import hu.rxd.filebot.tree.MediaSection;
+import hu.rxd.filebot.tree.MediaSection.Root;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.BasicVisitorRunner;
-import jdk.jfr.events.FileWriteEvent;
 import net.sf.ehcache.CacheManager;
 
 public class ScanBot {
@@ -67,6 +64,9 @@ public class ScanBot {
     
     @Option(name="-so",aliases={"--series-output"},required=true,usage="series output directory")
     public String seriesOutputDir;
+
+    @Option(name="-mo",aliases={"--movie-output"},required=true,usage="movie output directory")
+    public String movieOutputDir;
 
     @Option(name="-sp",aliases={"--series-pattern"},usage="series pattern directory")
     public String seriesPattern = "{n}/{s00e00}.{t}";
@@ -118,37 +118,63 @@ public class ScanBot {
 //		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
 		new BasicVisitorRunner(new SeriesMatcher())
 			.having(TypeTags.VIDEO)
+			.having(new MediaTag(MediaTagKey.episode))
 			.exclude(TypeTags.JUNK)
 			.run(root);
-		
 		
 		new BasicVisitorRunner(new SeriesIdentifactor())
-		.having(new MediaTag(MediaTagKey.canBeSeries))
-		.having(new MediaTag(MediaTagKey.season))
-		.having(new MediaTag(MediaTagKey.episode))
-		.having(new MediaTag(MediaTagKey.entry))
+			.having(new MediaTag(MediaTagKey.canBeSeries))
+			.having(new MediaTag(MediaTagKey.season))
+			.having(new MediaTag(MediaTagKey.episode))
+			.having(new MediaTag(MediaTagKey.entry))
+			.exclude(new MediaTag(MediaTagKey.canBeMovie))
 			.exclude(TypeTags.JUNK)
 			.run(root);
 		
-		System.out.println("positive:");
+		new BasicVisitorRunner(new MovieIdentifactor())
+			.having(new MediaTag(MediaTagKey.canBeMovie))
+			.having(new MediaTag(MediaTagKey.movie))
+			.exclude(new MediaTag(MediaTagKey.canBeSeries))
+			.exclude(TypeTags.JUNK)
+			.run(root);
+
+		System.out.println("series AND movie (undecided):");
 		new BasicVisitorRunner(new PrintThem())
 		.having(new MediaTag(MediaTagKey.canBeMovie))
+		.having(new MediaTag(MediaTagKey.canBeSeries))
 			.run(root);;
-		
+
+//		System.out.println("positive:");
 //		new BasicVisitorRunner(new PrintThem())
-//		.exclude(new MediaTag(MediaTagKey.seriesOutput))
-//		.having(new MediaTag(MediaTagKey.isVideo))
-//		.having(new MediaTag(MediaTagKey.entry))
-//			.exclude(TypeTags.JUNK)
+//		.having(new MediaTag(MediaTagKey.canBeMovie))
 //			.run(root);;
 		
+		
 			
-		new BasicVisitorRunner(new SeriesOutputLinker(seriesOutputDir))
+		new BasicVisitorRunner(new SeriesOutputLinker(seriesOutputDir,MediaTagKey.seriesOutput))
 			.having(new MediaTag(MediaTagKey.seriesOutput))
 			.having(new MediaTag(MediaTagKey.isVideo))
 			.having(new MediaTag(MediaTagKey.entry))
 			.exclude(TypeTags.JUNK)
 			.run(root);
+		new BasicVisitorRunner(new SeriesOutputLinker(movieOutputDir,MediaTagKey.movieOutput))
+			.having(new MediaTag(MediaTagKey.seriesOutput))
+			.having(new MediaTag(MediaTagKey.isVideo))
+			.having(new MediaTag(MediaTagKey.entry))
+			.exclude(TypeTags.JUNK)
+			.run(root);
+		
+		new BasicVisitorRunner(new PrintThem())
+		.exclude(new MediaTag(MediaTagKey.movieOutput))
+		.having(new MediaTag(MediaTagKey.isVideo))
+		.having(new MediaTag(MediaTagKey.entry))
+			.exclude(TypeTags.JUNK)
+			.run(root);;
+
+			System.out.println("mov+");
+			new BasicVisitorRunner(new PrintThem())
+			.having(new MediaTag(MediaTagKey.movieOutput))
+				.run(root);;
 		
 		saveState(root);
 
@@ -156,10 +182,10 @@ public class ScanBot {
 
 
 	private Root getRoot() throws Exception {
-		if(stateFile.exists()){
-			System.out.println("restoring state from: "+stateFile);
-			return (Root) JsonReader.jsonToJava(new FileInputStream(stateFile), new HashMap<>());
-		}
+//		if(stateFile.exists()){
+//			System.out.println("restoring state from: "+stateFile);
+//			return (Root) JsonReader.jsonToJava(new FileInputStream(stateFile), new HashMap<>());
+//		}
 		Root root = new MediaSection.Root(src.getPath());
 		return root;
 		

@@ -12,18 +12,20 @@ import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class SeriesOutputLinker implements ISectionVisitor {
 
-	private String seriesOutputDir;
+	private String outputDir;
+	private MediaTagKey tag;
 
-	public SeriesOutputLinker(String seriesOutputDir) {
-		this.seriesOutputDir = seriesOutputDir;
+	public SeriesOutputLinker(String outputDir, MediaTagKey tag) {
+		this.outputDir = outputDir;
+		this.tag = tag;
 	}
 
 	@Override
 	public void visit(ISection node) throws Exception {
-		String targetRelativeName = node.getTag(MediaTagKey.seriesOutput).getValue();
+		String targetRelativeName = node.getTag(tag).getValue();
 		
 		Path sourceFile = node.getPath();
-		Path targetFile = new File(seriesOutputDir+"/"+targetRelativeName).toPath();
+		Path targetFile = new File(outputDir+"/"+targetRelativeName).toPath();
 		if(Files.exists(targetFile) || Files.isSymbolicLink(targetFile)){
 			if(!Files.isSymbolicLink(targetFile)){
 				throw new RuntimeException("target exists and not a symlink");

@@ -56,7 +56,7 @@ public class MovieMatcher implements ISectionVisitor {
 		for (String q : searchKeys) {
 			Result<IndexEntry<Movie>> best = getMovieIndex().queryBest(q.replaceAll("[._ ]+", " ").toLowerCase());
 
-			if (best.getDistance() < 0.01) {
+			if (best.getDistance() < 0.1) {
 				node.addTag(new MediaTag(MediaTagKey.canBeMovie));
 				node.addTag(new MediaTag(MediaTagKey.movie, best.getPayload().getLenientName()));
 				return;
