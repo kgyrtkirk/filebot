@@ -1,21 +1,19 @@
 package hu.rxd.filebot.classifiers;
 
-import hu.rxd.filebot.tree.MediaTagKey;
-
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
-public class SeriesOutputLinker implements ISectionVisitor {
+public class OutputLinker implements ISectionVisitor {
 
 	private String outputDir;
 	private MediaTagKey tag;
 
-	public SeriesOutputLinker(String outputDir, MediaTagKey tag) {
+	public OutputLinker(String outputDir, MediaTagKey tag) {
 		this.outputDir = outputDir;
 		this.tag = tag;
 	}

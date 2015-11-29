@@ -24,7 +24,7 @@ import hu.rxd.filebot.classifiers.SeriesDirClassifier;
 import hu.rxd.filebot.classifiers.SeriesDirParentPopulator;
 import hu.rxd.filebot.classifiers.SeriesIdentifactor;
 import hu.rxd.filebot.classifiers.SeriesMatcher;
-import hu.rxd.filebot.classifiers.SeriesOutputLinker;
+import hu.rxd.filebot.classifiers.OutputLinker;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaSection.Root;
 import hu.rxd.filebot.tree.MediaTag;
@@ -151,13 +151,13 @@ public class ScanBot {
 		
 		
 			
-		new BasicVisitorRunner(new SeriesOutputLinker(seriesOutputDir,MediaTagKey.seriesOutput))
+		new BasicVisitorRunner(new OutputLinker(seriesOutputDir,MediaTagKey.seriesOutput))
 			.having(new MediaTag(MediaTagKey.seriesOutput))
 			.having(new MediaTag(MediaTagKey.isVideo))
 			.having(new MediaTag(MediaTagKey.entry))
 			.exclude(TypeTags.JUNK)
 			.run(root);
-		new BasicVisitorRunner(new SeriesOutputLinker(movieOutputDir,MediaTagKey.movieOutput))
+		new BasicVisitorRunner(new OutputLinker(movieOutputDir,MediaTagKey.movieOutput))
 			.having(new MediaTag(MediaTagKey.seriesOutput))
 			.having(new MediaTag(MediaTagKey.isVideo))
 			.having(new MediaTag(MediaTagKey.entry))
