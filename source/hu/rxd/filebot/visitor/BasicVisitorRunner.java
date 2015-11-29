@@ -2,6 +2,8 @@ package hu.rxd.filebot.visitor;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaSection.Root;
@@ -18,27 +20,26 @@ public class BasicVisitorRunner {
 	}
 
 	public void run(Root root) throws Exception {
-		visit(root);
-	}
+		Queue<ISection> queue = new LinkedList<>();
+		queue.add(root);
+		while (!queue.isEmpty()) {
+			ISection node = queue.poll();
+			if (accepted(node)) {
+				classifier.visit(node);
+			}
+			queue.addAll(node.getChildren());
+		}
 
-	private void visit(ISection node) throws Exception {
-		if (accepted(node)) {
-			classifier.visit(node);
-		}
-		Collection<ISection> c = node.getChildren();
-		for (ISection ic : c) {
-			visit(ic);
-		}
 	}
 
 	private boolean accepted(ISection node) {
 		for (MediaTag mediaTag : excludedTags) {
-			if(node.hasTag(mediaTag)){
+			if (node.hasTag(mediaTag)) {
 				return false;
 			}
 		}
 		for (MediaTag mediaTag : neededTags) {
-			if(!node.hasTag(mediaTag)){
+			if (!node.hasTag(mediaTag)) {
 				return false;
 			}
 		}
