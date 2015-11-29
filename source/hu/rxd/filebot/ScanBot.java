@@ -45,19 +45,20 @@ public class ScanBot {
     public String seriesPattern = "{n}/{s00e00}.{t}";
     
 	private void run() throws Exception {
-//		for (String srcDir : srcDirs) {
 			
-			DirectoryScanner ds = new DirectoryScanner(new File(srcDir), new File(srcDir));
-			Root root = ds.getRoot();
+		
+		DirectoryScanner ds = new DirectoryScanner(new File(srcDir), new File(srcDir));
+		Root root = ds.getRoot();
 			
-			new BasicVisitorRunner(new SeriesOutputLinker(seriesOutputDir))
-				.having(new MediaTag(MediaTagKey.seriesOutput))
-				.having(new MediaTag(MediaTagKey.isVideo))
-				.having(new MediaTag(MediaTagKey.entry))
-				.exclude(TypeTags.JUNK)
-				.run(root);;
+		new BasicVisitorRunner(new SeriesOutputLinker(seriesOutputDir))
+			.having(new MediaTag(MediaTagKey.seriesOutput))
+			.having(new MediaTag(MediaTagKey.isVideo))
+			.having(new MediaTag(MediaTagKey.entry))
+			.exclude(TypeTags.JUNK)
+			.run(root);
+			
+		
 
-//		}
 	}
 
 
