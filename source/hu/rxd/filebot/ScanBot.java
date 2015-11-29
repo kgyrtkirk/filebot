@@ -23,7 +23,7 @@ public class ScanBot {
 		CmdLineParser parser = new CmdLineParser(bot);
 		try{
 			parser.parseArgument(args);
-			System.out.println(bot.srcDirs);
+			System.out.println(bot.srcDir);
 			System.out.println(bot.seriesOutputDir);
 			bot.run();
 		}catch(CmdLineException e){
@@ -35,8 +35,8 @@ public class ScanBot {
 	}
 	
     
-    @Option(name="-src",usage="source directories",required=true)
-    public List<String> srcDirs;
+    @Option(name="-src",usage="source directory",required=true)
+    public String srcDir;
     
     @Option(name="-so",aliases={"--series-output"},required=true,usage="series output directory")
     public String seriesOutputDir;
@@ -45,7 +45,8 @@ public class ScanBot {
     public String seriesPattern = "{n}/{s00e00}.{t}";
     
 	private void run() throws Exception {
-		for (String srcDir : srcDirs) {
+//		for (String srcDir : srcDirs) {
+			
 			DirectoryScanner ds = new DirectoryScanner(new File(srcDir), new File(srcDir));
 			Root root = ds.getRoot();
 			
@@ -56,7 +57,7 @@ public class ScanBot {
 				.exclude(TypeTags.JUNK)
 				.run(root);;
 
-		}
+//		}
 	}
 
 
