@@ -23,6 +23,10 @@ public class JunkClassifier implements ISectionVisitor {
 
 	private boolean isJunk(ISection node) {
 		String n = node.getName();
+		if (n.equalsIgnoreCase("sample") ){
+			node.addNormalization(new PrefixRemoval(TypeTags.JUNK, "sample"));
+			return true;
+		}
 		if (n.startsWith("sample-") ){
 			node.addNormalization(new PrefixRemoval(TypeTags.JUNK, "sample-"));
 			return true;
