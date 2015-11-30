@@ -1,13 +1,26 @@
 package hu.rxd.filebot;
 
+import java.util.Collection;
+
 import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class SeriesDirByVote implements ISectionVisitor {
 
 	@Override
 	public void visit(ISection node) throws Exception {
-		// TODO Auto-generated method stub
+		Collection<ISection> ch = node.getChildren();
+		int vCnt=0;
+		for (ISection s : ch) {
+			if(s.hasTag(MediaTagKey.isVideo)){
+				vCnt++;
+			}
+		}
+		if(vCnt>3){
+			node.addTag(new MediaTag(MediaTagKey.isSeries));
+		}
 
 	}
 

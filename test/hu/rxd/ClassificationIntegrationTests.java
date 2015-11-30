@@ -97,7 +97,16 @@ public class ClassificationIntegrationTests {
 //		assertEquals(expected, actual);
 	}
 	
-	
+	@Test
+	public void exp3() throws Exception {
+
+		Root root = basicSections(		"The.Expendables.3.2014.THEATRiCAL.720p.BluRay.DTS.x264.HuN-TRiNiTY","the.expendables.3.tc.720p-trinity.mkv");
+		DirectoryScanner.tagDecorator1(root);
+		ISection leaf = getLeaf(root);
+		assertEquals("The Expendables 3",leaf.getTag(MediaTagKey.movie).getValue());
+	}
+
+
 	private ISection getLeaf(Root root) {
 		ISection curr = root;
 		while (curr.getChildren().size() > 0) {

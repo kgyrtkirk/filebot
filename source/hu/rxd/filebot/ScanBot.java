@@ -90,62 +90,7 @@ public class ScanBot {
 		
 		
 		
-		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
-		new BasicVisitorRunner(new JunkClassifier()).run(root);
-		new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);
-		// subtitle
-		
-		new BasicVisitorRunner(new MiscDataClassifier()).run(root);
-		
-		new BasicVisitorRunner(new YearIdentifier()).run(root);
-
-		new BasicVisitorRunner(new MultipartClassifier()).run(root);
-
-		new BasicVisitorRunner(new SeriesDirByVote())
-			.run(root);
-//		new SubtreeVis
-//		new BasicVisitorRunner(new DirTree()).run(root);
-		
-		
-		new BasicVisitorRunner(new MovieMatcher())
-		.having(MediaTagKey.isVideo)
-		.exclude(MediaTagKey.isJunk)
-		.run(root);
-		
-		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
-
-		new BasicVisitorRunner(new SeriesDirClassifier())
-			.having(MediaTagKey.dir)
-			.run(root);
-
-		new BasicVisitorRunner(new SeriesDirParentPopulator())
-			.having(MediaTagKey.entry)
-			.run(root);
-
-		
-		
-//		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
-		new BasicVisitorRunner(new SeriesMatcher())
-			.having(MediaTagKey.isVideo)
-			.having(MediaTagKey.episode)
-			.exclude(MediaTagKey.isJunk)
-			.run(root);
-		
-		new BasicVisitorRunner(new SeriesIdentifactor())
-			.having((MediaTagKey.canBeSeries))
-			.having((MediaTagKey.season))
-			.having((MediaTagKey.episode))
-			.having((MediaTagKey.entry))
-			.exclude((MediaTagKey.canBeMovie))
-			.exclude(MediaTagKey.isJunk)
-			.run(root);
-		
-		new BasicVisitorRunner(new MovieIdentifactor())
-			.having((MediaTagKey.canBeMovie))
-			.having((MediaTagKey.movie))
-			.exclude((MediaTagKey.canBeSeries))
-			.exclude(MediaTagKey.isJunk)
-			.run(root);
+		runIdentification(root);
 
 		System.out.println("series AND movie (undecided):");
 		new BasicVisitorRunner(new PrintThem())
@@ -189,6 +134,72 @@ public class ScanBot {
 		
 		saveState(root);
 
+	}
+
+
+	public static void runIdentification(Root root) throws Exception {
+		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
+		new BasicVisitorRunner(new JunkClassifier()).run(root);
+		new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);
+		// subtitle
+		
+		new BasicVisitorRunner(new MiscDataClassifier()).run(root);
+		
+		new BasicVisitorRunner(new YearIdentifier()).run(root);
+
+		new BasicVisitorRunner(new MultipartClassifier()).run(root);
+
+		new BasicVisitorRunner(new SeriesDirByVote())
+		.exclude(MediaTagKey.isRoot)
+		.having(MediaTagKey.dir)
+			.run(root);
+//		new SubtreeVis
+//		new BasicVisitorRunner(new DirTree()).run(root);
+
+		new BasicVisitorRunner(new SeriesDirClassifier())
+			.having(MediaTagKey.dir)
+			.run(root);
+		
+		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
+		
+
+		new BasicVisitorRunner(new SeriesDirParentPopulator())
+			.having(MediaTagKey.entry)
+			.run(root);
+
+		
+		new BasicVisitorRunner(new MovieMatcher())
+		.having(MediaTagKey.isVideo)
+		.exclude(MediaTagKey.isJunk)
+		.exclude(MediaTagKey.isSeries)
+		.run(root);
+		
+
+
+		
+		
+//		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
+		new BasicVisitorRunner(new SeriesMatcher())
+			.having(MediaTagKey.isVideo)
+			.having(MediaTagKey.episode)
+			.exclude(MediaTagKey.isJunk)
+			.run(root);
+		
+		new BasicVisitorRunner(new SeriesIdentifactor())
+			.having((MediaTagKey.canBeSeries))
+			.having((MediaTagKey.season))
+			.having((MediaTagKey.episode))
+			.having((MediaTagKey.entry))
+			.exclude((MediaTagKey.canBeMovie))
+			.exclude(MediaTagKey.isJunk)
+			.run(root);
+		
+		new BasicVisitorRunner(new MovieIdentifactor())
+			.having((MediaTagKey.canBeMovie))
+			.having((MediaTagKey.movie))
+			.exclude((MediaTagKey.canBeSeries))
+			.exclude(MediaTagKey.isJunk)
+			.run(root);
 	}
 
 

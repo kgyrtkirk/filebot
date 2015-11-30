@@ -27,6 +27,17 @@ public class YearIdentifier implements ISectionVisitor {
 			node.addTag(new MediaTag(MediaTagKey.year,m.group(1)));
 			node.addNormalization(new SuffixRemoval(TypeTags.MISC, m.group(0)));
 		}
+		if(node.getParent().hasTag(MediaTagKey.year)){
+			MediaTag pt = node.getParent().getTag(MediaTagKey.year);
+			if(node.hasTag(MediaTagKey.year)){
+				boolean nt = node.hasTag(MediaTagKey.year);
+				if(!pt.equals(nt)){
+					throw new RuntimeException("invalid: parent year/entry year mismatch");
+				}
+			}else{
+				node.addTag(pt);
+			}
+		}
 
 	}
 
