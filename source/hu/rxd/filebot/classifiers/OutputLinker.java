@@ -33,7 +33,7 @@ public class OutputLinker implements ISectionVisitor {
 				// already points to the right target
 				return;
 			}
-			throw new RuntimeException("link exists..but points to elsewhere..exception for now");
+			throw new RuntimeException("link exists..but points to elsewhere..exception for now: \nlink:" + sourceFile +"\nexpected:"+targetFile+"\nactual:"+target);
 		}
 		// create parent directories
 		Files.createDirectories(targetFile.getParent());

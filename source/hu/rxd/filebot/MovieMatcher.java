@@ -46,17 +46,32 @@ public class MovieMatcher implements ISectionVisitor {
 
 		
 		if(!node.getParent().hasTag(MediaTagKey.isRoot)){
-			searchKeys.add(node.getParent().getName());
+			if(node.getParent().hasTag(MediaTagKey.year)){
+				searchKeys.add(node.getParent().getName()+ " "+node.getParent().getTag(MediaTagKey.year).getValue());
+			}
 		}
 		if(node.hasTag(MediaTagKey.year)){
 			searchKeys.add(node.getName()+ " "+node.getTag(MediaTagKey.year).getValue());
 		}
+		if(!node.getParent().hasTag(MediaTagKey.isRoot)){
+			searchKeys.add(node.getParent().getName());
+		}
 		searchKeys.add(node.getName());
 //		TreeSet< Result<IndexEntry<Movie>> > matches =new TreeSet<>();	
 		for (String q : searchKeys) {
-			Result<IndexEntry<Movie>> best = getMovieIndex().queryBest(q.replaceAll("[._ ]+", " ").toLowerCase());
+			String lowerCase = q.replaceAll("[._ ]+", " ").toLowerCase();
+			TreeSet<Result<IndexEntry<Movie>>> b1 = getMovieIndex().query(lowerCase,0.3);
+			Result<IndexEntry<Movie>> best = getMovieIndex().queryBest(lowerCase);
+			int year = best.getPayload().getObject().getYear();
+			if(year>1 && node.hasTag(MediaTagKey.year)){
+				int yy = Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
+				if(yy!=year){
+					System.err.println("ignoring result..year diff:"+year+" !!"+yy);
+					continue;
+				}
+			}
 
-			if (best.getDistance() < 0.1) {
+			if (best.getDistance() < 0.01) {
 				node.addTag(new MediaTag(MediaTagKey.canBeMovie));
 				node.addTag(new MediaTag(MediaTagKey.movie, best.getPayload().getLenientName()));
 				return;

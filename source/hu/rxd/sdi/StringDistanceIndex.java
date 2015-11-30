@@ -22,7 +22,7 @@ public class StringDistanceIndex<S, K extends Function<S, String>> {
 		}
 	}
 
-	public static class Result<S> {
+	public static class Result<S> implements Comparable<Result<S>>{
 
 		double distance;
 		private S payload;
@@ -41,6 +41,10 @@ public class StringDistanceIndex<S, K extends Function<S, String>> {
 		@Override
 		public String toString() {
 			return "[distance: "+distance+ ", payload: "+payload+"]";
+		}
+		@Override
+		public int compareTo(Result<S> o) {
+			return Double.compare(distance, o.distance);
 		}
 	}
 

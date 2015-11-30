@@ -99,6 +99,11 @@ public class ScanBot {
 		
 		new BasicVisitorRunner(new YearIdentifier()).run(root);
 		
+		new BasicVisitorRunner(new MovieMatcher())
+		.having(TypeTags.VIDEO)
+		.exclude(TypeTags.JUNK)
+		.run(root);
+		
 		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
 
 		new BasicVisitorRunner(new SeriesDirClassifier())
@@ -110,10 +115,6 @@ public class ScanBot {
 			.run(root);
 
 		
-		new BasicVisitorRunner(new MovieMatcher())
-			.having(TypeTags.VIDEO)
-			.exclude(TypeTags.JUNK)
-			.run(root);
 		
 //		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
 		new BasicVisitorRunner(new SeriesMatcher())
@@ -158,7 +159,7 @@ public class ScanBot {
 			.exclude(TypeTags.JUNK)
 			.run(root);
 		new BasicVisitorRunner(new OutputLinker(movieOutputDir,MediaTagKey.movieOutput))
-			.having(new MediaTag(MediaTagKey.seriesOutput))
+			.having(new MediaTag(MediaTagKey.movieOutput))
 			.having(new MediaTag(MediaTagKey.isVideo))
 			.having(new MediaTag(MediaTagKey.entry))
 			.exclude(TypeTags.JUNK)
