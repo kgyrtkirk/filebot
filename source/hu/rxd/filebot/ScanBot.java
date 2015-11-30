@@ -101,6 +101,8 @@ public class ScanBot {
 
 		new BasicVisitorRunner(new MultipartClassifier()).run(root);
 
+		new BasicVisitorRunner(new SeriesDirByVote())
+			.run(root);
 //		new SubtreeVis
 //		new BasicVisitorRunner(new DirTree()).run(root);
 		
