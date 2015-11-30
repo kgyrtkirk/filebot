@@ -19,7 +19,7 @@ public class SeasonEpisodeClassifier implements ISectionVisitor {
 	}
 	@Override
 	public void visit(ISection node) throws Exception {
-		String name=node.getName();
+		String name=node.getName().replaceAll("(19[0-9]{2}|2[01][0-9]{2})", "");
 		List<SxE> a = sem.match(name);
 		if(a!=null && a.size() > 0){
 			SxE f = a.get(0);

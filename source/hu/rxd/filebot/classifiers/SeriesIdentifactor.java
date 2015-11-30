@@ -40,7 +40,12 @@ public class SeriesIdentifactor implements ISectionVisitor {
 
 		ScoredResult(KeyDistance kd, SearchResult result) {
 			this.result = result;
+			
+			
 			distance = kd.distance(result.getName());
+			for (String alias : result.getAliasNames()) {
+				distance=Math.min(distance, kd.distance(alias));
+			}
 		}
 	}
 
@@ -60,7 +65,7 @@ public class SeriesIdentifactor implements ISectionVisitor {
 		Integer	season=Integer.parseInt(node.getTag(MediaTagKey.season).getValue());
 		for (ScoredResult res : pq) {
 			if(res.distance>0.1){
-				break;
+				continue;
 			}
 			List<Episode> episodeList = db.getEpisodeList(res.result, sortOrder, language);
 			List<Episode> el=new ArrayList<>();
@@ -84,6 +89,7 @@ public class SeriesIdentifactor implements ISectionVisitor {
 //				node.addTag(new MediaTag(key));
 				
 			}
+			
 //			System.out.println(el);
 		}
 

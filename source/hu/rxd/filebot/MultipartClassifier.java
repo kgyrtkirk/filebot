@@ -24,7 +24,7 @@ public class MultipartClassifier implements ISectionVisitor {
 		
 		Matcher m = pat.matcher(n);
 		if(m.find()){
-			node.addTag(new MediaTag(MediaTagKey.part,m.group(1)));
+			node.addTag(new MediaTag(MediaTagKey.part,m.group(0)));
 			node.addNormalization(new SuffixRemoval(TypeTags.PART, m.group(0)));
 		}
 

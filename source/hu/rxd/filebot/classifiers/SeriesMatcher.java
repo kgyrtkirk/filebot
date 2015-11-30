@@ -43,10 +43,10 @@ public class SeriesMatcher implements ISectionVisitor {
 		
 		PriorityQueue<SeriesMatch.MatchResult>		results=new PriorityQueue<>();
 		for (String key : searchKeys) {
-			results.add(	SeriesMatch.lookup(key,0.1));
+			results.add(	SeriesMatch.lookup(key.replaceAll("[-. ]+", " ").toLowerCase(),0.1));
 		}
 		MatchResult best = results.peek();
-		if(best.distance < 0.01){
+		if(best.distance < 0.1){
 			node.addTag(new MediaTag(MediaTagKey.canBeSeries));
 			node.addTag(new MediaTag(MediaTagKey.series,best.result.getLenientName()));
 		}else{

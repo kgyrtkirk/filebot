@@ -2,10 +2,9 @@ package hu.rxd.filebot.classifiers;
 
 import hu.rxd.filebot.normalization.PrefixRemoval;
 import hu.rxd.filebot.normalization.SuffixRemoval;
-import hu.rxd.filebot.tree.MediaSection;
-import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaSection.Root;
+import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class JunkClassifier implements ISectionVisitor {
@@ -15,10 +14,6 @@ public class JunkClassifier implements ISectionVisitor {
 		if(isJunk(node)){
 			node.tag(TypeTags.JUNK);
 		}
-//			|| child.getParentFile().getName().equalsIgnoreCase("Sample")) {
-//		System.out.println("skip:" + child);
-//		
-		
 	}
 
 	private boolean isJunk(ISection node) {
@@ -34,7 +29,7 @@ public class JunkClassifier implements ISectionVisitor {
 		if (node.getName().equalsIgnoreCase("sample") ){
 			return true;
 		}
-		if(node.getParent().hasTag(TypeTags.JUNK)){
+		if(node.getParent().hasTag(MediaTagKey.isJunk)){
 			return true;
 		}
 		return false;

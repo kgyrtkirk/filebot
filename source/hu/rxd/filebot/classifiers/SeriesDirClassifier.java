@@ -19,7 +19,7 @@ public class SeriesDirClassifier implements ISectionVisitor {
 	public void visit(ISection node) throws Exception {
 		Pattern pats[]={
 		// season folder pattern for complementing partial sxe info from filename
-				compile("S[-._ ]?(\\d{1,2})$", CASE_INSENSITIVE | UNICODE_CHARACTER_CLASS),
+				compile("S[-._ ]?(\\d{1,2})$", /*CASE_INSENSITIVE | */UNICODE_CHARACTER_CLASS),
 		compile("Season[-._ ]?(\\d{1,2})$", CASE_INSENSITIVE | UNICODE_CHARACTER_CLASS),
 		};
 

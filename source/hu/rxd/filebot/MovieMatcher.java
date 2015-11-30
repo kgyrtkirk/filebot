@@ -60,8 +60,10 @@ public class MovieMatcher implements ISectionVisitor {
 //		TreeSet< Result<IndexEntry<Movie>> > matches =new TreeSet<>();	
 		for (String q : searchKeys) {
 			String lowerCase = q.replaceAll("[._ ]+", " ").toLowerCase();
-			TreeSet<Result<IndexEntry<Movie>>> b1 = getMovieIndex().query(lowerCase,0.3);
-			Result<IndexEntry<Movie>> best = getMovieIndex().queryBest(lowerCase);
+			TreeSet<Result<IndexEntry<Movie>>> b1 = getMovieIndex().query(lowerCase,0.1);
+//			Result<IndexEntry<Movie>> best = getMovieIndex().queryBest(lowerCase);
+			
+			for (Result<IndexEntry<Movie>> best : b1) {
 			int year = best.getPayload().getObject().getYear();
 			if(year>1 && node.hasTag(MediaTagKey.year)){
 				int yy = Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
@@ -79,8 +81,10 @@ public class MovieMatcher implements ISectionVisitor {
 				{
 					System.out.println("-M-");
 					System.out.println(best);
+					System.out.println(best.getPayload().getLenientName());
 					System.out.println(node);
 				}
+			}
 			}
 		}
 		// System.out.println("asd");

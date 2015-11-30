@@ -57,13 +57,19 @@ public class SeriesMatch {
 public	static class KeyDistance {
 		private NormalizedStringDistance cs;
 		private String key;
+		private String normalizedKey;
 		public KeyDistance(String key) {
 			this.key = key;
+			normalizedKey=norm(key);
 			cs=new NormalizedLevenshtein();
 		}
 
+		private String norm(String s) {
+			return s.replaceAll("[- .]+", " ").toLowerCase();
+		}
+
 		public double distance(String o) {
-			return cs.distance(key, o);
+			return cs.distance(normalizedKey, norm(o));
 		}
 	}
 

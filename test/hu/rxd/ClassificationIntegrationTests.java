@@ -100,13 +100,64 @@ public class ClassificationIntegrationTests {
 	@Test
 	public void exp3() throws Exception {
 
-		Root root = basicSections(		"The.Expendables.3.2014.THEATRiCAL.720p.BluRay.DTS.x264.HuN-TRiNiTY","the.expendables.3.tc.720p-trinity.mkv");
+		Root root = basicSections("The.Expendables.3.2014.THEATRiCAL.720p.BluRay.DTS.x264.HuN-TRiNiTY","the.expendables.3.tc.720p-trinity.mkv");
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
 		assertEquals("The Expendables 3",leaf.getTag(MediaTagKey.movie).getValue());
 	}
 
+	@Test
+	public void hfo() throws Exception {
 
+		Root root = basicSections("Hawaii.Five-0.2010.The.Complete.S01.HDTV.XviD-HUN-SKH","Hawaii.Five-0.2010.S01E20.HDTV.XviD.HUN-SKH.avi");
+		DirectoryScanner.tagDecorator1(root);
+		ISection leaf = getLeaf(root);
+		assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series).getValue());
+	}
+	@Test
+	public void spa() throws Exception {
+
+		Root root = basicSections("Spartacus.COMPLETE.BDRIP.x264.Hun.Eng-Krissz","Spartacus.Blood.and.Sand.S01.BDRIP.x264.Hun.Eng-Krissz","Spartacus.Blood.and.Sand.S01E04.BDRIP.x264.Hun.Eng-Krissz.mp4");
+		DirectoryScanner.tagDecorator1(root);
+		ISection leaf = getLeaf(root);
+		System.out.println(leaf);
+		assertEquals("Spartacus Blood and Sand",leaf.getTag(MediaTagKey.series).getValue());
+	}
+	
+	@Test
+	public void hfo2() throws Exception {
+	Root root = basicSections("Hawaii.Five-0.S02.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN.avi");
+	DirectoryScanner.tagDecorator1(root);
+	ISection leaf = getLeaf(root);
+	assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series).getValue());
+	}
+	
+	@Test
+	public void spy() throws Exception {
+	Root root = basicSections("Spy.2015.Extended.Cut.BDRip.x264.HuN-HRT","hrt-spy.extended.cut.2015.bdrip.x264.mkv");
+	DirectoryScanner.tagDecorator1(root);
+	ISection leaf = getLeaf(root);
+	assertEquals("Spy",leaf.getTag(MediaTagKey.movie).getValue());
+	}
+	
+	@Test
+	public void a1976() throws Exception {
+	Root root = basicSections("Assault.on.Precinct.13.1976.DVDRip.XviD.Hun-JM","Assault.on.Precinct.13.1976.DVDRip.XviD.Hun-JM.avi");
+	DirectoryScanner.tagDecorator1(root);
+	ISection leaf = getLeaf(root);
+	assertEquals("Assault on Precinct 13",leaf.getTag(MediaTagKey.movie).getValue());
+	System.out.println(leaf);
+	assertEquals("Assault on Precinct 13 (1976)/Assault on Precinct 13 (1976).avi",leaf.getTag(MediaTagKey.movieOutput).getValue());
+	}
+	@Test
+	public void ff() throws Exception {
+	Root root = basicSections("Fantastic.Four.2015.RETAiL.BDRip.x264.Hungarian-nCORE","ncore-FF.mkv");
+	DirectoryScanner.tagDecorator1(root);
+	ISection leaf = getLeaf(root);
+	System.out.println(leaf);
+	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTagKey.movieOutput).getValue());
+	}
+	
 	private ISection getLeaf(Root root) {
 		ISection curr = root;
 		while (curr.getChildren().size() > 0) {

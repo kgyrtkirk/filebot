@@ -127,10 +127,10 @@ public class ScanBot {
 			.exclude(TypeTags.JUNK)
 			.run(root);;
 
-			System.out.println("mov+");
-			new BasicVisitorRunner(new PrintThem())
-			.having((MediaTagKey.movieOutput))
-				.run(root);;
+//			System.out.println("mov+");
+//			new BasicVisitorRunner(new PrintThem())
+//			.having((MediaTagKey.movieOutput))
+//				.run(root);;
 		
 		saveState(root);
 
@@ -145,7 +145,6 @@ public class ScanBot {
 		
 		new BasicVisitorRunner(new MiscDataClassifier()).run(root);
 		
-		new BasicVisitorRunner(new YearIdentifier()).run(root);
 
 		new BasicVisitorRunner(new MultipartClassifier()).run(root);
 
@@ -162,6 +161,7 @@ public class ScanBot {
 		
 		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
 		
+		new BasicVisitorRunner(new YearIdentifier()).run(root);
 
 		new BasicVisitorRunner(new SeriesDirParentPopulator())
 			.having(MediaTagKey.entry)
@@ -169,10 +169,10 @@ public class ScanBot {
 
 		
 		new BasicVisitorRunner(new MovieMatcher())
-		.having(MediaTagKey.isVideo)
-		.exclude(MediaTagKey.isJunk)
-		.exclude(MediaTagKey.isSeries)
-		.run(root);
+			.having(MediaTagKey.isVideo)
+			.exclude(MediaTagKey.isJunk)
+			.exclude(MediaTagKey.isSeries)
+			.run(root);
 		
 
 
@@ -194,12 +194,21 @@ public class ScanBot {
 			.exclude(MediaTagKey.isJunk)
 			.run(root);
 		
-		new BasicVisitorRunner(new MovieIdentifactor())
-			.having((MediaTagKey.canBeMovie))
-			.having((MediaTagKey.movie))
-			.exclude((MediaTagKey.canBeSeries))
-			.exclude(MediaTagKey.isJunk)
-			.run(root);
+		new BasicVisitorRunner(new MovieIdentifactor(true))
+		.having((MediaTagKey.canBeMovie))
+		.having((MediaTagKey.movie))
+		.exclude((MediaTagKey.canBeSeries))
+		.exclude((MediaTagKey.isSeries))
+		.exclude(MediaTagKey.isJunk)
+		.run(root);
+
+		new BasicVisitorRunner(new MovieIdentifactor(false))
+		.having(MediaTagKey.isVideo)
+		.exclude(MediaTagKey.movieOutput)
+		.exclude((MediaTagKey.canBeSeries))
+		.exclude((MediaTagKey.isSeries))
+		.exclude(MediaTagKey.isJunk)
+		.run(root);
 	}
 
 
