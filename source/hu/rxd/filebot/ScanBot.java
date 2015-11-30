@@ -98,6 +98,12 @@ public class ScanBot {
 		new BasicVisitorRunner(new MiscDataClassifier()).run(root);
 		
 		new BasicVisitorRunner(new YearIdentifier()).run(root);
+
+		new BasicVisitorRunner(new MultipartClassifier()).run(root);
+
+//		new SubtreeVis
+//		new BasicVisitorRunner(new DirTree()).run(root);
+		
 		
 		new BasicVisitorRunner(new MovieMatcher())
 		.having(TypeTags.VIDEO)
@@ -165,8 +171,10 @@ public class ScanBot {
 			.exclude(TypeTags.JUNK)
 			.run(root);
 		
+		System.out.println("N/A");
 		new BasicVisitorRunner(new PrintThem())
 		.exclude(new MediaTag(MediaTagKey.movieOutput))
+		.exclude(new MediaTag(MediaTagKey.seriesOutput))
 		.having(new MediaTag(MediaTagKey.isVideo))
 		.having(new MediaTag(MediaTagKey.entry))
 			.exclude(TypeTags.JUNK)

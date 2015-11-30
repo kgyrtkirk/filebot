@@ -10,5 +10,6 @@ public class TypeTags {
 	public static final MediaTag SUBTITLE = new MediaTag(MediaTagKey.isSubtitle);
 	public static final MediaTag ARCHIVE = new MediaTag(MediaTagKey.isArchive);
 	public static final MediaTag MISC = new MediaTag(MediaTagKey.misc);
+	public static final MediaTag PART = new MediaTag(MediaTagKey.part);
 
 }

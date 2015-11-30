@@ -22,5 +22,6 @@ public enum MediaTagKey {
 	extension, canBeMovie, movie, year, 
 	removed, isRoot, 
 	movieOutput,
+	part,
 	;
 }
