@@ -8,12 +8,13 @@ import java.util.Queue;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaSection.Root;
 import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagKey;
 
 public class BasicVisitorRunner {
 
 	private ISectionVisitor classifier;
-	private Collection<MediaTag> neededTags = new ArrayList<>();
-	private Collection<MediaTag> excludedTags = new ArrayList<>();
+	private Collection<MediaTagKey> neededTags = new ArrayList<>();
+	private Collection<MediaTagKey> excludedTags = new ArrayList<>();
 
 	public BasicVisitorRunner(ISectionVisitor junkClassifier) {
 		classifier = junkClassifier;
@@ -33,12 +34,12 @@ public class BasicVisitorRunner {
 	}
 
 	private boolean accepted(ISection node) {
-		for (MediaTag mediaTag : excludedTags) {
+		for (MediaTagKey mediaTag : excludedTags) {
 			if (node.hasTag(mediaTag)) {
 				return false;
 			}
 		}
-		for (MediaTag mediaTag : neededTags) {
+		for (MediaTagKey mediaTag : neededTags) {
 			if (!node.hasTag(mediaTag)) {
 				return false;
 			}
@@ -46,13 +47,25 @@ public class BasicVisitorRunner {
 		return true;
 	}
 
-	public BasicVisitorRunner having(MediaTag tag) {
+	public BasicVisitorRunner having(MediaTagKey tag) {
 		neededTags.add(tag);
 		return this;
 	}
 
-	public BasicVisitorRunner exclude(MediaTag tag) {
+	public BasicVisitorRunner exclude(MediaTagKey tag) {
 		excludedTags.add(tag);
+		return this;
+	}
+	
+	@Deprecated
+	public BasicVisitorRunner having(MediaTag tag) {
+		neededTags.add(tag.getKey());
+		return this;
+	}
+
+	@Deprecated
+	public BasicVisitorRunner exclude(MediaTag tag) {
+		excludedTags.add(tag.getKey());
 		return this;
 	}
 
