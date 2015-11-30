@@ -108,49 +108,49 @@ public class ScanBot {
 		
 		
 		new BasicVisitorRunner(new MovieMatcher())
-		.having(TypeTags.VIDEO)
-		.exclude(TypeTags.JUNK)
+		.having(MediaTagKey.isVideo)
+		.exclude(MediaTagKey.isJunk)
 		.run(root);
 		
 		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
 
 		new BasicVisitorRunner(new SeriesDirClassifier())
-			.having(TypeTags.DIRECTORY)
+			.having(MediaTagKey.dir)
 			.run(root);
 
 		new BasicVisitorRunner(new SeriesDirParentPopulator())
-			.having(TypeTags.ENTRY)
+			.having(MediaTagKey.entry)
 			.run(root);
 
 		
 		
 //		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
 		new BasicVisitorRunner(new SeriesMatcher())
-			.having(TypeTags.VIDEO)
-			.having(new MediaTag(MediaTagKey.episode))
-			.exclude(TypeTags.JUNK)
+			.having(MediaTagKey.isVideo)
+			.having(MediaTagKey.episode)
+			.exclude(MediaTagKey.isJunk)
 			.run(root);
 		
 		new BasicVisitorRunner(new SeriesIdentifactor())
-			.having(new MediaTag(MediaTagKey.canBeSeries))
-			.having(new MediaTag(MediaTagKey.season))
-			.having(new MediaTag(MediaTagKey.episode))
-			.having(new MediaTag(MediaTagKey.entry))
-			.exclude(new MediaTag(MediaTagKey.canBeMovie))
-			.exclude(TypeTags.JUNK)
+			.having((MediaTagKey.canBeSeries))
+			.having((MediaTagKey.season))
+			.having((MediaTagKey.episode))
+			.having((MediaTagKey.entry))
+			.exclude((MediaTagKey.canBeMovie))
+			.exclude(MediaTagKey.isJunk)
 			.run(root);
 		
 		new BasicVisitorRunner(new MovieIdentifactor())
-			.having(new MediaTag(MediaTagKey.canBeMovie))
-			.having(new MediaTag(MediaTagKey.movie))
-			.exclude(new MediaTag(MediaTagKey.canBeSeries))
-			.exclude(TypeTags.JUNK)
+			.having((MediaTagKey.canBeMovie))
+			.having((MediaTagKey.movie))
+			.exclude((MediaTagKey.canBeSeries))
+			.exclude(MediaTagKey.isJunk)
 			.run(root);
 
 		System.out.println("series AND movie (undecided):");
 		new BasicVisitorRunner(new PrintThem())
-		.having(new MediaTag(MediaTagKey.canBeMovie))
-		.having(new MediaTag(MediaTagKey.canBeSeries))
+		.having((MediaTagKey.canBeMovie))
+		.having((MediaTagKey.canBeSeries))
 			.run(root);;
 
 //		System.out.println("positive:");
@@ -161,30 +161,30 @@ public class ScanBot {
 		
 			
 		new BasicVisitorRunner(new OutputLinker(seriesOutputDir,MediaTagKey.seriesOutput))
-			.having(new MediaTag(MediaTagKey.seriesOutput))
-			.having(new MediaTag(MediaTagKey.isVideo))
-			.having(new MediaTag(MediaTagKey.entry))
+			.having((MediaTagKey.seriesOutput))
+			.having((MediaTagKey.isVideo))
+			.having((MediaTagKey.entry))
 			.exclude(TypeTags.JUNK)
 			.run(root);
 		new BasicVisitorRunner(new OutputLinker(movieOutputDir,MediaTagKey.movieOutput))
-			.having(new MediaTag(MediaTagKey.movieOutput))
-			.having(new MediaTag(MediaTagKey.isVideo))
-			.having(new MediaTag(MediaTagKey.entry))
+			.having((MediaTagKey.movieOutput))
+			.having((MediaTagKey.isVideo))
+			.having((MediaTagKey.entry))
 			.exclude(TypeTags.JUNK)
 			.run(root);
 		
 		System.out.println("N/A");
 		new BasicVisitorRunner(new PrintThem())
-		.exclude(new MediaTag(MediaTagKey.movieOutput))
-		.exclude(new MediaTag(MediaTagKey.seriesOutput))
-		.having(new MediaTag(MediaTagKey.isVideo))
-		.having(new MediaTag(MediaTagKey.entry))
+		.exclude((MediaTagKey.movieOutput))
+		.exclude((MediaTagKey.seriesOutput))
+		.having((MediaTagKey.isVideo))
+		.having((MediaTagKey.entry))
 			.exclude(TypeTags.JUNK)
 			.run(root);;
 
 			System.out.println("mov+");
 			new BasicVisitorRunner(new PrintThem())
-			.having(new MediaTag(MediaTagKey.movieOutput))
+			.having((MediaTagKey.movieOutput))
 				.run(root);;
 		
 		saveState(root);
