@@ -1,7 +1,6 @@
 package hu.rxd.filebot;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
@@ -11,23 +10,21 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
 
 import hu.rxd.filebot.classifiers.ExtensionClassifier;
 import hu.rxd.filebot.classifiers.JunkClassifier;
 import hu.rxd.filebot.classifiers.MiscDataClassifier;
 import hu.rxd.filebot.classifiers.MovieIdentifactor;
+import hu.rxd.filebot.classifiers.OutputLinker;
 import hu.rxd.filebot.classifiers.ReleasePrefixClassifier;
 import hu.rxd.filebot.classifiers.SeasonEpisodeClassifier;
 import hu.rxd.filebot.classifiers.SeriesDirClassifier;
 import hu.rxd.filebot.classifiers.SeriesDirParentPopulator;
 import hu.rxd.filebot.classifiers.SeriesIdentifactor;
 import hu.rxd.filebot.classifiers.SeriesMatcher;
-import hu.rxd.filebot.classifiers.OutputLinker;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaSection.Root;
-import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.BasicVisitorRunner;
@@ -162,6 +159,9 @@ public class ScanBot {
 		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
 		
 		new BasicVisitorRunner(new YearIdentifier()).run(root);
+		
+//		new BasicVisitorRunner(new NfoReader()).run(root);
+		
 
 		new BasicVisitorRunner(new SeriesDirParentPopulator())
 			.having(MediaTagKey.entry)

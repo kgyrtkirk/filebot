@@ -2,14 +2,17 @@ package hu.rxd.filebot.classifiers;
 
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.script.ScriptException;
 
+import com.cedarsoftware.util.io.JsonReader;
 import com.google.common.base.Function;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
@@ -30,6 +33,7 @@ import net.filebot.web.TMDbClient;
 
 public class MovieIdentifactor implements ISectionVisitor {
 
+	
 	private boolean polite;
 	static class ScoredResult {
 		public static final Comparator<ScoredResult> SCORE_COMPARATOR = new Comparator<ScoredResult>() {
@@ -55,8 +59,11 @@ public class MovieIdentifactor implements ISectionVisitor {
 			return result;
 		}
 	}
+	private Map<String,String> m;
 	public MovieIdentifactor(boolean polite) {
 		this.polite = polite;
+//		m=JsonReader.jsonToMaps(MovieIdentifactor.class.getResourceAsStream("norm.json"), new HashMap<String, Object>());
+
 		
 	}
 	@Override
@@ -128,6 +135,18 @@ public class MovieIdentifactor implements ISectionVisitor {
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
 
+		if(node.hasTag(MediaTagKey.year)){
+			final int y = Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
+			pq.removeIf(res -> {
+				if(y!=res.getPayload().getYear()){
+					System.out.println("purging res because: year: "+y+"!="+res.getPayload().getYear());
+					return true;
+				}
+				return false;
+				
+			});
+		}
+
 //		StringDistanceIndex<Movie, Function<Movie, String>> sdi = new StringDistanceIndex<>(results, new MovieMapper(), new MetricLCS());
 //		
 //		Result<Movie> best = sdi.queryBest(movieName.toLowerCase());
@@ -136,14 +155,14 @@ public class MovieIdentifactor implements ISectionVisitor {
 				break;
 			}
 			ScoredResult best = scoredResult;
-			if(node.hasTag(MediaTagKey.year)){
-				int y = Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
-				if(y!=best.getPayload().getYear()){
-					System.out.println("year: "+y+"!="+best.getPayload().getYear());
-					continue;
-				}
-			}
-		if(best.distance<0.01){
+//			if(node.hasTag(MediaTagKey.year)){
+//				int y = Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
+//				if(y!=best.getPayload().getYear()){
+//					System.out.println("year: "+y+"!="+best.getPayload().getYear());
+//					continue;
+//				}
+//			}
+		if(best.distance<0.01 || pq.size()==1){
 			
 			MediaBindingBean mbb = new MediaBindingBean(best.getPayload(),null,null);
 			ExpressionFormat	ef=new ExpressionFormat("{n} ({y})/{n} ({y})");

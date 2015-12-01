@@ -65,7 +65,9 @@ public	static class KeyDistance {
 		}
 
 		private String norm(String s) {
-			return s.replaceAll("[- .]+", " ").toLowerCase();
+			return s.replaceAll("[- .]+", " ")
+					.replaceAll("[’'\"]", "")
+					.toLowerCase();
 		}
 
 		public double distance(String o) {

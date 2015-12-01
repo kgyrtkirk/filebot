@@ -36,6 +36,15 @@ public class ClassificationIntegrationTests {
 	//
 	// }
 	
+	
+	public static ISection getLeaf(Root root) {
+		ISection curr = root;
+		while (curr.getChildren().size() > 0) {
+			curr = curr.getChildren().iterator().next();
+		}
+		return curr;
+	}
+	
 	public static MediaSection.Root basicSections(String... strings) {
 		Root r = new MediaSection.Root("/");
 		ISection s = r;
@@ -158,11 +167,5 @@ public class ClassificationIntegrationTests {
 	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTagKey.movieOutput).getValue());
 	}
 	
-	private ISection getLeaf(Root root) {
-		ISection curr = root;
-		while (curr.getChildren().size() > 0) {
-			curr = curr.getChildren().iterator().next();
-		}
-		return curr;
-	}
+	
 }
