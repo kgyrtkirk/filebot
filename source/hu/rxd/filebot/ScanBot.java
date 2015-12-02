@@ -160,7 +160,10 @@ public class ScanBot {
 		
 		new BasicVisitorRunner(new YearIdentifier()).run(root);
 		
-//		new BasicVisitorRunner(new NfoReader()).run(root);
+		new BasicVisitorRunner(new NfoReader())
+			.having(MediaTagKey.isNfo)
+			.having(MediaTagKey.entry)
+			.run(root);
 		
 
 		new BasicVisitorRunner(new SeriesDirParentPopulator())
