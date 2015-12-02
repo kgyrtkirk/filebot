@@ -22,10 +22,10 @@ public enum MediaTagKey {
 	
 //	seriesOutput, 
 //	extension,
-	canBeMovie,
-	movie, 
+//	canBeMovie,
+//	movie, 
 	
-	removed, isRoot, 
+	removed,isRoot, 
 //	movieOutput,
 	part,
 	isSeries
@@ -34,6 +34,7 @@ public enum MediaTagKey {
 	// FIXME: looks like its mere existence is to prioritize searchKeys...f
 	@Deprecated
 	public	static final MediaTagKey2<Boolean>		canBeSeries =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Boolean>		canBeMovie =new MediaTagKey2<>();
 	
 	public	static final MediaTagKey2<Boolean>	isVideo =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isNfo =new MediaTagKey2<>();
@@ -57,5 +58,6 @@ public enum MediaTagKey {
 	public	static final MediaTagKey2<Integer>	season =new MediaTagKey2<>();
 
 	public	static final MediaTagKey2<String>	seriesOutput =new MediaTagKey2<>();
+	public	static final MediaTagKey2<String>	movie =new MediaTagKey2<>();
 	public	static final MediaTagKey2<String>	movieOutput =new MediaTagKey2<>();
 }

@@ -99,7 +99,7 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("d1","movies","Daddy.or.Mommy.2015.PROPER.RETAiL.DVDRip.x264.HuN-No1","dom.dvdrip.x264-no1.mkv");
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("Daddy or Mommy",leaf.getTag(MediaTagKey.movie).getValue());
+		assertEquals("Daddy or Mommy",leaf.getTag(MediaTagKey.movie));
 //		assertEquals("3",leaf.getTag(MediaTagKey.season).getValue());
 //		assertEquals("Psych",leaf.getTag(MediaTagKey.series).getValue());
 //		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
@@ -112,7 +112,7 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("The.Expendables.3.2014.THEATRiCAL.720p.BluRay.DTS.x264.HuN-TRiNiTY","the.expendables.3.tc.720p-trinity.mkv");
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("The Expendables 3",leaf.getTag(MediaTagKey.movie).getValue());
+		assertEquals("The Expendables 3",leaf.getTag(MediaTagKey.movie));
 	}
 
 	@Test
@@ -146,7 +146,7 @@ public class ClassificationIntegrationTests {
 	Root root = basicSections("Spy.2015.Extended.Cut.BDRip.x264.HuN-HRT","hrt-spy.extended.cut.2015.bdrip.x264.mkv");
 	DirectoryScanner.tagDecorator1(root);
 	ISection leaf = getLeaf(root);
-	assertEquals("Spy",leaf.getTag(MediaTagKey.movie).getValue());
+	assertEquals("Spy",leaf.getTag(MediaTagKey.movie));
 	}
 	
 	@Test
@@ -154,7 +154,7 @@ public class ClassificationIntegrationTests {
 	Root root = basicSections("Assault.on.Precinct.13.1976.DVDRip.XviD.Hun-JM","Assault.on.Precinct.13.1976.DVDRip.XviD.Hun-JM.avi");
 	DirectoryScanner.tagDecorator1(root);
 	ISection leaf = getLeaf(root);
-	assertEquals("Assault on Precinct 13",leaf.getTag(MediaTagKey.movie).getValue());
+	assertEquals("Assault on Precinct 13",leaf.getTag(MediaTagKey.movie));
 	System.out.println(leaf);
 	assertEquals("Assault on Precinct 13 (1976)/Assault on Precinct 13 (1976).avi",leaf.getTag(MediaTagKey.movieOutput));
 	}
