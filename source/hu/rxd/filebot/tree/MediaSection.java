@@ -22,8 +22,6 @@ public class MediaSection {
 		File getAbsoluteFile();
 		String getOriginalName();
 
-		@Deprecated
-		void tag(MediaTag tag);
 		void addTag(MediaTag tag);
 
 		java.util.Collection<ISection> getChildren();
@@ -92,7 +90,7 @@ public class MediaSection {
 			ISection section=children.get(name);
 			if(section==null){
 				children.put(name, section = new Collection(this,name));
-				section.tag(TypeTags.DIRECTORY);
+				section.addTag(TypeTags.DIRECTORY);
 			}
 			return section;
 		}
@@ -102,14 +100,9 @@ public class MediaSection {
 			ISection section=children.get(name);
 			if(section==null){
 				children.put(name, section = new Collection(this,name));
-				section.tag(TypeTags.ENTRY);
+				section.addTag(TypeTags.ENTRY);
 			}
 			return section;
-		}
-		@Override
-		public void tag(MediaTag tag) {
-			tags.put(tag.getKey(), tag);
-			
 		}
 		@Override
 		public java.util.Collection<ISection> getChildren() {
@@ -158,7 +151,7 @@ public class MediaSection {
 		}
 		@Override
 		public void addTag(MediaTag tag) {
-			tag(tag);
+			tags.put(tag.getKey(), tag);
 		}
 		@Override
 		public MediaTag getTag(MediaTagKey key) {
@@ -194,12 +187,12 @@ public class MediaSection {
 
 		public Root(String path) {
 			super(null,path);
-			super.tag(TypeTags.DIRECTORY);
-			super.tag(new MediaTag(MediaTagKey.isRoot));
+			super.addTag(TypeTags.DIRECTORY);
+			super.addTag(new MediaTag(MediaTagKey.isRoot));
 			parent=this;
 		}
 		@Override
-		public void tag(MediaTag tag) {
+		public void addTag(MediaTag tag) {
 			System.out.println("ignoring tag on root: "+tag);
 		}
 		public File getAbsoluteFile() {

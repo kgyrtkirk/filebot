@@ -19,13 +19,13 @@ public class ReleasePrefixClassifier implements ISectionVisitor {
 			String nCand = np[0];
 			MediaTag tag = new MediaTag(MediaTagKey.releasePrefix,nCand);
 			if(pCand.equalsIgnoreCase(nCand)){
-				node.tag(tag);
+				node.addTag(tag);
 				node.addNormalization(new PrefixRemoval(tag, nCand));
 				return;
 			}
 			pCand=pCand.replaceAll("[a-z]", "");
 			if(pCand.equalsIgnoreCase(nCand)) {
-				node.tag(tag);
+				node.addTag(tag);
 				node.addNormalization(new PrefixRemoval(tag, nCand));
 				return;
 			}

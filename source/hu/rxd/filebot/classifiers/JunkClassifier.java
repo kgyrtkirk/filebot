@@ -12,7 +12,7 @@ public class JunkClassifier implements ISectionVisitor {
 	@Override
 	public void visit(ISection node) {
 		if(isJunk(node)){
-			node.tag(TypeTags.JUNK);
+			node.addTag(TypeTags.JUNK);
 		}
 	}
 
