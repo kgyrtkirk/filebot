@@ -5,15 +5,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey2;
+import hu.rxd.filebot.tree.MediaTagType;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class OutputLinker implements ISectionVisitor {
 
 	private String outputDir;
-	private MediaTagKey2<String> tag;
+	private MediaTagType<String> tag;
 
-	public OutputLinker(String outputDir, MediaTagKey2<String> seriesoutput) {
+	public OutputLinker(String outputDir, MediaTagType<String> seriesoutput) {
 		this.outputDir = outputDir;
 		this.tag = seriesoutput;
 	}

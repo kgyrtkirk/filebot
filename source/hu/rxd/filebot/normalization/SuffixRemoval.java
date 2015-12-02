@@ -1,13 +1,13 @@
 package hu.rxd.filebot.normalization;
 
-import hu.rxd.filebot.tree.MediaTagKey2;
+import hu.rxd.filebot.tree.MediaTagType;
 
 public class SuffixRemoval  implements INormalization{
 
 	private String suffix;
-	private MediaTagKey2<?> tag2;
+	private MediaTagType<?> tag2;
 
-	public SuffixRemoval(MediaTagKey2<?> tag, String suffix) {
+	public SuffixRemoval(MediaTagType<?> tag, String suffix) {
 		tag2 = tag;
 		this.suffix = suffix;
 	}

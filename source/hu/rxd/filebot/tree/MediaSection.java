@@ -18,8 +18,8 @@ public class MediaSection {
 		String getOriginalName();
 
 		
-		public <T>void addTag1(MediaTagKey2<T> key,T value);
-		public <T>T getTag(MediaTagKey2<T> key);
+		public <T>void addTag1(MediaTagType<T> key,T value);
+		public <T>T getTag(MediaTagType<T> key);
 
 		java.util.Collection<ISection> getChildren();
 
@@ -30,11 +30,11 @@ public class MediaSection {
 		ISection getParent();
 
 		
-		public <T>boolean hasTag1(MediaTagKey2<T> key);
+		public <T>boolean hasTag1(MediaTagType<T> key);
 
 		void addNormalization(INormalization suffixRemoval);
-		void addSearchKey(MediaTagKey2<?> tag, String head);
-		java.util.Collection<String> getSearchKeys(MediaTagKey2<?> series);
+		void addSearchKey(MediaTagType<?> tag, String head);
+		java.util.Collection<String> getSearchKeys(MediaTagType<?> series);
 		Path getPath();
 		
 	}
@@ -58,10 +58,10 @@ public class MediaSection {
 		protected String path;
 		protected Collection parent;
 		private Map<String,ISection> children=new HashMap<>();
-		private Map<MediaTagKey2,Object> tags2=new HashMap<>();
+		private Map<MediaTagType,Object> tags2=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
-		private Map<MediaTagKey2<?>, List<String>> searchKeys =new HashMap<>();
+		private Map<MediaTagType<?>, List<String>> searchKeys =new HashMap<>();
 		
 
 		Collection(Collection parent, String name) {
@@ -131,20 +131,20 @@ public class MediaSection {
 		}
 		
 		@Override
-		public <T>void addTag1(MediaTagKey2<T> key,T value){
+		public <T>void addTag1(MediaTagType<T> key,T value){
 			tags2.put(key, value);
 		}
 		@Override
-		public <T>T getTag(MediaTagKey2<T> key){
+		public <T>T getTag(MediaTagType<T> key){
 			return (T)tags2.get(key);
 		}
 		@Override
-		public <T>boolean hasTag1(MediaTagKey2<T> key){
+		public <T>boolean hasTag1(MediaTagType<T> key){
 			return tags2.containsKey(key);
 		}
 		
 		@Override
-		public void addSearchKey(MediaTagKey2<?> tag, String key) {
+		public void addSearchKey(MediaTagType<?> tag, String key) {
 			List<String> li = searchKeys.get(tag);
 			if(li==null){
 				searchKeys.put(tag,li=new ArrayList<>());
@@ -152,7 +152,7 @@ public class MediaSection {
 			li.add(generalTrimmer(key));
 		}
 		@Override
-		public java.util.Collection<String> getSearchKeys(MediaTagKey2<?> tag) {
+		public java.util.Collection<String> getSearchKeys(MediaTagType<?> tag) {
 			List<String> li = searchKeys.get(tag);
 			if(li==null){
 				return new ArrayList<>();

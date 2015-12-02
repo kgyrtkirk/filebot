@@ -7,13 +7,13 @@ import java.util.Queue;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaSection.Root;
-import hu.rxd.filebot.tree.MediaTagKey2;
+import hu.rxd.filebot.tree.MediaTagType;
 
 public class BasicVisitorRunner {
 
 	private ISectionVisitor classifier;
-	private Collection<MediaTagKey2<?>> neededTags2= new ArrayList<>();
-	private Collection<MediaTagKey2<?>> excludedTags2= new ArrayList<>();
+	private Collection<MediaTagType<?>> neededTags2= new ArrayList<>();
+	private Collection<MediaTagType<?>> excludedTags2= new ArrayList<>();
 
 	public BasicVisitorRunner(ISectionVisitor junkClassifier) {
 		classifier = junkClassifier;
@@ -33,12 +33,12 @@ public class BasicVisitorRunner {
 	}
 
 	private boolean accepted(ISection node) {
-		for (MediaTagKey2<?> mediaTag : excludedTags2) {
+		for (MediaTagType<?> mediaTag : excludedTags2) {
 			if (node.hasTag1(mediaTag)) {
 				return false;
 			}
 		}
-		for (MediaTagKey2<?> mediaTag : neededTags2) {
+		for (MediaTagType<?> mediaTag : neededTags2) {
 			if (!node.hasTag1(mediaTag)) {
 				return false;
 			}
@@ -46,12 +46,12 @@ public class BasicVisitorRunner {
 		return true;
 	}
 
-	public BasicVisitorRunner having(MediaTagKey2<?> tag) {
+	public BasicVisitorRunner having(MediaTagType<?> tag) {
 		neededTags2.add(tag);
 		return this;
 	}
 
-	public BasicVisitorRunner exclude(MediaTagKey2<?> tag) {
+	public BasicVisitorRunner exclude(MediaTagType<?> tag) {
 		excludedTags2.add(tag);
 		return this;
 	}
