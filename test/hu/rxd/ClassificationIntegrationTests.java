@@ -64,8 +64,8 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("The Good Wife S05", "20 - The Deep Web.mkv");
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("20",leaf.getTag(MediaTagKey.episode).getValue());
-		assertEquals("5",leaf.getTag(MediaTagKey.season).getValue());
+		assertEquals(20,leaf.getTag(MediaTagKey.episode));
+		assertEquals(5,leaf.getTag(MediaTagKey.season));
 		assertEquals("The Good Wife",leaf.getTag(MediaTagKey.series).getValue());
 //		assertEquals("20",leaf.getTagByName("series").getValue());
 
@@ -76,8 +76,8 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("Empire S01 1080p", "1x10 - Sins Of The Father 1080p Bluray.mkv");
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("10",leaf.getTag(MediaTagKey.episode).getValue());
-		assertEquals("1",leaf.getTag(MediaTagKey.season).getValue());
+		assertEquals(10,leaf.getTag(MediaTagKey.episode));
+		assertEquals(1,leaf.getTag(MediaTagKey.season));
 		assertEquals("Empire",leaf.getTag(MediaTagKey.series).getValue());
 	}
 
@@ -87,8 +87,8 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("Psych.S03.HUN.DVDRip.XviD-HSF","Psych.S03E15.REPACK.HUN.DVDRip.XviD-HSF","hsf-psych-rpck-315.avi");
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("15",leaf.getTag(MediaTagKey.episode).getValue());
-		assertEquals("3",leaf.getTag(MediaTagKey.season).getValue());
+		assertEquals(15,leaf.getTag(MediaTagKey.episode));
+		assertEquals(3,leaf.getTag(MediaTagKey.season));
 		assertEquals("Psych",leaf.getTag(MediaTagKey.series).getValue());
 		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
 //		assertEquals(expected, actual);

@@ -61,8 +61,8 @@ public class SeriesIdentifactor implements ISectionVisitor {
 		KeyDistance distanceFn = new KeyDistance(seriesTag.getValue());
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
-		Integer	episode=Integer.parseInt(node.getTag(MediaTagKey.episode).getValue());
-		Integer	season=Integer.parseInt(node.getTag(MediaTagKey.season).getValue());
+		Integer	episode=node.getTag(MediaTagKey.episode);
+		Integer	season=node.getTag(MediaTagKey.season);
 		for (ScoredResult res : pq) {
 			if(res.distance>0.1){
 				continue;
