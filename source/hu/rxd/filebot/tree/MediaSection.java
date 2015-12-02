@@ -210,7 +210,7 @@ public class MediaSection {
 		public Root(String path) {
 			super(null,path);
 			super.addTag1(MediaTagKey.dir,true);
-			super.addTag(new MediaTag(MediaTagKey.isRoot));
+			super.addTag1(MediaTagKey.isRoot,true);
 			parent=this;
 		}
 		@Override

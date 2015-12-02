@@ -82,7 +82,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 			}
 			doSearch(node, db, language, movieName);
 		}else{
-			if(!node.getParent().hasTag(MediaTagKey.isRoot))
+			if(!node.getParent().hasTag1(MediaTagKey.isRoot))
 				if(doSearch(node, db, language, node.getParent().getName())){
 					return;
 				}

@@ -19,7 +19,7 @@ public class SeriesDirByVote implements ISectionVisitor {
 			}
 		}
 		if(vCnt>3 || ch.size()>10){
-			node.addTag(new MediaTag(MediaTagKey.isSeries));
+			node.addTag1(MediaTagKey.isSeries,true);
 		}
 
 	}

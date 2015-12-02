@@ -23,7 +23,7 @@ public class FileTreeWalker implements ISectionVisitor {
 				}
 			}
 		}else{
-			node.addTag(new MediaTag(MediaTagKey.removed));
+			node.addTag1(MediaTagKey.removed,true);
 		}
 	}
 }

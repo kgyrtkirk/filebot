@@ -45,7 +45,7 @@ public class MovieMatcher implements ISectionVisitor {
 		List<String> searchKeys = new ArrayList<>();
 
 		
-		if(!node.getParent().hasTag(MediaTagKey.isRoot)){
+		if(!node.getParent().hasTag1(MediaTagKey.isRoot)){
 			if(node.getParent().hasTag1(MediaTagKey.year)){
 				searchKeys.add(node.getParent().getName()+ " "+node.getParent().getTag(MediaTagKey.year));
 			}
@@ -53,7 +53,7 @@ public class MovieMatcher implements ISectionVisitor {
 		if(node.hasTag1(MediaTagKey.year)){
 			searchKeys.add(node.getName()+ " "+node.getTag(MediaTagKey.year));
 		}
-		if(!node.getParent().hasTag(MediaTagKey.isRoot)){
+		if(!node.getParent().hasTag1(MediaTagKey.isRoot)){
 			searchKeys.add(node.getParent().getName());
 		}
 		searchKeys.add(node.getName());
