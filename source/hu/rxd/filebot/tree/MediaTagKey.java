@@ -21,7 +21,7 @@ public enum MediaTagKey {
 	
 	
 	seriesOutput, 
-	extension,
+//	extension,
 	canBeMovie,
 	movie, 
 	
@@ -31,6 +31,8 @@ public enum MediaTagKey {
 	isSeries
 	;
 	
+	// FIXME: looks like its mere existence is to prioritize searchKeys...f
+	@Deprecated
 	public	static final MediaTagKey2<Boolean>		canBeSeries =new MediaTagKey2<>();
 	
 	public	static final MediaTagKey2<Boolean>	isVideo =new MediaTagKey2<>();
@@ -43,6 +45,7 @@ public enum MediaTagKey {
 	public	static final MediaTagKey2<Boolean>	entry =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	dir =new MediaTagKey2<>();
 
+	public	static final MediaTagKey2<String>	extension =new MediaTagKey2<>();
 	public	static final MediaTagKey2<String>	releasePrefix =new MediaTagKey2<>();
 	
 	public	static final MediaTagKey2<Integer>	year =new MediaTagKey2<>();

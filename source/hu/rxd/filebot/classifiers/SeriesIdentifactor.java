@@ -79,7 +79,7 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
 				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
 				String a = ef.format(mbb);
-				a+="."+node.getTag(MediaTagKey.extension).getValue();
+				a+="."+node.getTag(MediaTagKey.extension);
 				Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
 				a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
 				node.addTag(new MediaTag(MediaTagKey.seriesOutput,a));

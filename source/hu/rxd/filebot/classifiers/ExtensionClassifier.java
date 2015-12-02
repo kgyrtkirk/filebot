@@ -34,7 +34,7 @@ public class ExtensionClassifier implements ISectionVisitor {
 	private void removeExt(ISection node, MediaTagKey2<Boolean> isvideo) {
 		node.addTag1(isvideo,true);
 		String ext = node.getName().substring(node.getName().lastIndexOf(".")+1);
-		node.addTag(new MediaTag(MediaTagKey.extension,ext));
+		node.addTag1(MediaTagKey.extension,ext);
 		node.addNormalization(new SuffixRemoval(isvideo,ext));
 	}
 
