@@ -2,10 +2,8 @@ package hu.rxd.filebot.classifiers;
 
 import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.MediaTagKey2;
-import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.MediaTypes;
 

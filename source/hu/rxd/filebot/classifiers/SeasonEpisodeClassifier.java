@@ -3,9 +3,7 @@ package hu.rxd.filebot.classifiers;
 import java.util.List;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
-import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.media.SmartSeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher;

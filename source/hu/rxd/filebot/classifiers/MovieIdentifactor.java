@@ -2,7 +2,6 @@ package hu.rxd.filebot.classifiers;
 
 import java.io.IOException;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -13,24 +12,14 @@ import java.util.stream.Collectors;
 
 import javax.script.ScriptException;
 
-import com.cedarsoftware.util.io.JsonReader;
-import com.google.common.base.Function;
-
-import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.SeriesMatch.KeyDistance;
-import hu.rxd.filebot.classifiers.SeriesIdentifactor.ScoredResult;
-import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTagKey;
-import hu.rxd.filebot.tree.MediaTagKey2;
 import hu.rxd.filebot.visitor.ISectionVisitor;
-import hu.rxd.sdi.StringDistanceIndex;
-import hu.rxd.sdi.StringDistanceIndex.Result;
-import info.debatty.java.stringsimilarity.MetricLCS;
 import net.filebot.WebServices;
 import net.filebot.format.ExpressionFormat;
 import net.filebot.format.MediaBindingBean;
 import net.filebot.web.Movie;
-import net.filebot.web.SearchResult;
 import net.filebot.web.TMDbClient;
 
 public class MovieIdentifactor implements ISectionVisitor {

@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.MediaTagKey2;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 

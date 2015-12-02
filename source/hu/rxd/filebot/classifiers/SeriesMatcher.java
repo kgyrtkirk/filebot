@@ -7,14 +7,10 @@ import java.util.PriorityQueue;
 
 import hu.rxd.filebot.SeriesMatch;
 import hu.rxd.filebot.SeriesMatch.MatchResult;
-import hu.rxd.filebot.tree.MediaSection;
-import hu.rxd.filebot.tree.MediaTag;
-import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.similarity.SeriesNameMatcher;
-import sun.reflect.annotation.TypeAnnotation.TypeAnnotationTarget;
 
 public class SeriesMatcher implements ISectionVisitor {
 

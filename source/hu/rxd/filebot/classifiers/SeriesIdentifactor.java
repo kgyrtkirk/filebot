@@ -9,19 +9,14 @@ import java.util.PriorityQueue;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.jsoup.select.Collector;
-
-import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.SeriesMatch.KeyDistance;
-import hu.rxd.filebot.classifiers.SeriesIdentifactor.ScoredResult;
-import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.WebServices;
 import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
 import net.filebot.format.ExpressionFormat;
 import net.filebot.format.MediaBindingBean;
-import net.filebot.util.FileUtilities;
 import net.filebot.web.Episode;
 import net.filebot.web.SearchResult;
 import net.filebot.web.SortOrder;

@@ -3,18 +3,11 @@ package hu.rxd.filebot.tree;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import com.sun.media.jfxmedia.Media;
 
 import hu.rxd.filebot.normalization.INormalization;
-import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaSection.Root;
 
 public class MediaSection {
 
@@ -24,8 +17,6 @@ public class MediaSection {
 		File getAbsoluteFile();
 		String getOriginalName();
 
-		@Deprecated
-		void addTag(MediaTag tag);
 		
 		public <T>void addTag1(MediaTagKey2<T> key,T value);
 		public <T>T getTag(MediaTagKey2<T> key);
@@ -38,16 +29,10 @@ public class MediaSection {
 
 		ISection getParent();
 
-		@Deprecated
-		MediaTag getTagByName(String string);
-		@Deprecated
-		boolean hasTag(MediaTag junk);
 		
-		boolean hasTag(MediaTagKey junk);
 		public <T>boolean hasTag1(MediaTagKey2<T> key);
 
 		void addNormalization(INormalization suffixRemoval);
-		MediaTag getTag(MediaTagKey series);
 		void addSearchKey(MediaTagKey2<?> tag, String head);
 		java.util.Collection<String> getSearchKeys(MediaTagKey2<?> series);
 		Path getPath();
@@ -73,7 +58,6 @@ public class MediaSection {
 		protected String path;
 		protected Collection parent;
 		private Map<String,ISection> children=new HashMap<>();
-		private Map<MediaTagKey,MediaTag> tags=new HashMap<>();
 		private Map<MediaTagKey2,Object> tags2=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
@@ -121,14 +105,10 @@ public class MediaSection {
 		public ISection getParent() {
 			return parent;
 		}
-		@Override
-		public boolean hasTag(MediaTag junk) {
-			return tags.containsKey(junk.getKey());
-		}
 
 		@Override
 		public String toString() {
-			return String.format("%s ; %s; tags: %s", normalizedName,path,tags);
+			return String.format("%s ; %s; tags: %s", normalizedName,path,tags2);
 		}
 		@Override
 		public void addNormalization(INormalization suffixRemoval) {
@@ -149,18 +129,6 @@ public class MediaSection {
 			c=c.replaceAll("[.\\-_ ]+$", "");
 			return c;
 		}
-		@Override
-		public MediaTag getTagByName(String string) {
-			return (MediaTag)tags.get(MediaTagKey.valueOf(string));
-		}
-		@Override
-		public boolean hasTag(MediaTagKey junk) {
-			return tags.get(junk)!=null;
-		}
-		@Override
-		public void addTag(MediaTag tag) {
-			tags.put(tag.getKey(), tag);
-		}
 		
 		@Override
 		public <T>void addTag1(MediaTagKey2<T> key,T value){
@@ -175,10 +143,6 @@ public class MediaSection {
 			return tags2.containsKey(key);
 		}
 		
-		@Override
-		public MediaTag getTag(MediaTagKey key) {
-			return (MediaTag) tags.get(key);
-		}
 		@Override
 		public void addSearchKey(MediaTagKey2<?> tag, String key) {
 			List<String> li = searchKeys.get(tag);
@@ -212,10 +176,6 @@ public class MediaSection {
 			super.addTag1(MediaTagKey.dir,true);
 			super.addTag1(MediaTagKey.isRoot,true);
 			parent=this;
-		}
-		@Override
-		public void addTag(MediaTag tag) {
-			System.out.println("ignoring tag on root: "+tag);
 		}
 		public File getAbsoluteFile() {
 			return new File(path);
