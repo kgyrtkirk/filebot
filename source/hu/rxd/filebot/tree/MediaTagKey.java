@@ -8,7 +8,7 @@ public enum MediaTagKey {
 //	entry,
 //	isVideo,
 //	isNfo,
-	isJunk,
+//	isJunk,
 //	isSubtitle,
 //	isArchive,
 	misc,
@@ -33,7 +33,7 @@ public enum MediaTagKey {
 	;
 	public	static final MediaTagKey2<Boolean>	isVideo =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isNfo =new MediaTagKey2<>();
-//	public	static final MediaTagKey2<Boolean>	isJunk =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Boolean>	isJunk =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isSubtitle =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isArchive =new MediaTagKey2<>();
 //	public	static final MediaTagKey2<Boolean>	misc =new MediaTagKey2<>();

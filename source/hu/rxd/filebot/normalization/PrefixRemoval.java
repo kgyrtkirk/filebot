@@ -7,7 +7,7 @@ public class PrefixRemoval implements INormalization {
 
 	private MediaTag tag;
 	private String suffix;
-	private MediaTagKey2<String> tag2;
+	private MediaTagKey2<?> tag2;
 
 
 
@@ -16,7 +16,7 @@ public class PrefixRemoval implements INormalization {
 		this.suffix = suffix;
 	}
 
-	public PrefixRemoval(MediaTagKey2<String> tag	, String prefix) {
+	public PrefixRemoval(MediaTagKey2<?> tag	, String prefix) {
 		tag2 = tag;
 		suffix = prefix;
 	}

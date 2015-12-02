@@ -17,6 +17,7 @@ public class BasicVisitorRunner {
 	private Collection<MediaTagKey> neededTags = new ArrayList<>();
 	private Collection<MediaTagKey> excludedTags = new ArrayList<>();
 	private Collection<MediaTagKey2<?>> neededTags2= new ArrayList<>();
+	private Collection<MediaTagKey2<?>> excludedTags2= new ArrayList<>();
 
 	public BasicVisitorRunner(ISectionVisitor junkClassifier) {
 		classifier = junkClassifier;
@@ -38,6 +39,11 @@ public class BasicVisitorRunner {
 	private boolean accepted(ISection node) {
 		for (MediaTagKey mediaTag : excludedTags) {
 			if (node.hasTag(mediaTag)) {
+				return false;
+			}
+		}
+		for (MediaTagKey2<?> mediaTag : excludedTags2) {
+			if (node.hasTag1(mediaTag)) {
 				return false;
 			}
 		}
@@ -78,6 +84,11 @@ public class BasicVisitorRunner {
 
 	public BasicVisitorRunner having(MediaTagKey2<?> tag) {
 		neededTags2.add(tag);
+		return this;
+	}
+
+	public BasicVisitorRunner exclude(MediaTagKey2<?> tag) {
+		excludedTags2.add(tag);
 		return this;
 	}
 

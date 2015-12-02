@@ -106,13 +106,13 @@ public class ScanBot {
 			.having((MediaTagKey.seriesOutput))
 			.having((MediaTagKey.isVideo))
 			.having((MediaTagKey.entry))
-			.exclude(TypeTags.JUNK)
+			.exclude(MediaTagKey.isJunk)
 			.run(root);
 		new BasicVisitorRunner(new OutputLinker(movieOutputDir,MediaTagKey.movieOutput))
 			.having((MediaTagKey.movieOutput))
 			.having((MediaTagKey.isVideo))
 			.having((MediaTagKey.entry))
-			.exclude(TypeTags.JUNK)
+			.exclude(MediaTagKey.isJunk)
 			.run(root);
 		
 		System.out.println("N/A");
@@ -121,7 +121,7 @@ public class ScanBot {
 		.exclude((MediaTagKey.seriesOutput))
 		.having((MediaTagKey.isVideo))
 		.having((MediaTagKey.entry))
-			.exclude(TypeTags.JUNK)
+			.exclude(MediaTagKey.isJunk)
 			.run(root);;
 
 //			System.out.println("mov+");

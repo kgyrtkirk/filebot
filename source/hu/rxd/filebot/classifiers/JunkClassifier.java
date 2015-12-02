@@ -12,24 +12,24 @@ public class JunkClassifier implements ISectionVisitor {
 	@Override
 	public void visit(ISection node) {
 		if(isJunk(node)){
-			node.addTag(TypeTags.JUNK);
+			node.addTag1(MediaTagKey.isJunk,true);
 		}
 	}
 
 	private boolean isJunk(ISection node) {
 		String n = node.getName();
 		if (n.startsWith("sample-") ){
-			node.addNormalization(new PrefixRemoval(TypeTags.JUNK, "sample-"));
+			node.addNormalization(new PrefixRemoval(MediaTagKey.isJunk, "sample-"));
 			return true;
 		}
 		if (n.endsWith("-sample") ){
-			node.addNormalization(new SuffixRemoval(TypeTags.JUNK, "-sample"));
+			node.addNormalization(new SuffixRemoval(MediaTagKey.isJunk, "-sample"));
 			return true;
 		}
 		if (node.getName().equalsIgnoreCase("sample") ){
 			return true;
 		}
-		if(node.getParent().hasTag(MediaTagKey.isJunk)){
+		if(node.getParent().hasTag1(MediaTagKey.isJunk)){
 			return true;
 		}
 		return false;
