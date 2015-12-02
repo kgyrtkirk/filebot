@@ -28,14 +28,14 @@ public class SeriesMatcher implements ISectionVisitor {
 		if(sn!=null)
 			searchKeys.add(sn);
 		ISection parent = node.getParent();
-		if(parent.hasTag(MediaTagKey.canBeSeries)){
+		if(parent.hasTag1(MediaTagKey.canBeSeries)){
 			sn = seriesNameMatcher.matchByEpisodeIdentifier(parent.getName());
 			if(sn!=null)
 				searchKeys.add(sn);
 			searchKeys.add(parent.getName());
 		}
 		searchKeys.addAll(node.getSearchKeys(MediaTagKey.series));
-		if(parent.hasTag(MediaTagKey.canBeSeries)){
+		if(parent.hasTag1(MediaTagKey.canBeSeries)){
 			searchKeys.add(parent.getName());
 		}
 
@@ -47,7 +47,7 @@ public class SeriesMatcher implements ISectionVisitor {
 		}
 		MatchResult best = results.peek();
 		if(best.distance < 0.1){
-			node.addTag(new MediaTag(MediaTagKey.canBeSeries));
+			node.addTag1(MediaTagKey.canBeSeries,true);
 			node.addTag1(MediaTagKey.series,best.result.getLenientName());
 		}else{
 			System.out.println("---");

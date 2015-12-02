@@ -19,7 +19,6 @@ public enum MediaTagKey {
 //	season,
 //	episode,
 	
-	canBeSeries,
 	
 	seriesOutput, 
 	extension,
@@ -31,6 +30,9 @@ public enum MediaTagKey {
 	part,
 	isSeries
 	;
+	
+	public	static final MediaTagKey2<Boolean>		canBeSeries =new MediaTagKey2<>();
+	
 	public	static final MediaTagKey2<Boolean>	isVideo =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isNfo =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isJunk =new MediaTagKey2<>();
