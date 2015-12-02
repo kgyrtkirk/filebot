@@ -25,7 +25,7 @@ public class YearIdentifier implements ISectionVisitor {
 		Matcher m = pat.matcher(n);
 		if(m.find()){
 			node.addTag1(MediaTagKey.year,Integer.parseInt(m.group(1)));
-			node.addNormalization(new SuffixRemoval(TypeTags.MISC, m.group(0)));
+			node.addNormalization(new SuffixRemoval(MediaTagKey.year, m.group(0)));
 		}
 		if(node.getParent().hasTag1(MediaTagKey.year)){
 			int pt = node.getParent().getTag(MediaTagKey.year);

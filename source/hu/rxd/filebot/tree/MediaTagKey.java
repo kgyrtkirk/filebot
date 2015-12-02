@@ -11,7 +11,7 @@ public enum MediaTagKey {
 //	isJunk,
 //	isSubtitle,
 //	isArchive,
-	misc,
+//	misc,
 	
 //	releasePrefix,
 	
@@ -36,7 +36,7 @@ public enum MediaTagKey {
 	public	static final MediaTagKey2<Boolean>	isJunk =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isSubtitle =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isArchive =new MediaTagKey2<>();
-//	public	static final MediaTagKey2<Boolean>	misc =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Boolean>	misc =new MediaTagKey2<>();
 
 	public	static final MediaTagKey2<Boolean>	entry =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	dir =new MediaTagKey2<>();

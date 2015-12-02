@@ -11,6 +11,7 @@ import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class MiscDataClassifier implements ISectionVisitor {
@@ -27,7 +28,7 @@ public class MiscDataClassifier implements ISectionVisitor {
 		Matcher matcher = pat.matcher(n);
 		if(matcher.find()){
 //			String suffix=n.substring(start);
-			node.addNormalization(new SuffixRemoval(TypeTags.MISC, matcher.group(0)));
+			node.addNormalization(new SuffixRemoval(MediaTagKey.misc, matcher.group(0)));
 		}
 //		for (String pat : startPatterns) {
 //			int i = (n.indexOf(pat));
