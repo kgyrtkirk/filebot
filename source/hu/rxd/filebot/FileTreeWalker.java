@@ -2,7 +2,6 @@ package hu.rxd.filebot;
 
 import java.io.File;
 
-import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.visitor.ISectionVisitor;

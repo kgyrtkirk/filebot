@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.PriorityQueue;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 
 import com.google.common.base.Function;
@@ -17,7 +16,6 @@ import com.google.common.cache.LoadingCache;
 import hu.rxd.sdi.StringDistanceIndex;
 import hu.rxd.sdi.StringDistanceIndex.Result;
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
-import info.debatty.java.stringsimilarity.SorensenDice;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
 import net.filebot.media.MediaDetection;
 import net.filebot.media.MediaDetection.IndexEntry;

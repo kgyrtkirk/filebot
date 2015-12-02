@@ -2,23 +2,8 @@ package hu.rxd.filebot;
 
 import java.io.File;
 
-import hu.rxd.filebot.classifiers.ExtensionClassifier;
-import hu.rxd.filebot.classifiers.JunkClassifier;
-import hu.rxd.filebot.classifiers.MiscDataClassifier;
-import hu.rxd.filebot.classifiers.ReleasePrefixClassifier;
-import hu.rxd.filebot.classifiers.SeasonEpisodeClassifier;
-import hu.rxd.filebot.classifiers.SeriesDirClassifier;
-import hu.rxd.filebot.classifiers.SeriesDirParentPopulator;
-import hu.rxd.filebot.classifiers.SeriesIdentifactor;
-import hu.rxd.filebot.classifiers.SeriesMatcher;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTag;
-import hu.rxd.filebot.tree.MediaTagKey;
-import hu.rxd.filebot.tree.TypeTags;
-import hu.rxd.filebot.visitor.BasicVisitorRunner;
-import net.filebot.WebServices;
-import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
 
 public class DirectoryScanner {
 

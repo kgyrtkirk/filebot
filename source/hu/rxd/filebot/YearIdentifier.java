@@ -8,9 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import hu.rxd.filebot.normalization.SuffixRemoval;
-import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
-import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 

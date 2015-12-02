@@ -3,20 +3,16 @@ package hu.rxd.filebot;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.PriorityQueue;
 import java.util.TreeSet;
 
 import com.google.common.base.Function;
 
 import hu.rxd.filebot.SeriesMatch.IndexEntryExtractor;
-import hu.rxd.filebot.SeriesMatch.MatchResult;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import hu.rxd.sdi.StringDistanceIndex;
 import hu.rxd.sdi.StringDistanceIndex.Result;
-import info.debatty.java.stringsimilarity.MetricLCS;
 import info.debatty.java.stringsimilarity.NormalizedLevenshtein;
 import net.filebot.media.MediaDetection;
 import net.filebot.media.MediaDetection.IndexEntry;

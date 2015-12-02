@@ -26,7 +26,6 @@ import hu.rxd.filebot.classifiers.SeriesMatcher;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaSection.Root;
 import hu.rxd.filebot.tree.MediaTagKey;
-import hu.rxd.filebot.tree.TypeTags;
 import hu.rxd.filebot.visitor.BasicVisitorRunner;
 import net.sf.ehcache.CacheManager;
 
