@@ -9,6 +9,7 @@ import com.google.common.io.Files;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTagKey2;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.media.MediaDetection;
 
@@ -28,8 +29,10 @@ public class NfoReader implements ISectionVisitor {
 			throw new RuntimeException("not expected");
 		}
 		if(imdbIds.size()>0){
-			
-//			node.addTag(new MediaTag(MediaTagKey.imdbId,imdbIds));
+			node.addTag1(MediaTagKey2.imdbId,imdbIds);
+		}
+		if(tvdbIds.size()>0){
+			node.addTag1(MediaTagKey2.tvdbId,tvdbIds);
 		}
 		
 

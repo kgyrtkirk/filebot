@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.media.jfxmedia.Media;
+
 import hu.rxd.filebot.normalization.INormalization;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaSection.Root;
@@ -22,7 +24,11 @@ public class MediaSection {
 		File getAbsoluteFile();
 		String getOriginalName();
 
+		@Deprecated
 		void addTag(MediaTag tag);
+		
+		public <T>void addTag1(MediaTagKey2<T> key,T value);
+		public <T>T getTag(MediaTagKey2<T> key);
 
 		java.util.Collection<ISection> getChildren();
 
@@ -38,6 +44,7 @@ public class MediaSection {
 		boolean hasTag(MediaTag junk);
 		
 		boolean hasTag(MediaTagKey junk);
+		public <T>boolean hasTag1(MediaTagKey2<T> key);
 
 		void addNormalization(INormalization suffixRemoval);
 		MediaTag getTag(MediaTagKey series);
@@ -67,6 +74,7 @@ public class MediaSection {
 		protected Collection parent;
 		private Map<String,ISection> children=new HashMap<>();
 		private Map<MediaTagKey,MediaTag> tags=new HashMap<>();
+		private Map<MediaTagKey2,Object> tags2=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
 		private Map<MediaTagKey, List<String>> searchKeys =new HashMap<>();
@@ -143,7 +151,7 @@ public class MediaSection {
 		}
 		@Override
 		public MediaTag getTagByName(String string) {
-			return tags.get(MediaTagKey.valueOf(string));
+			return (MediaTag)tags.get(MediaTagKey.valueOf(string));
 		}
 		@Override
 		public boolean hasTag(MediaTagKey junk) {
@@ -153,9 +161,23 @@ public class MediaSection {
 		public void addTag(MediaTag tag) {
 			tags.put(tag.getKey(), tag);
 		}
+		
+		@Override
+		public <T>void addTag1(MediaTagKey2<T> key,T value){
+			tags2.put(key, value);
+		}
+		@Override
+		public <T>T getTag(MediaTagKey2<T> key){
+			return (T)tags2.get(key);
+		}
+		@Override
+		public <T>boolean hasTag1(MediaTagKey2<T> key){
+			return tags2.containsKey(key);
+		}
+		
 		@Override
 		public MediaTag getTag(MediaTagKey key) {
-			return tags.get(key);
+			return (MediaTag) tags.get(key);
 		}
 		@Override
 		public void addSearchKey(MediaTagKey tag, String key) {

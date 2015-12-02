@@ -23,6 +23,6 @@ public enum MediaTagKey {
 	removed, isRoot, 
 	movieOutput,
 	part,
-	isSeries, imdbId,
+	isSeries
 	;
 }

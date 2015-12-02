@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -20,6 +21,7 @@ import hu.rxd.filebot.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.classifiers.SeriesIdentifactor.ScoredResult;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTagKey2;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import hu.rxd.sdi.StringDistanceIndex;
 import hu.rxd.sdi.StringDistanceIndex.Result;
@@ -74,6 +76,10 @@ public class MovieIdentifactor implements ISectionVisitor {
 		
 		if(polite){
 			String movieName = node.getTag(MediaTagKey.movie).getValue();
+			if(node.hasTag1(MediaTagKey2.imdbId)){
+				Set<Integer> imdbids = node.getTag(MediaTagKey2.imdbId);
+				doImdbLookup(node,db,imdbids);
+			}
 			doSearch(node, db, language, movieName);
 		}else{
 			if(!node.getParent().hasTag(MediaTagKey.isRoot))
@@ -118,10 +124,19 @@ public class MovieIdentifactor implements ISectionVisitor {
 ////			System.out.println(el);
 //		}
 	}
+	private void doImdbLookup(ISection node, TMDbClient db, Set<Integer> imdbids) {
+//		List<Movie> results = db.getMovieInfo();
+		System.out.println("skipped");
+		
+	}
 	private boolean doSearch(ISection node, TMDbClient db, Locale language, String movieName)
 			throws IOException, ScriptException {
 		movieName=movieName.replaceAll("[-. ]+", " ");
-		List<Movie> results = db.searchMovie(movieName, language);
+		int	movieYear=-1;
+		if(node.hasTag(MediaTagKey.year)){
+			movieYear= Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
+		}
+		List<Movie> results = db.searchMovie(movieName, movieYear, language,true);
 		
 		if(results.size()==0){
 			System.out.println("no match for:"+node);
@@ -163,17 +178,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 //				}
 //			}
 		if(best.distance<0.01 || pq.size()==1){
-			
-			MediaBindingBean mbb = new MediaBindingBean(best.getPayload(),null,null);
-			ExpressionFormat	ef=new ExpressionFormat("{n} ({y})/{n} ({y})");
-			String a = ef.format(mbb);
-			if(node.hasTag(MediaTagKey.part)){
-				a+="."+node.getTag(MediaTagKey.part);
-			}
-			a+="."+node.getTag(MediaTagKey.extension).getValue();
-			Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
-			a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-			node.addTag(new MediaTag(MediaTagKey.movieOutput,a));
+			identified(node, best);
 			return true;
 		}else{
 			System.out.println("not assigning:" +best);
@@ -181,6 +186,18 @@ public class MovieIdentifactor implements ISectionVisitor {
 		}
 		}
 		return false;
+	}
+	private void identified(ISection node, ScoredResult best) throws ScriptException {
+		MediaBindingBean mbb = new MediaBindingBean(best.getPayload(),null,null);
+		ExpressionFormat	ef=new ExpressionFormat("{n} ({y})/{n} ({y})");
+		String a = ef.format(mbb);
+		if(node.hasTag(MediaTagKey.part)){
+			a+="."+node.getTag(MediaTagKey.part);
+		}
+		a+="."+node.getTag(MediaTagKey.extension).getValue();
+		Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
+		a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
+		node.addTag(new MediaTag(MediaTagKey.movieOutput,a));
 	}
 
 }

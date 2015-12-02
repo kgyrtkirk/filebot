@@ -23,9 +23,10 @@ public class MovieIdentificationIntegrationTest {
 	static String[] cases = { 
 			"d1/movies/Flicka 2..avi",
 			"d1/movies/Szabadeses.2014.RETAiL.DVDRip.x264.HuN-No1/szabadeses.dvdrip.x264-no1.mkv",
-			"She's.Funny.That.Way.2014.BDRip.x264.HuN-HRT/hrt-shes.funny.that.way.2014.bdrip.x264.mkv", };
-//disabled..only imdbid can help	"d1/movies/Flicka.3.DVDRip.x264.HUN-Baggio1/Flicka.3.DVDRip.x264.HUN-Baggio1.mkv",
-
+			"She's.Funny.That.Way.2014.BDRip.x264.HuN-HRT/hrt-shes.funny.that.way.2014.bdrip.x264.mkv",
+//disabled..only imdbid can help	
+			"d1/movies/Flicka.3.DVDRip.x264.HUN-Baggio1/Flicka.3.DVDRip.x264.HUN-Baggio1.mkv",
+	 };
 	@Parameters(name = "{0}")
 	public static Iterable<Object[]> getParameters() {
 
