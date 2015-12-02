@@ -7,7 +7,7 @@ public class SuffixRemoval  implements INormalization{
 
 	private MediaTag tag;
 	private String suffix;
-	private MediaTagKey2<Integer> tag2;
+	private MediaTagKey2<?> tag2;
 
 	public SuffixRemoval(MediaTag tag, String suffix) {
 		this.tag = tag;
@@ -15,7 +15,7 @@ public class SuffixRemoval  implements INormalization{
 		
 	}
 
-	public SuffixRemoval(MediaTagKey2<Integer> tag, String suffix) {
+	public SuffixRemoval(MediaTagKey2<?> tag, String suffix) {
 		tag2 = tag;
 		this.suffix = suffix;
 	}

@@ -6,11 +6,11 @@ public enum MediaTagKey {
 
 //	dir,
 //	entry,
-	isVideo,
-	isNfo,
+//	isVideo,
+//	isNfo,
 	isJunk,
-	isSubtitle,
-	isArchive,
+//	isSubtitle,
+//	isArchive,
 	misc,
 	
 //	releasePrefix,
@@ -31,11 +31,11 @@ public enum MediaTagKey {
 	part,
 	isSeries
 	;
-//	public	static final MediaTagKey2<Boolean>	isVideo =new MediaTagKey2<>();
-//	public	static final MediaTagKey2<Boolean>	isNfo =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Boolean>	isVideo =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Boolean>	isNfo =new MediaTagKey2<>();
 //	public	static final MediaTagKey2<Boolean>	isJunk =new MediaTagKey2<>();
-//	public	static final MediaTagKey2<Boolean>	isSubtitle =new MediaTagKey2<>();
-//	public	static final MediaTagKey2<Boolean>	isArchive =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Boolean>	isSubtitle =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Boolean>	isArchive =new MediaTagKey2<>();
 //	public	static final MediaTagKey2<Boolean>	misc =new MediaTagKey2<>();
 
 	public	static final MediaTagKey2<Boolean>	entry =new MediaTagKey2<>();

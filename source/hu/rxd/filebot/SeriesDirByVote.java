@@ -14,7 +14,7 @@ public class SeriesDirByVote implements ISectionVisitor {
 		Collection<ISection> ch = node.getChildren();
 		int vCnt=0;
 		for (ISection s : ch) {
-			if(s.hasTag(MediaTagKey.isVideo)){
+			if(s.hasTag1(MediaTagKey.isVideo)){
 				vCnt++;
 			}
 		}
