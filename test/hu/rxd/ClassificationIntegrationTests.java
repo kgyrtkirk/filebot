@@ -66,7 +66,7 @@ public class ClassificationIntegrationTests {
 		ISection leaf = getLeaf(root);
 		assertEquals(20,leaf.getTag(MediaTagKey.episode));
 		assertEquals(5,leaf.getTag(MediaTagKey.season));
-		assertEquals("The Good Wife",leaf.getTag(MediaTagKey.series).getValue());
+		assertEquals("The Good Wife",leaf.getTag(MediaTagKey.series));
 //		assertEquals("20",leaf.getTagByName("series").getValue());
 
 	}
@@ -78,7 +78,7 @@ public class ClassificationIntegrationTests {
 		ISection leaf = getLeaf(root);
 		assertEquals(10,leaf.getTag(MediaTagKey.episode));
 		assertEquals(1,leaf.getTag(MediaTagKey.season));
-		assertEquals("Empire",leaf.getTag(MediaTagKey.series).getValue());
+		assertEquals("Empire",leaf.getTag(MediaTagKey.series));
 	}
 
 	
@@ -89,7 +89,7 @@ public class ClassificationIntegrationTests {
 		ISection leaf = getLeaf(root);
 		assertEquals(15,leaf.getTag(MediaTagKey.episode));
 		assertEquals(3,leaf.getTag(MediaTagKey.season));
-		assertEquals("Psych",leaf.getTag(MediaTagKey.series).getValue());
+		assertEquals("Psych",leaf.getTag(MediaTagKey.series));
 		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
 //		assertEquals(expected, actual);
 	}
@@ -121,7 +121,7 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("Hawaii.Five-0.2010.The.Complete.S01.HDTV.XviD-HUN-SKH","Hawaii.Five-0.2010.S01E20.HDTV.XviD.HUN-SKH.avi");
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series).getValue());
+		assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series));
 	}
 	@Test
 	public void spa() throws Exception {
@@ -130,7 +130,7 @@ public class ClassificationIntegrationTests {
 		DirectoryScanner.tagDecorator1(root);
 		ISection leaf = getLeaf(root);
 		System.out.println(leaf);
-		assertEquals("Spartacus Blood and Sand",leaf.getTag(MediaTagKey.series).getValue());
+		assertEquals("Spartacus Blood and Sand",leaf.getTag(MediaTagKey.series));
 	}
 	
 	@Test
@@ -138,7 +138,7 @@ public class ClassificationIntegrationTests {
 	Root root = basicSections("Hawaii.Five-0.S02.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN.avi");
 	DirectoryScanner.tagDecorator1(root);
 	ISection leaf = getLeaf(root);
-	assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series).getValue());
+	assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series));
 	}
 	
 	@Test

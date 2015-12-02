@@ -13,8 +13,8 @@ public class SeriesDirParentPopulator implements ISectionVisitor {
 		if(node.getParent().hasTag1(MediaTagKey.season)){
 			node.addTag1(MediaTagKey.season,node.getParent().getTag(MediaTagKey.season));
 		}
-		if(node.getParent().hasTag(MediaTagKey.series)){
-			node.addTag(node.getParent().getTag(MediaTagKey.series));
+		if(node.getParent().hasTag1(MediaTagKey.series)){
+			node.addTag1(MediaTagKey.series,node.getParent().getTag(MediaTagKey.series));
 		}
 		if(node.getParent().hasTag(MediaTagKey.isSeries)){
 			node.addTag(node.getParent().getTag(MediaTagKey.isSeries));

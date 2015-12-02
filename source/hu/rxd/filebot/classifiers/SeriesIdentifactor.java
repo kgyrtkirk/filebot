@@ -55,10 +55,10 @@ public class SeriesIdentifactor implements ISectionVisitor {
 
 		SortOrder sortOrder = SortOrder.DVD;
 		Locale language = Locale.getDefault();
-		MediaTag seriesTag = node.getTag(MediaTagKey.series);
-		List<SearchResult> results = db.search(seriesTag.getValue(), language);
+		String seriesName = node.getTag(MediaTagKey.series);
+		List<SearchResult> results = db.search(seriesName, language);
 		
-		KeyDistance distanceFn = new KeyDistance(seriesTag.getValue());
+		KeyDistance distanceFn = new KeyDistance(seriesName);
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
 		Integer	episode=node.getTag(MediaTagKey.episode);

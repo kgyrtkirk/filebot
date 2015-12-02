@@ -15,7 +15,7 @@ public enum MediaTagKey {
 	
 //	releasePrefix,
 	
-	series,
+//	series,
 //	season,
 //	episode,
 	
@@ -46,6 +46,8 @@ public enum MediaTagKey {
 	public	static final MediaTagKey2<Integer>	year =new MediaTagKey2<>();
 	
 	public	static final MediaTagKey2<Movie>	movieObj =new MediaTagKey2<>();
+	
+	public	static final MediaTagKey2<String>	series =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Integer>	episode =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Integer>	season =new MediaTagKey2<>();
 }

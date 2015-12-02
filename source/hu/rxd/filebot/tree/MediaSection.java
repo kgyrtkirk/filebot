@@ -48,8 +48,8 @@ public class MediaSection {
 
 		void addNormalization(INormalization suffixRemoval);
 		MediaTag getTag(MediaTagKey series);
-		void addSearchKey(MediaTagKey tag, String head);
-		java.util.Collection<String> getSearchKeys(MediaTagKey series);
+		void addSearchKey(MediaTagKey2<?> tag, String head);
+		java.util.Collection<String> getSearchKeys(MediaTagKey2<?> series);
 		Path getPath();
 		
 	}
@@ -77,7 +77,7 @@ public class MediaSection {
 		private Map<MediaTagKey2,Object> tags2=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
-		private Map<MediaTagKey, List<String>> searchKeys =new HashMap<>();
+		private Map<MediaTagKey2<?>, List<String>> searchKeys =new HashMap<>();
 		
 
 		Collection(Collection parent, String name) {
@@ -180,7 +180,7 @@ public class MediaSection {
 			return (MediaTag) tags.get(key);
 		}
 		@Override
-		public void addSearchKey(MediaTagKey tag, String key) {
+		public void addSearchKey(MediaTagKey2<?> tag, String key) {
 			List<String> li = searchKeys.get(tag);
 			if(li==null){
 				searchKeys.put(tag,li=new ArrayList<>());
@@ -188,7 +188,7 @@ public class MediaSection {
 			li.add(generalTrimmer(key));
 		}
 		@Override
-		public java.util.Collection<String> getSearchKeys(MediaTagKey tag) {
+		public java.util.Collection<String> getSearchKeys(MediaTagKey2<?> tag) {
 			List<String> li = searchKeys.get(tag);
 			if(li==null){
 				return new ArrayList<>();
