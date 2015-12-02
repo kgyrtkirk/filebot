@@ -98,7 +98,7 @@ public class MediaSection {
 			ISection section=children.get(name);
 			if(section==null){
 				children.put(name, section = new Collection(this,name));
-				section.addTag(TypeTags.DIRECTORY);
+				section.addTag1(MediaTagKey.dir,true);
 			}
 			return section;
 		}
@@ -108,7 +108,7 @@ public class MediaSection {
 			ISection section=children.get(name);
 			if(section==null){
 				children.put(name, section = new Collection(this,name));
-				section.addTag(TypeTags.ENTRY);
+				section.addTag1(MediaTagKey.entry,true);
 			}
 			return section;
 		}
@@ -209,7 +209,7 @@ public class MediaSection {
 
 		public Root(String path) {
 			super(null,path);
-			super.addTag(TypeTags.DIRECTORY);
+			super.addTag1(MediaTagKey.dir,true);
 			super.addTag(new MediaTag(MediaTagKey.isRoot));
 			parent=this;
 		}

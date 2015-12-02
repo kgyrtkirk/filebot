@@ -76,7 +76,7 @@ public class BasicVisitorRunner {
 		return this;
 	}
 
-	public BasicVisitorRunner having(MediaTagKey2<Integer> tag) {
+	public BasicVisitorRunner having(MediaTagKey2<?> tag) {
 		neededTags2.add(tag);
 		return this;
 	}
