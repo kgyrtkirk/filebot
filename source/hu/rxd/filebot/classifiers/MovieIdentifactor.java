@@ -76,8 +76,8 @@ public class MovieIdentifactor implements ISectionVisitor {
 		
 		if(polite) {
 			String movieName = node.getTag(MediaTagKey.movie);
-			if(node.hasTag1(MediaTagKey2.imdbId)){
-				Set<Integer> imdbids = node.getTag(MediaTagKey2.imdbId);
+			if(node.hasTag1(MediaTagKey.imdbId)){
+				Set<Integer> imdbids = node.getTag(MediaTagKey.imdbId);
 				doImdbLookup(node,db,imdbids);
 			}
 			doSearch(node, db, language, movieName);

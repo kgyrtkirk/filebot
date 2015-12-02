@@ -1,5 +1,7 @@
 package hu.rxd.filebot.tree;
 
+import java.util.Set;
+
 import net.filebot.web.Movie;
 
 public enum MediaTagKey {
@@ -66,5 +68,8 @@ public enum MediaTagKey {
 	public	static final MediaTagKey2<Boolean>	removed =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isRoot =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Boolean>	isSeries =new MediaTagKey2<>();
+	
+	public static final MediaTagKey2<Set<Integer>> imdbId = new MediaTagKey2<>();
+	public static final MediaTagKey2<Set<Integer>> tvdbId = new MediaTagKey2<>();
 
 }
