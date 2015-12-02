@@ -88,41 +88,6 @@ public class MovieIdentifactor implements ISectionVisitor {
 				}
 			doSearch(node, db, language, node.getName());
 		}
-		
-//		node.addTag(new MediaTag(key));
-		
-//		KeyDistance distanceFn = new KeyDistance(seriesTag.getValue());
-//		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
-//				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
-//		
-//		for (ScoredResult res : pq) {
-//			if(res.distance>0.1){
-//				break;
-//			}
-//			List<Episode> episodeList = db.getEpisodeList(res.result, sortOrder, language);
-//			List<Episode> el=new ArrayList<>();
-//			for (Episode e : episodeList) {
-//				if(Objects.equals(e.getEpisode() , episode) && Objects.equals(e.getSeason() , season)){
-//					el.add(e);
-//				}
-//			}
-//			if(el.size()==1){
-//				Episode s = el.get(0);
-//				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
-//				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
-//				String a = ef.format(mbb);
-//				a+="."+node.getTag(MediaTagKey.extension).getValue();
-//				Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
-//				a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-//				node.addTag(new MediaTag(MediaTagKey.seriesOutput,a));
-////				node.tag(new MediaTag(MediaTagKey.));
-////				System.out.println(a);
-//				break;
-////				node.addTag(new MediaTag(key));
-//				
-//			}
-////			System.out.println(el);
-//		}
 	}
 	private void doImdbLookup(ISection node, TMDbClient db, Set<Integer> imdbids) {
 //		List<Movie> results = db.getMovieInfo();
@@ -150,8 +115,10 @@ public class MovieIdentifactor implements ISectionVisitor {
 		if(node.hasTag(MediaTagKey.year)){
 			pq.removeIf(res -> {
 				if(movieYear!=res.getPayload().getYear()){
+//					throw 
 					System.out.println("purging res because: year: "+movieYear+"!="+res.getPayload().getYear());
-					return true;
+//					return true;
+					throw new RuntimeException("purging res because: year: "+movieYear+"!="+res.getPayload().getYear());
 				}
 				return false;
 				
@@ -166,13 +133,6 @@ public class MovieIdentifactor implements ISectionVisitor {
 				break;
 			}
 			ScoredResult best = scoredResult;
-//			if(node.hasTag(MediaTagKey.year)){
-//				int y = Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
-//				if(y!=best.getPayload().getYear()){
-//					System.out.println("year: "+y+"!="+best.getPayload().getYear());
-//					continue;
-//				}
-//			}
 		if(best.distance<0.01 || pq.size()==1){
 			identified(node, best);
 			return true;
