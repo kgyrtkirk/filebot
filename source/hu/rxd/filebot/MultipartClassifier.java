@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class MultipartClassifier implements ISectionVisitor {
@@ -22,8 +22,8 @@ public class MultipartClassifier implements ISectionVisitor {
 		
 		Matcher m = pat.matcher(n);
 		if(m.find()){
-			node.addTag1(MediaTagKey.part,m.group(0));
-			node.addNormalization(new SuffixRemoval(MediaTagKey.part, m.group(0)));
+			node.addTag1(MediaTag.part,m.group(0));
+			node.addNormalization(new SuffixRemoval(MediaTag.part, m.group(0)));
 		}
 
 	}

@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 import hu.rxd.filebot.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.WebServices;
 import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
@@ -50,14 +50,14 @@ public class SeriesIdentifactor implements ISectionVisitor {
 
 		SortOrder sortOrder = SortOrder.DVD;
 		Locale language = Locale.getDefault();
-		String seriesName = node.getTag(MediaTagKey.series);
+		String seriesName = node.getTag(MediaTag.series);
 		List<SearchResult> results = db.search(seriesName, language);
 		
 		KeyDistance distanceFn = new KeyDistance(seriesName);
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
-		Integer	episode=node.getTag(MediaTagKey.episode);
-		Integer	season=node.getTag(MediaTagKey.season);
+		Integer	episode=node.getTag(MediaTag.episode);
+		Integer	season=node.getTag(MediaTag.season);
 		for (ScoredResult res : pq) {
 			if(res.distance>0.1){
 				continue;
@@ -74,10 +74,10 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
 				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
 				String a = ef.format(mbb);
-				a+="."+node.getTag(MediaTagKey.extension);
+				a+="."+node.getTag(MediaTag.extension);
 				Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
 				a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-				node.addTag1(MediaTagKey.seriesOutput,a);
+				node.addTag1(MediaTag.seriesOutput,a);
 //				node.tag(new MediaTag(MediaTagKey.));
 //				System.out.println(a);
 				break;

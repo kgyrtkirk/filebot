@@ -12,7 +12,7 @@ import org.junit.runners.Parameterized.Parameters;
 import hu.rxd.filebot.ScanBot;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaSection.Root;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 
 import static hu.rxd.ClassificationIntegrationTests.*;
 import static org.junit.Assert.assertTrue;
@@ -50,8 +50,8 @@ public class MovieIdentificationIntegrationTest {
 	public void testIsMovie() throws Exception{
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertTrue(leaf.hasTag1(MediaTagKey.movieOutput));
-		System.out.println(leaf.getTag(MediaTagKey.movieOutput));
+		assertTrue(leaf.hasTag1(MediaTag.movieOutput));
+		System.out.println(leaf.getTag(MediaTag.movieOutput));
 	}
 
 }

@@ -3,7 +3,7 @@ package hu.rxd.filebot;
 import java.io.File;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class FileTreeWalker implements ISectionVisitor {
@@ -22,7 +22,7 @@ public class FileTreeWalker implements ISectionVisitor {
 				}
 			}
 		}else{
-			node.addTag1(MediaTagKey.removed,true);
+			node.addTag1(MediaTag.removed,true);
 		}
 	}
 }

@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class YearIdentifier implements ISectionVisitor {
@@ -22,18 +22,18 @@ public class YearIdentifier implements ISectionVisitor {
 		
 		Matcher m = pat.matcher(n);
 		if(m.find()){
-			node.addTag1(MediaTagKey.year,Integer.parseInt(m.group(1)));
-			node.addNormalization(new SuffixRemoval(MediaTagKey.year, m.group(0)));
+			node.addTag1(MediaTag.year,Integer.parseInt(m.group(1)));
+			node.addNormalization(new SuffixRemoval(MediaTag.year, m.group(0)));
 		}
-		if(node.getParent().hasTag1(MediaTagKey.year)){
-			int pt = node.getParent().getTag(MediaTagKey.year);
-			if(node.hasTag1(MediaTagKey.year)){
-				int nt = node.getTag(MediaTagKey.year);
+		if(node.getParent().hasTag1(MediaTag.year)){
+			int pt = node.getParent().getTag(MediaTag.year);
+			if(node.hasTag1(MediaTag.year)){
+				int nt = node.getTag(MediaTag.year);
 				if(pt!=nt){
 					throw new RuntimeException("invalid: parent year/entry year mismatch");
 				}
 			}else{
-				node.addTag1(MediaTagKey.year,pt);
+				node.addTag1(MediaTag.year,pt);
 			}
 		}
 

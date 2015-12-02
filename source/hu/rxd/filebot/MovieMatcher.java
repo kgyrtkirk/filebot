@@ -9,7 +9,7 @@ import com.google.common.base.Function;
 
 import hu.rxd.filebot.SeriesMatch.IndexEntryExtractor;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import hu.rxd.sdi.StringDistanceIndex;
 import hu.rxd.sdi.StringDistanceIndex.Result;
@@ -41,15 +41,15 @@ public class MovieMatcher implements ISectionVisitor {
 		List<String> searchKeys = new ArrayList<>();
 
 		
-		if(!node.getParent().hasTag1(MediaTagKey.isRoot)){
-			if(node.getParent().hasTag1(MediaTagKey.year)){
-				searchKeys.add(node.getParent().getName()+ " "+node.getParent().getTag(MediaTagKey.year));
+		if(!node.getParent().hasTag1(MediaTag.isRoot)){
+			if(node.getParent().hasTag1(MediaTag.year)){
+				searchKeys.add(node.getParent().getName()+ " "+node.getParent().getTag(MediaTag.year));
 			}
 		}
-		if(node.hasTag1(MediaTagKey.year)){
-			searchKeys.add(node.getName()+ " "+node.getTag(MediaTagKey.year));
+		if(node.hasTag1(MediaTag.year)){
+			searchKeys.add(node.getName()+ " "+node.getTag(MediaTag.year));
 		}
-		if(!node.getParent().hasTag1(MediaTagKey.isRoot)){
+		if(!node.getParent().hasTag1(MediaTag.isRoot)){
 			searchKeys.add(node.getParent().getName());
 		}
 		searchKeys.add(node.getName());
@@ -61,8 +61,8 @@ public class MovieMatcher implements ISectionVisitor {
 			
 			for (Result<IndexEntry<Movie>> best : b1) {
 			int year = best.getPayload().getObject().getYear();
-			if(year>1 && node.hasTag1(MediaTagKey.year)){
-				int movieYear = (node.getTag(MediaTagKey.year));
+			if(year>1 && node.hasTag1(MediaTag.year)){
+				int movieYear = (node.getTag(MediaTag.year));
 				if(movieYear!=year){
 					System.err.println("ignoring result..year diff:"+year+" !!"+movieYear);
 					continue;
@@ -70,8 +70,8 @@ public class MovieMatcher implements ISectionVisitor {
 			}
 
 			if (best.getDistance() < 0.01) {
-				node.addTag1(MediaTagKey.canBeMovie,true);
-				node.addTag1(MediaTagKey.movie, best.getPayload().getLenientName());
+				node.addTag1(MediaTag.canBeMovie,true);
+				node.addTag1(MediaTag.movie, best.getPayload().getLenientName());
 //				best.getPayload().getObject().g
 				return;
 			}else{

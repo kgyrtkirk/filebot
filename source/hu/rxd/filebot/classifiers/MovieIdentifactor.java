@@ -14,7 +14,7 @@ import javax.script.ScriptException;
 
 import hu.rxd.filebot.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.WebServices;
 import net.filebot.format.ExpressionFormat;
@@ -64,14 +64,14 @@ public class MovieIdentifactor implements ISectionVisitor {
 		Locale language = Locale.getDefault();
 		
 		if(polite) {
-			String movieName = node.getTag(MediaTagKey.movie);
-			if(node.hasTag1(MediaTagKey.imdbId)){
-				Set<Integer> imdbids = node.getTag(MediaTagKey.imdbId);
+			String movieName = node.getTag(MediaTag.movie);
+			if(node.hasTag1(MediaTag.imdbId)){
+				Set<Integer> imdbids = node.getTag(MediaTag.imdbId);
 				doImdbLookup(node,db,imdbids);
 			}
 			doSearch(node, db, language, movieName);
 		}else{
-			if(!node.getParent().hasTag1(MediaTagKey.isRoot))
+			if(!node.getParent().hasTag1(MediaTag.isRoot))
 				if(doSearch(node, db, language, node.getParent().getName())){
 					return;
 				}
@@ -101,7 +101,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
 
-		if(node.hasTag1(MediaTagKey.year)){
+		if(node.hasTag1(MediaTag.year)){
 			pq.removeIf(res -> {
 				if(movieYear!=res.getPayload().getYear()){
 //					throw 
@@ -123,7 +123,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 			}
 			ScoredResult best = scoredResult;
 		if(best.distance<0.01 || pq.size()==1){
-			node.addTag1(MediaTagKey.movieObj, best.getPayload());
+			node.addTag1(MediaTag.movieObj, best.getPayload());
 			identified(node, best);
 			return true;
 		}else{
@@ -134,8 +134,8 @@ public class MovieIdentifactor implements ISectionVisitor {
 		return false;
 	}
 	private int getYear(ISection node) {
-		if(node.hasTag1(MediaTagKey.year)){
-			return node.getTag(MediaTagKey.year);
+		if(node.hasTag1(MediaTag.year)){
+			return node.getTag(MediaTag.year);
 		}
 		return -1;
 	}
@@ -143,13 +143,13 @@ public class MovieIdentifactor implements ISectionVisitor {
 		MediaBindingBean mbb = new MediaBindingBean(best.getPayload(),null,null);
 		ExpressionFormat	ef=new ExpressionFormat("{n} ({y})/{n} ({y})");
 		String a = ef.format(mbb);
-		if(node.hasTag1(MediaTagKey.part)){
-			a+="."+node.getTag(MediaTagKey.part);
+		if(node.hasTag1(MediaTag.part)){
+			a+="."+node.getTag(MediaTag.part);
 		}
-		a+="."+node.getTag(MediaTagKey.extension);
+		a+="."+node.getTag(MediaTag.extension);
 		Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
 		a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-		node.addTag1(MediaTagKey.movieOutput,a);
+		node.addTag1(MediaTag.movieOutput,a);
 	}
 
 }

@@ -8,7 +8,7 @@ import java.util.PriorityQueue;
 import hu.rxd.filebot.SeriesMatch;
 import hu.rxd.filebot.SeriesMatch.MatchResult;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.similarity.SeriesNameMatcher;
 
@@ -24,14 +24,14 @@ public class SeriesMatcher implements ISectionVisitor {
 		if(sn!=null)
 			searchKeys.add(sn);
 		ISection parent = node.getParent();
-		if(parent.hasTag1(MediaTagKey.canBeSeries)){
+		if(parent.hasTag1(MediaTag.canBeSeries)){
 			sn = seriesNameMatcher.matchByEpisodeIdentifier(parent.getName());
 			if(sn!=null)
 				searchKeys.add(sn);
 			searchKeys.add(parent.getName());
 		}
-		searchKeys.addAll(node.getSearchKeys(MediaTagKey.series));
-		if(parent.hasTag1(MediaTagKey.canBeSeries)){
+		searchKeys.addAll(node.getSearchKeys(MediaTag.series));
+		if(parent.hasTag1(MediaTag.canBeSeries)){
 			searchKeys.add(parent.getName());
 		}
 
@@ -43,8 +43,8 @@ public class SeriesMatcher implements ISectionVisitor {
 		}
 		MatchResult best = results.peek();
 		if(best.distance < 0.1){
-			node.addTag1(MediaTagKey.canBeSeries,true);
-			node.addTag1(MediaTagKey.series,best.result.getLenientName());
+			node.addTag1(MediaTag.canBeSeries,true);
+			node.addTag1(MediaTag.series,best.result.getLenientName());
 		}else{
 			System.out.println("---");
 			System.out.println(best);

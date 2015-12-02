@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class SeriesDirClassifier implements ISectionVisitor {
@@ -28,10 +28,10 @@ public class SeriesDirClassifier implements ISectionVisitor {
 			if(m.find()){
 				String matchedSeasonPart = m.group(0);
 				String seasonStr = m.group(1).replaceFirst("0+", "");
-				node.addTag1(MediaTagKey.season,Integer.valueOf(seasonStr));
-				node.addTag1(MediaTagKey.canBeSeries,true);
+				node.addTag1(MediaTag.season,Integer.valueOf(seasonStr));
+				node.addTag1(MediaTag.canBeSeries,true);
 
-				node.addNormalization(new SuffixRemoval(MediaTagKey.season, matchedSeasonPart));
+				node.addNormalization(new SuffixRemoval(MediaTag.season, matchedSeasonPart));
 //				System.out.println(node);
 				return;
 			}

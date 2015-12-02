@@ -2,7 +2,7 @@ package hu.rxd.filebot.classifiers;
 
 import hu.rxd.filebot.normalization.PrefixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class ReleasePrefixClassifier implements ISectionVisitor {
@@ -17,15 +17,15 @@ public class ReleasePrefixClassifier implements ISectionVisitor {
 			String nCand = np[0];
 //			MediaTag tag = new MediaTag(MediaTagKey.releasePrefix,nCand);
 			if(pCand.equalsIgnoreCase(nCand)){
-				node.addTag1(MediaTagKey.releasePrefix,nCand);
-				node.addNormalization(new PrefixRemoval(MediaTagKey.releasePrefix, nCand));
+				node.addTag1(MediaTag.releasePrefix,nCand);
+				node.addNormalization(new PrefixRemoval(MediaTag.releasePrefix, nCand));
 				return;
 			}
 			// support: qwe-TheAsd/ta-qwe.avi
 			pCand=pCand.replaceAll("[a-z]", "");
 			if(pCand.equalsIgnoreCase(nCand)) {
-				node.addTag1(MediaTagKey.releasePrefix,nCand);
-				node.addNormalization(new PrefixRemoval(MediaTagKey.releasePrefix, nCand));
+				node.addTag1(MediaTag.releasePrefix,nCand);
+				node.addNormalization(new PrefixRemoval(MediaTag.releasePrefix, nCand));
 				return;
 			}
 		}

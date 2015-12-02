@@ -8,7 +8,7 @@ import hu.rxd.filebot.ScanBot;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaSection.Root;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 
 //@RunWith(Parameterized.class)
 public class ClassificationIntegrationTests {
@@ -51,9 +51,9 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("The Good Wife S05", "20 - The Deep Web.mkv");
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertEquals(20,leaf.getTag(MediaTagKey.episode));
-		assertEquals(5,leaf.getTag(MediaTagKey.season));
-		assertEquals("The Good Wife",leaf.getTag(MediaTagKey.series));
+		assertEquals(20,leaf.getTag(MediaTag.episode));
+		assertEquals(5,leaf.getTag(MediaTag.season));
+		assertEquals("The Good Wife",leaf.getTag(MediaTag.series));
 //		assertEquals("20",leaf.getTagByName("series").getValue());
 
 	}
@@ -63,9 +63,9 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("Empire S01 1080p", "1x10 - Sins Of The Father 1080p Bluray.mkv");
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertEquals(10,leaf.getTag(MediaTagKey.episode));
-		assertEquals(1,leaf.getTag(MediaTagKey.season));
-		assertEquals("Empire",leaf.getTag(MediaTagKey.series));
+		assertEquals(10,leaf.getTag(MediaTag.episode));
+		assertEquals(1,leaf.getTag(MediaTag.season));
+		assertEquals("Empire",leaf.getTag(MediaTag.series));
 	}
 
 	
@@ -74,10 +74,10 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("Psych.S03.HUN.DVDRip.XviD-HSF","Psych.S03E15.REPACK.HUN.DVDRip.XviD-HSF","hsf-psych-rpck-315.avi");
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertEquals(15,leaf.getTag(MediaTagKey.episode));
-		assertEquals(3,leaf.getTag(MediaTagKey.season));
-		assertEquals("Psych",leaf.getTag(MediaTagKey.series));
-		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput));
+		assertEquals(15,leaf.getTag(MediaTag.episode));
+		assertEquals(3,leaf.getTag(MediaTag.season));
+		assertEquals("Psych",leaf.getTag(MediaTag.series));
+		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTag.seriesOutput));
 //		assertEquals(expected, actual);
 	}
 	
@@ -86,7 +86,7 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("d1","movies","Daddy.or.Mommy.2015.PROPER.RETAiL.DVDRip.x264.HuN-No1","dom.dvdrip.x264-no1.mkv");
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("Daddy or Mommy",leaf.getTag(MediaTagKey.movie));
+		assertEquals("Daddy or Mommy",leaf.getTag(MediaTag.movie));
 //		assertEquals("3",leaf.getTag(MediaTagKey.season).getValue());
 //		assertEquals("Psych",leaf.getTag(MediaTagKey.series).getValue());
 //		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
@@ -99,7 +99,7 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("The.Expendables.3.2014.THEATRiCAL.720p.BluRay.DTS.x264.HuN-TRiNiTY","the.expendables.3.tc.720p-trinity.mkv");
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("The Expendables 3",leaf.getTag(MediaTagKey.movie));
+		assertEquals("The Expendables 3",leaf.getTag(MediaTag.movie));
 	}
 
 	@Test
@@ -108,7 +108,7 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("Hawaii.Five-0.2010.The.Complete.S01.HDTV.XviD-HUN-SKH","Hawaii.Five-0.2010.S01E20.HDTV.XviD.HUN-SKH.avi");
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series));
+		assertEquals("Hawaii Five 0",leaf.getTag(MediaTag.series));
 	}
 	@Test
 	public void spa() throws Exception {
@@ -117,7 +117,7 @@ public class ClassificationIntegrationTests {
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
 		System.out.println(leaf);
-		assertEquals("Spartacus Blood and Sand",leaf.getTag(MediaTagKey.series));
+		assertEquals("Spartacus Blood and Sand",leaf.getTag(MediaTag.series));
 	}
 	
 	@Test
@@ -125,7 +125,7 @@ public class ClassificationIntegrationTests {
 	Root root = basicSections("Hawaii.Five-0.S02.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN.avi");
 	ScanBot.runIdentification(root);
 	ISection leaf = getLeaf(root);
-	assertEquals("Hawaii Five 0",leaf.getTag(MediaTagKey.series));
+	assertEquals("Hawaii Five 0",leaf.getTag(MediaTag.series));
 	}
 	
 	@Test
@@ -133,7 +133,7 @@ public class ClassificationIntegrationTests {
 	Root root = basicSections("Spy.2015.Extended.Cut.BDRip.x264.HuN-HRT","hrt-spy.extended.cut.2015.bdrip.x264.mkv");
 	ScanBot.runIdentification(root);
 	ISection leaf = getLeaf(root);
-	assertEquals("Spy",leaf.getTag(MediaTagKey.movie));
+	assertEquals("Spy",leaf.getTag(MediaTag.movie));
 	}
 	
 	@Test
@@ -141,9 +141,9 @@ public class ClassificationIntegrationTests {
 	Root root = basicSections("Assault.on.Precinct.13.1976.DVDRip.XviD.Hun-JM","Assault.on.Precinct.13.1976.DVDRip.XviD.Hun-JM.avi");
 	ScanBot.runIdentification(root);
 	ISection leaf = getLeaf(root);
-	assertEquals("Assault on Precinct 13",leaf.getTag(MediaTagKey.movie));
+	assertEquals("Assault on Precinct 13",leaf.getTag(MediaTag.movie));
 	System.out.println(leaf);
-	assertEquals("Assault on Precinct 13 (1976)/Assault on Precinct 13 (1976).avi",leaf.getTag(MediaTagKey.movieOutput));
+	assertEquals("Assault on Precinct 13 (1976)/Assault on Precinct 13 (1976).avi",leaf.getTag(MediaTag.movieOutput));
 	}
 	@Test
 	public void ff() throws Exception {
@@ -151,7 +151,7 @@ public class ClassificationIntegrationTests {
 	ScanBot.runIdentification(root);
 	ISection leaf = getLeaf(root);
 	System.out.println(leaf);
-	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTagKey.movieOutput));
+	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTag.movieOutput));
 	}
 	
 	

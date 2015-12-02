@@ -3,7 +3,7 @@ package hu.rxd.filebot.classifiers;
 import java.util.List;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.media.SmartSeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher;
@@ -22,14 +22,14 @@ public class SeasonEpisodeClassifier implements ISectionVisitor {
 		if(a!=null && a.size() > 0){
 			SxE f = a.get(0);
 			if(f.episode>=0){
-			node.addTag1(MediaTagKey.episode, f.episode);
+			node.addTag1(MediaTag.episode, f.episode);
 			}
 			if(f.season>=0){
-			node.addTag1(MediaTagKey.season, f.season);
+			node.addTag1(MediaTag.season, f.season);
 			}
 			String head = sem.head(name);
 			if(head!=null) {
-				node.addSearchKey(MediaTagKey.series,head );
+				node.addSearchKey(MediaTag.series,head );
 			}
 		}
 

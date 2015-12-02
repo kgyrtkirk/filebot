@@ -7,7 +7,7 @@ import java.util.Set;
 import com.google.common.io.Files;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
-import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.media.MediaDetection;
 
@@ -27,10 +27,10 @@ public class NfoReader implements ISectionVisitor {
 			throw new RuntimeException("not expected");
 		}
 		if(imdbIds.size()>0){
-			node.addTag1(MediaTagKey.imdbId,imdbIds);
+			node.addTag1(MediaTag.imdbId,imdbIds);
 		}
 		if(tvdbIds.size()>0){
-			node.addTag1(MediaTagKey.tvdbId,tvdbIds);
+			node.addTag1(MediaTag.tvdbId,tvdbIds);
 		}
 		
 

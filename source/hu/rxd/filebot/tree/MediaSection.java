@@ -82,7 +82,7 @@ public class MediaSection {
 			ISection section=children.get(name);
 			if(section==null){
 				children.put(name, section = new Collection(this,name));
-				section.addTag1(MediaTagKey.dir,true);
+				section.addTag1(MediaTag.dir,true);
 			}
 			return section;
 		}
@@ -92,7 +92,7 @@ public class MediaSection {
 			ISection section=children.get(name);
 			if(section==null){
 				children.put(name, section = new Collection(this,name));
-				section.addTag1(MediaTagKey.entry,true);
+				section.addTag1(MediaTag.entry,true);
 			}
 			return section;
 		}
@@ -173,8 +173,8 @@ public class MediaSection {
 
 		public Root(String path) {
 			super(null,path);
-			super.addTag1(MediaTagKey.dir,true);
-			super.addTag1(MediaTagKey.isRoot,true);
+			super.addTag1(MediaTag.dir,true);
+			super.addTag1(MediaTag.isRoot,true);
 			parent=this;
 		}
 		public File getAbsoluteFile() {

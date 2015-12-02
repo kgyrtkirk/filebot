@@ -5,7 +5,7 @@ import java.util.Set;
 import net.filebot.web.Movie;
 
 /* interface to prevent instantiation */
-public interface MediaTagKey {
+public interface MediaTag {
 
 	// FIXME: looks like its mere existence is to prioritize searchKeys...f
 	@Deprecated
