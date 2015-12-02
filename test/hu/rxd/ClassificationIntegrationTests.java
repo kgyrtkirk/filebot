@@ -90,7 +90,7 @@ public class ClassificationIntegrationTests {
 		assertEquals(15,leaf.getTag(MediaTagKey.episode));
 		assertEquals(3,leaf.getTag(MediaTagKey.season));
 		assertEquals("Psych",leaf.getTag(MediaTagKey.series));
-		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput).getValue());
+		assertEquals("Psych/S03E15.Tuesday the 17th.avi", leaf.getTag(MediaTagKey.seriesOutput));
 //		assertEquals(expected, actual);
 	}
 	
@@ -156,7 +156,7 @@ public class ClassificationIntegrationTests {
 	ISection leaf = getLeaf(root);
 	assertEquals("Assault on Precinct 13",leaf.getTag(MediaTagKey.movie).getValue());
 	System.out.println(leaf);
-	assertEquals("Assault on Precinct 13 (1976)/Assault on Precinct 13 (1976).avi",leaf.getTag(MediaTagKey.movieOutput).getValue());
+	assertEquals("Assault on Precinct 13 (1976)/Assault on Precinct 13 (1976).avi",leaf.getTag(MediaTagKey.movieOutput));
 	}
 	@Test
 	public void ff() throws Exception {
@@ -164,7 +164,7 @@ public class ClassificationIntegrationTests {
 	DirectoryScanner.tagDecorator1(root);
 	ISection leaf = getLeaf(root);
 	System.out.println(leaf);
-	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTagKey.movieOutput).getValue());
+	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTagKey.movieOutput));
 	}
 	
 	

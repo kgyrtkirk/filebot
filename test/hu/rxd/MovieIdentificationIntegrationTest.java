@@ -50,7 +50,7 @@ public class MovieIdentificationIntegrationTest {
 	public void testIsMovie() throws Exception{
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertTrue(leaf.hasTag(MediaTagKey.movieOutput));
+		assertTrue(leaf.hasTag1(MediaTagKey.movieOutput));
 		System.out.println(leaf.getTag(MediaTagKey.movieOutput));
 	}
 

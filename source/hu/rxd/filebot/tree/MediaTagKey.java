@@ -20,13 +20,13 @@ public enum MediaTagKey {
 //	episode,
 	
 	
-	seriesOutput, 
+//	seriesOutput, 
 //	extension,
 	canBeMovie,
 	movie, 
 	
 	removed, isRoot, 
-	movieOutput,
+//	movieOutput,
 	part,
 	isSeries
 	;
@@ -55,4 +55,7 @@ public enum MediaTagKey {
 	public	static final MediaTagKey2<String>	series =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Integer>	episode =new MediaTagKey2<>();
 	public	static final MediaTagKey2<Integer>	season =new MediaTagKey2<>();
+
+	public	static final MediaTagKey2<String>	seriesOutput =new MediaTagKey2<>();
+	public	static final MediaTagKey2<String>	movieOutput =new MediaTagKey2<>();
 }

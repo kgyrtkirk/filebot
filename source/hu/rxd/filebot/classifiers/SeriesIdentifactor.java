@@ -82,7 +82,7 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				a+="."+node.getTag(MediaTagKey.extension);
 				Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
 				a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-				node.addTag(new MediaTag(MediaTagKey.seriesOutput,a));
+				node.addTag1(MediaTagKey.seriesOutput,a);
 //				node.tag(new MediaTag(MediaTagKey.));
 //				System.out.println(a);
 				break;

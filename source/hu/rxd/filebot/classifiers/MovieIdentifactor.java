@@ -160,7 +160,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		a+="."+node.getTag(MediaTagKey.extension);
 		Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
 		a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-		node.addTag(new MediaTag(MediaTagKey.movieOutput,a));
+		node.addTag1(MediaTagKey.movieOutput,a);
 	}
 
 }

@@ -6,21 +6,22 @@ import java.nio.file.Path;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTagKey;
+import hu.rxd.filebot.tree.MediaTagKey2;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
 public class OutputLinker implements ISectionVisitor {
 
 	private String outputDir;
-	private MediaTagKey tag;
+	private MediaTagKey2<String> tag;
 
-	public OutputLinker(String outputDir, MediaTagKey tag) {
+	public OutputLinker(String outputDir, MediaTagKey2<String> seriesoutput) {
 		this.outputDir = outputDir;
-		this.tag = tag;
+		this.tag = seriesoutput;
 	}
 
 	@Override
 	public void visit(ISection node) throws Exception {
-		String targetRelativeName = node.getTag(tag).getValue();
+		String targetRelativeName = node.getTag(tag);
 		
 		Path sourceFile = node.getPath();
 		Path targetFile = new File(outputDir+"/"+targetRelativeName).toPath();
