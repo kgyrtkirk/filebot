@@ -1,5 +1,7 @@
 package hu.rxd.filebot.tree;
 
+import net.filebot.web.Movie;
+
 public enum MediaTagKey {
 
 	dir,
@@ -26,7 +28,7 @@ public enum MediaTagKey {
 	part,
 	isSeries
 	;
-//	public	static final MediaTagKey2<Boolean>	dir =new MediaTagKey2<>();
+	public	static final MediaTagKey2<Movie>	movieObj =new MediaTagKey2<>();
 //	public	static final MediaTagKey2<Boolean>	releasePrefix =new MediaTagKey2<>();
 //	public	static final MediaTagKey2<Integer>	episode =new MediaTagKey2<>();
 }

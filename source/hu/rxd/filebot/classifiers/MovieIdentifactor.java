@@ -134,6 +134,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 			}
 			ScoredResult best = scoredResult;
 		if(best.distance<0.01 || pq.size()==1){
+			node.addTag1(MediaTagKey.movieObj, best.getPayload());
 			identified(node, best);
 			return true;
 		}else{
