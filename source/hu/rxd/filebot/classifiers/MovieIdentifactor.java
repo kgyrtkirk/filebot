@@ -154,7 +154,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		MediaBindingBean mbb = new MediaBindingBean(best.getPayload(),null,null);
 		ExpressionFormat	ef=new ExpressionFormat("{n} ({y})/{n} ({y})");
 		String a = ef.format(mbb);
-		if(node.hasTag(MediaTagKey.part)){
+		if(node.hasTag1(MediaTagKey.part)){
 			a+="."+node.getTag(MediaTagKey.part);
 		}
 		a+="."+node.getTag(MediaTagKey.extension);

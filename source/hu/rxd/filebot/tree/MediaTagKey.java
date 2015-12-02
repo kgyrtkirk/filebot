@@ -27,7 +27,7 @@ public enum MediaTagKey {
 	
 	removed,isRoot, 
 //	movieOutput,
-	part,
+//	part,
 	isSeries
 	;
 	
@@ -60,4 +60,6 @@ public enum MediaTagKey {
 	public	static final MediaTagKey2<String>	seriesOutput =new MediaTagKey2<>();
 	public	static final MediaTagKey2<String>	movie =new MediaTagKey2<>();
 	public	static final MediaTagKey2<String>	movieOutput =new MediaTagKey2<>();
+
+	public	static final MediaTagKey2<String>	part =new MediaTagKey2<>();
 }
