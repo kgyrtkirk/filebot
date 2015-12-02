@@ -112,7 +112,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
 
-		if(node.hasTag(MediaTagKey.year)){
+		if(node.hasTag1(MediaTagKey.year)){
 			pq.removeIf(res -> {
 				if(movieYear!=res.getPayload().getYear()){
 //					throw 
@@ -145,8 +145,8 @@ public class MovieIdentifactor implements ISectionVisitor {
 		return false;
 	}
 	private int getYear(ISection node) {
-		if(node.hasTag(MediaTagKey.year)){
-			return Integer.parseInt(node.getTag(MediaTagKey.year).getValue());
+		if(node.hasTag1(MediaTagKey.year)){
+			return node.getTag(MediaTagKey.year);
 		}
 		return -1;
 	}

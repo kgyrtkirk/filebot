@@ -24,18 +24,18 @@ public class YearIdentifier implements ISectionVisitor {
 		
 		Matcher m = pat.matcher(n);
 		if(m.find()){
-			node.addTag(new MediaTag(MediaTagKey.year,m.group(1)));
+			node.addTag1(MediaTagKey.year,Integer.parseInt(m.group(1)));
 			node.addNormalization(new SuffixRemoval(TypeTags.MISC, m.group(0)));
 		}
-		if(node.getParent().hasTag(MediaTagKey.year)){
-			MediaTag pt = node.getParent().getTag(MediaTagKey.year);
-			if(node.hasTag(MediaTagKey.year)){
-				MediaTag nt = node.getTag(MediaTagKey.year);
-				if(!pt.equals(nt)){
+		if(node.getParent().hasTag1(MediaTagKey.year)){
+			int pt = node.getParent().getTag(MediaTagKey.year);
+			if(node.hasTag1(MediaTagKey.year)){
+				int nt = node.getTag(MediaTagKey.year);
+				if(pt!=nt){
 					throw new RuntimeException("invalid: parent year/entry year mismatch");
 				}
 			}else{
-				node.addTag(pt);
+				node.addTag1(MediaTagKey.year,pt);
 			}
 		}
 
