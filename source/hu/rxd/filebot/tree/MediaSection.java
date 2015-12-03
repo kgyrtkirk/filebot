@@ -81,7 +81,7 @@ public class MediaSection {
 		protected String path;
 		protected MediaCollection parent;
 		private Map<String,ISection> children=new HashMap<>();
-		private Map<MediaTagType,Object> tags2=new HashMap<>();
+		private Map<MediaTagType<?>,Object> tags2=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
 		private Map<MediaTagType<?>, List<String>> searchKeys =new HashMap<>();

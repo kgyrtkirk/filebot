@@ -70,6 +70,8 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				}
 			}
 			if(el.size()==1){
+				node.addTag(MediaTag.episodeObj,res.result);
+				
 				Episode s = el.get(0);
 				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
 				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
