@@ -22,10 +22,10 @@ public class SeasonEpisodeClassifier implements ISectionVisitor {
 		if(a!=null && a.size() > 0){
 			SxE f = a.get(0);
 			if(f.episode>=0){
-			node.addTag1(MediaTag.episode, f.episode);
+			node.addTag(MediaTag.episode, f.episode);
 			}
 			if(f.season>=0){
-			node.addTag1(MediaTag.season, f.season);
+			node.addTag(MediaTag.season, f.season);
 			}
 			String head = sem.head(name);
 			if(head!=null) {

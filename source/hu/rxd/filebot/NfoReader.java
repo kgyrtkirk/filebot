@@ -27,10 +27,10 @@ public class NfoReader implements ISectionVisitor {
 			throw new RuntimeException("not expected");
 		}
 		if(imdbIds.size()>0){
-			node.addTag1(MediaTag.imdbId,imdbIds);
+			node.addTag(MediaTag.imdbId,imdbIds);
 		}
 		if(tvdbIds.size()>0){
-			node.addTag1(MediaTag.tvdbId,tvdbIds);
+			node.addTag(MediaTag.tvdbId,tvdbIds);
 		}
 		
 

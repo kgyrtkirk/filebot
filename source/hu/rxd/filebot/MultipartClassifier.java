@@ -22,7 +22,7 @@ public class MultipartClassifier implements ISectionVisitor {
 		
 		Matcher m = pat.matcher(n);
 		if(m.find()){
-			node.addTag1(MediaTag.part,m.group(0));
+			node.addTag(MediaTag.part,m.group(0));
 			node.addNormalization(new SuffixRemoval(MediaTag.part, m.group(0)));
 		}
 

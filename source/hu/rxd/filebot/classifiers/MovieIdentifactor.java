@@ -123,7 +123,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 			}
 			ScoredResult best = scoredResult;
 		if(best.distance<0.01 || pq.size()==1){
-			node.addTag1(MediaTag.movieObj, best.getPayload());
+			node.addTag(MediaTag.movieObj, best.getPayload());
 			identified(node, best);
 			return true;
 		}else{
@@ -149,7 +149,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		a+="."+node.getTag(MediaTag.extension);
 		Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
 		a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-		node.addTag1(MediaTag.movieOutput,a);
+		node.addTag(MediaTag.movieOutput,a);
 	}
 
 }

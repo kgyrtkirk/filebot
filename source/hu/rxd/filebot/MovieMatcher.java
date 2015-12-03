@@ -70,8 +70,8 @@ public class MovieMatcher implements ISectionVisitor {
 			}
 
 			if (best.getDistance() < 0.01) {
-				node.addTag1(MediaTag.canBeMovie,true);
-				node.addTag1(MediaTag.movie, best.getPayload().getLenientName());
+				node.addTag(MediaTag.canBeMovie,true);
+				node.addTag(MediaTag.movie, best.getPayload().getLenientName());
 //				best.getPayload().getObject().g
 				return;
 			}else{

@@ -17,14 +17,14 @@ public class ReleasePrefixClassifier implements ISectionVisitor {
 			String nCand = np[0];
 //			MediaTag tag = new MediaTag(MediaTagKey.releasePrefix,nCand);
 			if(pCand.equalsIgnoreCase(nCand)){
-				node.addTag1(MediaTag.releasePrefix,nCand);
+				node.addTag(MediaTag.releasePrefix,nCand);
 				node.addNormalization(new PrefixRemoval(MediaTag.releasePrefix, nCand));
 				return;
 			}
 			// support: qwe-TheAsd/ta-qwe.avi
 			pCand=pCand.replaceAll("[a-z]", "");
 			if(pCand.equalsIgnoreCase(nCand)) {
-				node.addTag1(MediaTag.releasePrefix,nCand);
+				node.addTag(MediaTag.releasePrefix,nCand);
 				node.addNormalization(new PrefixRemoval(MediaTag.releasePrefix, nCand));
 				return;
 			}

@@ -28,8 +28,8 @@ public class SeriesDirClassifier implements ISectionVisitor {
 			if(m.find()){
 				String matchedSeasonPart = m.group(0);
 				String seasonStr = m.group(1).replaceFirst("0+", "");
-				node.addTag1(MediaTag.season,Integer.valueOf(seasonStr));
-				node.addTag1(MediaTag.canBeSeries,true);
+				node.addTag(MediaTag.season,Integer.valueOf(seasonStr));
+				node.addTag(MediaTag.canBeSeries,true);
 
 				node.addNormalization(new SuffixRemoval(MediaTag.season, matchedSeasonPart));
 //				System.out.println(node);

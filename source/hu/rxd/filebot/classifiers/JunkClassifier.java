@@ -11,7 +11,7 @@ public class JunkClassifier implements ISectionVisitor {
 	@Override
 	public void visit(ISection node) {
 		if(isJunk(node)){
-			node.addTag1(MediaTag.isJunk,true);
+			node.addTag(MediaTag.isJunk,true);
 		}
 	}
 

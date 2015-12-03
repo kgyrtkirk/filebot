@@ -22,7 +22,7 @@ public class YearIdentifier implements ISectionVisitor {
 		
 		Matcher m = pat.matcher(n);
 		if(m.find()){
-			node.addTag1(MediaTag.year,Integer.parseInt(m.group(1)));
+			node.addTag(MediaTag.year,Integer.parseInt(m.group(1)));
 			node.addNormalization(new SuffixRemoval(MediaTag.year, m.group(0)));
 		}
 		if(node.getParent().hasTag1(MediaTag.year)){
@@ -33,7 +33,7 @@ public class YearIdentifier implements ISectionVisitor {
 					throw new RuntimeException("invalid: parent year/entry year mismatch");
 				}
 			}else{
-				node.addTag1(MediaTag.year,pt);
+				node.addTag(MediaTag.year,pt);
 			}
 		}
 

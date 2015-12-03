@@ -43,8 +43,8 @@ public class SeriesMatcher implements ISectionVisitor {
 		}
 		MatchResult best = results.peek();
 		if(best.distance < 0.1){
-			node.addTag1(MediaTag.canBeSeries,true);
-			node.addTag1(MediaTag.series,best.result.getLenientName());
+			node.addTag(MediaTag.canBeSeries,true);
+			node.addTag(MediaTag.series,best.result.getLenientName());
 		}else{
 			System.out.println("---");
 			System.out.println(best);

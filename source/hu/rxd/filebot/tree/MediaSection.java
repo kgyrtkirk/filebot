@@ -13,12 +13,35 @@ public class MediaSection {
 
 	public static interface ISection {
 
+		/**
+		 * returns the current name of the file (depends on applied normalizations)
+		 * 
+		 * @return
+		 */
 		String getName();
+		/**
+		 * returns an absolute file
+		 * @return
+		 */
 		File getAbsoluteFile();
+		/**
+		 * returns the original filename
+		 * @return
+		 */
 		String getOriginalName();
-
-		
-		public <T>void addTag1(MediaTagType<T> key,T value);
+		/**
+		 * adds the tag with its value
+		 * 
+		 * @param key
+		 * @param value
+		 */
+		public <T>void addTag(MediaTagType<T> key,T value);
+		/**
+		 * returns the value for the given key
+		 * 
+		 * @param key
+		 * @return
+		 */
 		public <T>T getTag(MediaTagType<T> key);
 
 		java.util.Collection<ISection> getChildren();
@@ -54,9 +77,9 @@ public class MediaSection {
 //		
 //	}
 
-	public static class  Collection implements ISection{
+	public static class  MediaCollection implements ISection{
 		protected String path;
-		protected Collection parent;
+		protected MediaCollection parent;
 		private Map<String,ISection> children=new HashMap<>();
 		private Map<MediaTagType,Object> tags2=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
@@ -64,7 +87,7 @@ public class MediaSection {
 		private Map<MediaTagType<?>, List<String>> searchKeys =new HashMap<>();
 		
 
-		Collection(Collection parent, String name) {
+		MediaCollection(MediaCollection parent, String name) {
 			this.parent = parent;
 			path = name;
 			renormalize();
@@ -81,8 +104,8 @@ public class MediaSection {
 		public ISection getSubsection(String name) {
 			ISection section=children.get(name);
 			if(section==null){
-				children.put(name, section = new Collection(this,name));
-				section.addTag1(MediaTag.dir,true);
+				children.put(name, section = new MediaCollection(this,name));
+				section.addTag(MediaTag.dir,true);
 			}
 			return section;
 		}
@@ -91,8 +114,8 @@ public class MediaSection {
 			
 			ISection section=children.get(name);
 			if(section==null){
-				children.put(name, section = new Collection(this,name));
-				section.addTag1(MediaTag.entry,true);
+				children.put(name, section = new MediaCollection(this,name));
+				section.addTag(MediaTag.entry,true);
 			}
 			return section;
 		}
@@ -131,7 +154,7 @@ public class MediaSection {
 		}
 		
 		@Override
-		public <T>void addTag1(MediaTagType<T> key,T value){
+		public <T>void addTag(MediaTagType<T> key,T value){
 			tags2.put(key, value);
 		}
 		@Override
@@ -169,12 +192,12 @@ public class MediaSection {
 			return new File(getParent().getAbsoluteFile(),getOriginalName());
 		}
 	}
-	public static class Root extends Collection{
+	public static class Root extends MediaCollection{
 
 		public Root(String path) {
 			super(null,path);
-			super.addTag1(MediaTag.dir,true);
-			super.addTag1(MediaTag.isRoot,true);
+			super.addTag(MediaTag.dir,true);
+			super.addTag(MediaTag.isRoot,true);
 			parent=this;
 		}
 		public File getAbsoluteFile() {
