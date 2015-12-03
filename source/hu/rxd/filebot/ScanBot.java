@@ -12,6 +12,7 @@ import org.kohsuke.args4j.Option;
 
 import com.cedarsoftware.util.io.JsonWriter;
 
+import hu.rxd.filebot.classifiers.DecompressionConnector;
 import hu.rxd.filebot.classifiers.ExtensionClassifier;
 import hu.rxd.filebot.classifiers.JunkClassifier;
 import hu.rxd.filebot.classifiers.MiscDataClassifier;
@@ -140,6 +141,13 @@ public class ScanBot {
 
 	public static void runIdentification(Root root) throws Exception {
 		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
+		
+		new BasicVisitorRunner(new DecompressionConnector())
+		.having(MediaTag.isArchive)
+			.run(root);
+		// re-run extension classifier on decompressed
+		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
+		
 		new BasicVisitorRunner(new JunkClassifier()).run(root);
 		new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);
 		// subtitle

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import hu.rxd.filebot.normalization.INormalization;
+import net.sf.ehcache.search.expression.InCollection;
 
 public class MediaSection {
 
@@ -59,6 +60,7 @@ public class MediaSection {
 		void addSearchKey(MediaTagType<?> tag, String head);
 		java.util.Collection<String> getSearchKeys(MediaTagType<?> series);
 		Path getPath();
+		ISection getShadowEntry(File file);
 		
 	}
 //	public static class  Entry implements ISection{
@@ -119,6 +121,18 @@ public class MediaSection {
 			}
 			return section;
 		}
+		@Override
+		public ISection getShadowEntry(File file) {
+			String name = file.getName();
+			String key = "shadow::"+name;
+			ISection section=children.get(key);
+			if(section==null){
+				children.put(key, section = new ShadowMediaCollection(this,name,file));
+				section.addTag(MediaTag.entry,true);
+			}
+			return section;
+		}
+
 		@Override
 		public java.util.Collection<ISection> getChildren() {
 			return children.values();
@@ -202,6 +216,18 @@ public class MediaSection {
 		}
 		public File getAbsoluteFile() {
 			return new File(path);
+		}
+	}
+
+	public static class ShadowMediaCollection extends MediaCollection{
+
+		private File f;
+		public ShadowMediaCollection(MediaCollection parent,String name,File f) {
+			super(parent,name);
+			this.f = f;
+		}
+		public File getAbsoluteFile() {
+			return f;
 		}
 	}
 

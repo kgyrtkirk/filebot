@@ -26,3 +26,12 @@ dependencies {
 		compile files(f)
 	}
 }
+
+   eclipse.classpath.file.withXml {XmlProvider provider ->
+	def libPath = file('lib/native/linux-amd64/')
+         provider.asNode().classpathentry.findAll{it.'@path'.contains('net.sf.sevenzipjbinding')}
+          .each {
+             it.appendNode('attributes')
+              .appendNode('attribute', [name:'org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY', value:libPath])
+            }
+     }
