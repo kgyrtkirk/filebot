@@ -9,7 +9,7 @@ import java.util.PriorityQueue;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import hu.rxd.filebot.SeriesMatch.KeyDistance;
+import hu.rxd.filebot.classifiers.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;

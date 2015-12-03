@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import javax.script.ScriptException;
 
-import hu.rxd.filebot.SeriesMatch.KeyDistance;
+import hu.rxd.filebot.classifiers.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;

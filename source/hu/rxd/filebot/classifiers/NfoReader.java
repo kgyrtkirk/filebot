@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.classifiers;
 
 import java.io.File;
 import java.nio.charset.Charset;

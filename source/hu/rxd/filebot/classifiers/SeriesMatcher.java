@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.PriorityQueue;
 
-import hu.rxd.filebot.SeriesMatch;
-import hu.rxd.filebot.SeriesMatch.MatchResult;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
@@ -41,7 +39,7 @@ public class SeriesMatcher implements ISectionVisitor {
 		for (String key : searchKeys) {
 			results.add(	SeriesMatch.lookup(key.replaceAll("[-. ]+", " ").toLowerCase(),0.1));
 		}
-		MatchResult best = results.peek();
+		SeriesMatch.MatchResult best = results.peek();
 		if(best.distance < 0.1){
 			node.addTag(MediaTag.canBeSeries,true);
 			node.addTag(MediaTag.series,best.result.getLenientName());

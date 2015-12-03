@@ -23,4 +23,9 @@ public class MediaTagType<T> {
 		}
 		return super.equals(obj);
 	}
+	
+	@Override
+	public String toString() {
+		return "@"+label;
+	}
 }

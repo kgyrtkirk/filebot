@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import hu.rxd.filebot.SeriesMatch;
 import net.filebot.media.SmartSeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher.SxE;

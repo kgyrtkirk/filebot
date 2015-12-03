@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.classifiers;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.visitor.ISectionVisitor;

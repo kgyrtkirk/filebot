@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.classifiers;
 
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.UNICODE_CHARACTER_CLASS;

@@ -7,7 +7,7 @@ import java.util.TreeSet;
 
 import com.google.common.base.Function;
 
-import hu.rxd.filebot.SeriesMatch.IndexEntryExtractor;
+import hu.rxd.filebot.classifiers.SeriesMatch.IndexEntryExtractor;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;

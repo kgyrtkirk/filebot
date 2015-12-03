@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.classifiers;
 
 import java.util.Collection;
 

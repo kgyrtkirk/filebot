@@ -1,4 +1,4 @@
-package hu.rxd.filebot;
+package hu.rxd.filebot.classifiers;
 
 import java.io.IOException;
 import java.util.ArrayList;
