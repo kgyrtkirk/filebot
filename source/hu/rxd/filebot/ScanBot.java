@@ -12,7 +12,7 @@ import org.kohsuke.args4j.Option;
 
 import com.cedarsoftware.util.io.JsonWriter;
 
-import hu.rxd.filebot.classifiers.DecompressionConnector;
+import hu.rxd.filebot.classifiers.ExtractionRunner;
 import hu.rxd.filebot.classifiers.ExtensionClassifier;
 import hu.rxd.filebot.classifiers.JunkClassifier;
 import hu.rxd.filebot.classifiers.MiscDataClassifier;
@@ -57,12 +57,12 @@ public class ScanBot {
 	}
 	
     
-    @Option(name="-src",usage="source directory",required=true)
+    @Option(name="-src",usage="source directory; threated as read-only",required=true)
     public String srcDir;
 
     // FIXME: enable this later
-//    @Option(name="-sd",aliases={"--state-dir"},usage="state directory (defaults to be inside series-output)")
-//    public String stateDir;
+    @Option(name="-sd",aliases={"--data-dir"},usage="data directory; will contain: application state info/caches and extracted archives",required=true)
+    public String stateDir;
     
     @Option(name="-so",aliases={"--series-output"},required=true,usage="series output directory")
     public String seriesOutputDir;
@@ -142,7 +142,8 @@ public class ScanBot {
 	public static void runIdentification(Root root) throws Exception {
 		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
 		
-		new BasicVisitorRunner(new DecompressionConnector())
+		File dataDir=new File("/tmp/e1");
+		new BasicVisitorRunner(new ExtractionRunner(dataDir))
 		.having(MediaTag.isArchive)
 			.run(root);
 		// re-run extension classifier on decompressed
@@ -150,7 +151,6 @@ public class ScanBot {
 		
 		new BasicVisitorRunner(new JunkClassifier()).run(root);
 		new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);
-		// subtitle
 		
 		new BasicVisitorRunner(new MiscDataClassifier()).run(root);
 		

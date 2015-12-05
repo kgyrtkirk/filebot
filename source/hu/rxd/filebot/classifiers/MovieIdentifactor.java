@@ -101,13 +101,14 @@ public class MovieIdentifactor implements ISectionVisitor {
 		PriorityQueue<ScoredResult> pq = results.stream().map(a -> new ScoredResult(distanceFn, a))
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
 
+		// if year is given ; but still needed in some cases 
 		if(node.hasTag1(MediaTag.year)){
 			pq.removeIf(res -> {
 				if(movieYear!=res.getPayload().getYear()){
 //					throw 
 					System.out.println("purging res because: year: "+movieYear+"!="+res.getPayload().getYear());
-//					return true;
-					throw new RuntimeException("purging res because: year: "+movieYear+"!="+res.getPayload().getYear());
+					return true;
+//					throw new RuntimeException("purging res because: year: "+movieYear+"!="+res.getPayload().getYear());
 				}
 				return false;
 				
