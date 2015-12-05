@@ -5,6 +5,8 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import org.mapdb.DB;
+
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 
@@ -17,10 +19,6 @@ public class CachedJsonResource extends AbstractCachedResource<String, String> {
 		super(resource, String.class, ONE_DAY, 2, 1000);
 	}
 
-	@Override
-	protected Cache getCache() {
-		return CacheManager.getInstance().getCache("web-datasource-lv3");
-	}
 
 	public JsonObject<?, ?> getJSON() throws IOException {
 		try {

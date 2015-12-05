@@ -11,12 +11,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import net.filebot.web.FanartTVClient.FanartDescriptor.FanartProperty;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
+import org.mapdb.DB;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+
+import net.filebot.web.FanartTVClient.FanartDescriptor.FanartProperty;
 
 public class FanartTVClient {
 
@@ -73,10 +73,6 @@ public class FanartTVClient {
 				return fanart.toArray(new FanartDescriptor[0]);
 			}
 
-			@Override
-			protected Cache getCache() {
-				return CacheManager.getInstance().getCache("web-datasource-lv2");
-			}
 		};
 
 		return Arrays.asList(data.get());
