@@ -95,7 +95,7 @@ public class ScanBot {
 		
 		
 		
-		runIdentification(root);
+		runIdentification(root,new File(stateDir,"extracted"));
 
 		System.out.println("series AND movie (undecided):");
 		new BasicVisitorRunner(new PrintThem())
@@ -143,9 +143,12 @@ public class ScanBot {
 
 
 	public static void runIdentification(Root root) throws Exception {
+		runIdentification(root,new File("/tmp/e1"));
+	}
+
+	public static void runIdentification(Root root, File dataDir) throws Exception {
 		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
 		
-		File dataDir=new File("/tmp/e1");
 		new BasicVisitorRunner(new ExtractionRunner(dataDir))
 		.having(MediaTag.isArchive)
 			.run(root);
