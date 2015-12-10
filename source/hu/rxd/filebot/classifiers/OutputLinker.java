@@ -35,6 +35,7 @@ public class OutputLinker implements ISectionVisitor {
 			}
 			System.err.println("WWW link exists..but points to elsewhere..exception for now: \nlink: "
 			+ targetFile +"\nexpected:"+sourceFile+"\nactual:"+target);
+			return;
 //			throw new RuntimeException("link exists..but points to elsewhere..exception for now: \nlink:" + sourceFile +"\nexpected:"+targetFile+"\nactual:"+target);
 		}
 		// create parent directories
