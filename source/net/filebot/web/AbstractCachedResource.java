@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
+import hu.rxd.filebot.CacheBackplane;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.Element;
 import net.sf.ehcache.config.CacheConfiguration;
@@ -49,7 +50,7 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 	private static DB db;
 
 	protected final DB getCache() {
-		return getDB();
+		return CacheBackplane.getDB();
 	}
 
 	public static DB getDB() {
@@ -66,7 +67,8 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 		long lastUpdateTime = 0;
 
 		DB db = getCache();
-		Map<String,Element> cache = db.createHashMap("x"+type.toString())
+		String	cacheTableName=getClass().getName()+"_"+type.getName();
+		Map<String,Element> cache = db.createHashMap(cacheTableName)
 				.expireAfterWrite(expirationTime)
 				.makeOrGet();
 		try{

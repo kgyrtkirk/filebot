@@ -80,7 +80,10 @@ public class ScanBot {
 	private void run() throws Exception {
 		
 		src = new File(srcDir);
-		stateFile = new File(src,STATEFILE_NAME);
+		
+		CacheBackplane.setDatabaseFile(new File(stateDir,".cache.db"));
+		stateFile = new File(stateDir,STATEFILE_NAME);
+		
 		
 		if(!src.exists() || !src.isDirectory()){
 			throw new IllegalArgumentException(String.format("source directory: %s doesnt exists, or not a directory", srcDir));
