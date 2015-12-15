@@ -67,6 +67,16 @@ public class ClassificationIntegrationTests {
 		assertEquals(1,leaf.getTag(MediaTag.season));
 		assertEquals("Empire",leaf.getTag(MediaTag.series));
 	}
+	@Test
+	public void badu() throws Exception {
+		
+		Root root = basicSections("Bad.Education.S01.COMPLETE.HUN.WEB-DL.XviD-DART","dt-badu-102.avi");
+		ScanBot.runIdentification(root);
+		ISection leaf = getLeaf(root);
+		assertEquals(2,leaf.getTag(MediaTag.episode));
+		assertEquals(1,leaf.getTag(MediaTag.season));
+		assertEquals("Bad Education",leaf.getTag(MediaTag.series));
+	}
 
 	
 	@Test
