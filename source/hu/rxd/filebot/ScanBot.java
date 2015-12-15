@@ -73,6 +73,9 @@ public class ScanBot {
     @Option(name="-sp",aliases={"--series-pattern"},usage="series pattern directory")
     public String seriesPattern = "{n}/{s00e00}.{t}";
 
+    @Option(name="-i",aliases={"--incremental"},usage="enables incremental mode (loads previous state)")
+    public boolean	incremental;
+
 	private File src;
 
 	private File stateFile;
