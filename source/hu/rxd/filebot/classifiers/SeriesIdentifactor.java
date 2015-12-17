@@ -75,19 +75,20 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				}
 			}
 			if(el.size()==1){
-				node.addTag(MediaTag.series, res.result.getName());
-				node.addTag(MediaTag.episodeObj,res.result);
 				
 				Episode s = el.get(0);
-				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
-				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
-				String a = ef.format(mbb);
-				a+="."+node.getTag(MediaTag.extension);
-				Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
-				a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
-				node.addTag(MediaTag.seriesOutput,a);
-//				node.tag(new MediaTag(MediaTagKey.));
-//				System.out.println(a);
+				node.addTag(MediaTag.series, s.getSeriesName());
+				node.addTag(MediaTag.episodeObj,s);
+//				
+//				MediaBindingBean mbb = new MediaBindingBean(s,null,null);
+//				ExpressionFormat	ef=new ExpressionFormat("{n}/{s00e00}.{t}");
+//				String a = ef.format(mbb);
+//				a+="."+node.getTag(MediaTag.extension);
+//				Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
+//				a=ILLEGAL_CHARACTERS.matcher(a).replaceAll("").replaceAll("\\s+", " ").trim();
+//				node.addTag(MediaTag.seriesOutput,a);
+////				node.tag(new MediaTag(MediaTagKey.));
+////				System.out.println(a);
 				return;
 //				break;
 //				node.addTag(new MediaTag(key));

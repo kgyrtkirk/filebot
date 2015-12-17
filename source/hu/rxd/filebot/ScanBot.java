@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -32,7 +33,10 @@ import hu.rxd.filebot.classifiers.YearIdentifier;
 import hu.rxd.filebot.tree.MediaSection;
 import hu.rxd.filebot.tree.MediaSection.Root;
 import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagType;
 import hu.rxd.filebot.visitor.BasicVisitorRunner;
+import net.filebot.format.ExpressionFormat;
+import net.filebot.format.MediaBindingBean;
 import net.sf.ehcache.CacheManager;
 
 public class ScanBot {
@@ -229,6 +233,15 @@ public class ScanBot {
 		.exclude((MediaTag.canBeSeries))
 		.exclude((MediaTag.isSeries))
 		.exclude(MediaTag.isJunk)
+		.run(root);
+		
+		
+		new BasicVisitorRunner(new NameBindingVisitor(MediaTag.episodeObj,MediaTag.seriesOutput,"{n}/{s00e00}.{t}"))
+		.having(MediaTag.episodeObj)
+		.run(root);
+		
+		new BasicVisitorRunner(new NameBindingVisitor(MediaTag.movieObj,MediaTag.movieOutput,"{n} ({y})/{n} ({y})"))
+		.having(MediaTag.movieObj)
 		.run(root);
 	}
 

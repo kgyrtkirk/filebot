@@ -125,7 +125,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 			ScoredResult best = scoredResult;
 		if(best.distance<0.01 || pq.size()==1){
 			node.addTag(MediaTag.movieObj, best.getPayload());
-			identified(node, best);
+//			identified(node, best);
 			return true;
 		}else{
 			System.out.println("not assigning:" +best);

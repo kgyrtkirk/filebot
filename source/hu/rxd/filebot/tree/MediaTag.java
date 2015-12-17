@@ -2,6 +2,7 @@ package hu.rxd.filebot.tree;
 
 import java.util.Set;
 
+import net.filebot.web.Episode;
 import net.filebot.web.Movie;
 import net.filebot.web.SearchResult;
 
@@ -46,6 +47,6 @@ public interface MediaTag {
 
 	public static final MediaTagType<Set<Integer>> imdbId = new MediaTagType<>("imdbId");
 	public static final MediaTagType<Set<Integer>> tvdbId = new MediaTagType<>("tvdbId");
-	public static final MediaTagType<SearchResult> episodeObj = new MediaTagType<>("episodeObj");
+	public static final MediaTagType<Episode> episodeObj = new MediaTagType<>("episodeObj");
 
 }
