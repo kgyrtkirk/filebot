@@ -49,7 +49,7 @@ public class SeasonEpisodeMatcher {
 		};
 
 		// match patterns like S01E01, s01e02, ... [s01]_[e02], s01.e02, s01e02a, s2010e01 ... s01e01-02-03-04, [s01]_[e01-02-03-04] ...
-		S00E00 = new SeasonEpisodePattern(null, "(?<!\\p{Digit})[Ss](\\d{1,2}|\\d{4})[^\\p{Alnum}]{0,3}(?i:ep|e|p)(((?<=[^._ ])[Ee]?[Pp]?\\d{1,3}(\\D|$))+)") {
+		S00E00 = new SeasonEpisodePattern(null, "(?<!\\p{Digit})[Ss][Ee]{0,1}(\\d{1,2}|\\d{4})[^\\p{Alnum}]{0,3}(?i:ep|e|p)(((?<=[^._ ])[Ee]?[Pp]?\\d{1,3}(\\D|$))+)") {
 
 			@Override
 			protected Collection<SxE> process(MatchResult match) {
