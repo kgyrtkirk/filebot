@@ -26,6 +26,11 @@ public class ExtractionRunner implements ISectionVisitor {
 		
 		CmdlineOperations cmdline = new CmdlineOperations();
 		File extractDir = new File(extractionRoot,node.getName());
+		System.out.println(" * extract: "+node.getAbsoluteFile());
+		if(node.getAbsoluteFile().length()==0){
+			System.out.println("!!! skip extract 0 length: "+node.getAbsoluteFile());
+			return;
+		}
 		List<File> ef = cmdline.extract(Sets.newHashSet(node.getAbsoluteFile()),
 				extractDir.getAbsolutePath(),
 				ConflictAction.AUTO.toString(),
@@ -47,7 +52,9 @@ public class ExtractionRunner implements ISectionVisitor {
 
 	private Collection<File> flatFileList(File dir) {
 		List<File>	ret=new ArrayList<>();
-		
+		if(!dir.exists()){
+			return ret;
+		}
 		Queue<File>	q=new PriorityQueue<>();
 		q.add(dir);
 		while(!q.isEmpty()){
