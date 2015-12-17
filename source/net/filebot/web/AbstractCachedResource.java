@@ -63,12 +63,12 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 
 	public synchronized T get() throws IOException {
 		String cacheKey = type.getName() + ":" + resource.toString();
-		Element element = null;
+		T element = null;
 		long lastUpdateTime = 0;
 
 		DB db = getCache();
-		String	cacheTableName=getClass().getName()+"_"+type.getName();
-		Map<String,Element> cache = db.createHashMap(cacheTableName)
+		String	cacheTableName=getClass().getName()+"_"+type.getName()+".2";
+		Map<String,T> cache = db.createHashMap(cacheTableName)
 				.expireAfterWrite(expirationTime)
 				.makeOrGet();
 		try{
@@ -76,18 +76,9 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 //			Cache cache = getCache();
 			element = cache.get(cacheKey);
 
-			// sanity check ehcache diskcache problems
-			if (element != null && !cacheKey.equals(element.getKey().toString())) {
-				element = null;
-			}
-
-			if (element != null) {
-				lastUpdateTime = element.getLatestOfCreationAndUpdateTime();
-			}
-
 			// fetch from cache
-			if (element != null && System.currentTimeMillis() - lastUpdateTime < expirationTime) {
-				return type.cast(element.getValue());
+			if (element != null) {
+				return element;
 			}
 		} catch (Exception e) {
 			Logger.getLogger(getClass().getName()).log(Level.FINEST, e.getMessage());
@@ -108,45 +99,17 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 			data = fetch(url, lastModified, element != null ? 0 : retryCountLimit);
 		} catch (IOException e) {
 			networkException = e;
+			throw e;
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
 		}
 
-		if (data != null) {
-			try {
-				product = process(data);
-				element = new Element(cacheKey, product);
-			} catch (Exception e) {
-				throw new IOException(e);
-			}
-		} else {
-			try {
-				if (element != null) {
-					product = type.cast(element.getValue());
-				}
-			} catch (Exception e) {
-				Logger.getLogger(getClass().getName()).log(Level.FINEST, e.getMessage());
-			}
-		}
-
 		try {
-			if (element != null) {
-//				Cache cache = getCache();
-				cache.put(cacheKey,element);
-			}
+			product = process(data);
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.FINEST, e.getMessage());
+			throw new RuntimeException(e);
 		}
-
-		// throw network error only if we can't use previously cached data
-		if (networkException != null) {
-			if (product == null) {
-				throw networkException;
-			}
-
-			// just log error and continue with cached data
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, networkException.toString());
-		}
+		cache.put(cacheKey,product);
 		db.commit();
 		return product;
 		}finally{
