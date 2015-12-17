@@ -1,4 +1,4 @@
-package hu.rxd.filebot.classifiers;
+package hu.rxd.filebot.tree;
 
 public interface SearchKeyPriorities {
 

@@ -65,7 +65,7 @@ public class ClassificationIntegrationTests {
 		ISection leaf = getLeaf(root);
 		assertEquals(10,leaf.getTag(MediaTag.episode));
 		assertEquals(1,leaf.getTag(MediaTag.season));
-		assertEquals("Empire",leaf.getTag(MediaTag.series));
+		assertEquals("Empire (2015)",leaf.getTag(MediaTag.series));
 		System.out.println(leaf);
 	}
 	@Test
@@ -86,7 +86,7 @@ public class ClassificationIntegrationTests {
 		ISection leaf = getLeaf(root);
 		assertEquals(3,leaf.getTag(MediaTag.episode));
 		assertEquals(1,leaf.getTag(MediaTag.season));
-		assertEquals("Bad Education",leaf.getTag(MediaTag.series));
+		assertEquals("Szomszedok",leaf.getTag(MediaTag.series));
 	}
 	
 	
@@ -129,7 +129,7 @@ public class ClassificationIntegrationTests {
 		Root root = basicSections("Hawaii.Five-0.2010.The.Complete.S01.HDTV.XviD-HUN-SKH","Hawaii.Five-0.2010.S01E20.HDTV.XviD.HUN-SKH.avi");
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
-		assertEquals("Hawaii Five 0",leaf.getTag(MediaTag.series));
+		assertEquals("Hawaii Five-0",leaf.getTag(MediaTag.series));
 	}
 	@Test
 	public void spa() throws Exception {
@@ -138,7 +138,7 @@ public class ClassificationIntegrationTests {
 		ScanBot.runIdentification(root);
 		ISection leaf = getLeaf(root);
 		System.out.println(leaf);
-		assertEquals("Spartacus Blood and Sand",leaf.getTag(MediaTag.series));
+		assertEquals("Spartacus",leaf.getTag(MediaTag.series));
 	}
 	
 	@Test
@@ -146,7 +146,7 @@ public class ClassificationIntegrationTests {
 	Root root = basicSections("Hawaii.Five-0.S02.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN","Hawaii.Five-0.S02E14.HDTV.XviD.Hun-SLN.avi");
 	ScanBot.runIdentification(root);
 	ISection leaf = getLeaf(root);
-	assertEquals("Hawaii Five 0",leaf.getTag(MediaTag.series));
+	assertEquals("Hawaii Five-0",leaf.getTag(MediaTag.series));
 	}
 	
 	@Test

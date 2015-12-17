@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
 import hu.rxd.filebot.normalization.INormalization;
 import net.sf.ehcache.search.expression.InCollection;
@@ -58,7 +60,7 @@ public class MediaSection {
 
 		void addNormalization(INormalization suffixRemoval);
 		void addSearchKey(MediaTagType<?> tag, float weight, String head);
-		java.util.Collection<String> getSearchKeys(MediaTagType<?> series);
+		Queue<SearchKey> getSearchKeys(MediaTagType<?> series);
 		Path getPath();
 		ISection getShadowEntry(File file);
 		
@@ -71,7 +73,7 @@ public class MediaSection {
 		private Map<MediaTagType<?>,Object> tags2=new HashMap<>();
 		private List<INormalization> normalizations=new ArrayList<>();
 		private String normalizedName;
-		private Map<MediaTagType<?>, List<String>> searchKeys =new HashMap<>();
+		private Map<MediaTagType<?>, Queue<SearchKey>> searchKeys =new HashMap<>();
 		
 
 		MediaCollection(MediaCollection parent, String name) {
@@ -167,17 +169,17 @@ public class MediaSection {
 		
 		@Override
 		public void addSearchKey(MediaTagType<?> tag, float weight,String key) {
-			List<String> li = searchKeys.get(tag);
+			Queue<SearchKey> li = searchKeys.get(tag);
 			if(li==null){
-				searchKeys.put(tag,li=new ArrayList<>());
+				searchKeys.put(tag,li=new PriorityQueue<>());
 			}
-			li.add(generalTrimmer(key));
+			li.add(new SearchKey(weight,generalTrimmer(key)));
 		}
 		@Override
-		public java.util.Collection<String> getSearchKeys(MediaTagType<?> tag) {
-			List<String> li = searchKeys.get(tag);
+		public Queue<SearchKey> getSearchKeys(MediaTagType<?> tag) {
+			Queue<SearchKey> li = searchKeys.get(tag);
 			if(li==null){
-				return new ArrayList<>();
+				return new PriorityQueue<>();
 			}
 			return li;
 		}

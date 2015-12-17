@@ -210,7 +210,7 @@ public class ScanBot {
 			.run(root);
 		
 		new BasicVisitorRunner(new SeriesIdentifactor())
-			.having((MediaTag.canBeSeries))
+//			.having((MediaTag.canBeSeries))
 			.having((MediaTag.season))
 			.having((MediaTag.episode))
 			.having((MediaTag.entry))

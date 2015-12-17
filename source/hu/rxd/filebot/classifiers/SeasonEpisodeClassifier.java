@@ -4,6 +4,7 @@ import java.util.List;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.SearchKeyPriorities;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.media.SmartSeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher;

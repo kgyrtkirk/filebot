@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 import hu.rxd.filebot.classifiers.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
+import hu.rxd.filebot.tree.MediaTagType;
+import hu.rxd.filebot.tree.SearchKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.WebServices;
 import net.filebot.WebServices.TheTVDBClientWithLocalSearch;
@@ -51,7 +53,9 @@ public class SeriesIdentifactor implements ISectionVisitor {
 		SortOrder sortOrder = SortOrder.DVD;
 		Locale language = Locale.getDefault();
 //		String seriesName = node.getName();
-		String seriesName = node.getTag(MediaTag.series);
+		for( SearchKey searchKey : node.getSearchKeys(MediaTag.series)){
+		String seriesName = searchKey.getQueryStr();
+		//node.getTag(MediaTag.series);
 		List<SearchResult> results = db.search(seriesName, language);
 		
 		KeyDistance distanceFn = new KeyDistance(seriesName);
@@ -71,6 +75,7 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				}
 			}
 			if(el.size()==1){
+				node.addTag(MediaTag.series, res.result.getName());
 				node.addTag(MediaTag.episodeObj,res.result);
 				
 				Episode s = el.get(0);
@@ -83,12 +88,14 @@ public class SeriesIdentifactor implements ISectionVisitor {
 				node.addTag(MediaTag.seriesOutput,a);
 //				node.tag(new MediaTag(MediaTagKey.));
 //				System.out.println(a);
-				break;
+				return;
+//				break;
 //				node.addTag(new MediaTag(key));
 				
 			}
 			
 //			System.out.println(el);
+		}
 		}
 
 	}
