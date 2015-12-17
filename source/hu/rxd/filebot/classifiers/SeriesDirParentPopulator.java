@@ -10,13 +10,13 @@ public class SeriesDirParentPopulator implements ISectionVisitor {
 
 	@Override
 	public void visit(ISection node) throws Exception {
-		if(node.getParent().hasTag1(MediaTag.season)){
+		if(node.getParent().hasTag(MediaTag.season)){
 			node.addTag(MediaTag.season,node.getParent().getTag(MediaTag.season));
 		}
-		if(node.getParent().hasTag1(MediaTag.series)){
+		if(node.getParent().hasTag(MediaTag.series)){
 			node.addTag(MediaTag.series,node.getParent().getTag(MediaTag.series));
 		}
-		if(node.getParent().hasTag1(MediaTag.isSeries)){
+		if(node.getParent().hasTag(MediaTag.isSeries)){
 			node.addTag(MediaTag.isSeries,node.getParent().getTag(MediaTag.isSeries));
 		}
 		

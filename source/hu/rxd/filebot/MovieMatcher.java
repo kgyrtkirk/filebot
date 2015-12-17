@@ -41,15 +41,15 @@ public class MovieMatcher implements ISectionVisitor {
 		List<String> searchKeys = new ArrayList<>();
 
 		
-		if(!node.getParent().hasTag1(MediaTag.isRoot)){
-			if(node.getParent().hasTag1(MediaTag.year)){
+		if(!node.getParent().hasTag(MediaTag.isRoot)){
+			if(node.getParent().hasTag(MediaTag.year)){
 				searchKeys.add(node.getParent().getName()+ " "+node.getParent().getTag(MediaTag.year));
 			}
 		}
-		if(node.hasTag1(MediaTag.year)){
+		if(node.hasTag(MediaTag.year)){
 			searchKeys.add(node.getName()+ " "+node.getTag(MediaTag.year));
 		}
-		if(!node.getParent().hasTag1(MediaTag.isRoot)){
+		if(!node.getParent().hasTag(MediaTag.isRoot)){
 			searchKeys.add(node.getParent().getName());
 		}
 		searchKeys.add(node.getName());
@@ -61,7 +61,7 @@ public class MovieMatcher implements ISectionVisitor {
 			
 			for (Result<IndexEntry<Movie>> best : b1) {
 			int year = best.getPayload().getObject().getYear();
-			if(year>1 && node.hasTag1(MediaTag.year)){
+			if(year>1 && node.hasTag(MediaTag.year)){
 				int movieYear = (node.getTag(MediaTag.year));
 				if(movieYear!=year){
 					System.err.println("ignoring result..year diff:"+year+" !!"+movieYear);

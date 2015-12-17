@@ -54,7 +54,7 @@ public class MediaSection {
 		ISection getParent();
 
 		
-		public <T>boolean hasTag1(MediaTagType<T> key);
+		public <T>boolean hasTag(MediaTagType<T> key);
 
 		void addNormalization(INormalization suffixRemoval);
 		void addSearchKey(MediaTagType<?> tag, float weight, String head);
@@ -63,21 +63,6 @@ public class MediaSection {
 		ISection getShadowEntry(File file);
 		
 	}
-//	public static class  Entry implements ISection{
-//		private String path;
-//		private Collection parent;
-//
-//		public Entry(Collection parent, String name) {
-//			this.parent = parent;
-//			path = name;
-//		}
-//
-//		@Override
-//		public String getName() {
-//			return path;
-//		}
-//		
-//	}
 
 	public static class  MediaCollection implements ISection{
 		protected String path;
@@ -176,7 +161,7 @@ public class MediaSection {
 			return (T)tags2.get(key);
 		}
 		@Override
-		public <T>boolean hasTag1(MediaTagType<T> key){
+		public <T>boolean hasTag(MediaTagType<T> key){
 			return tags2.containsKey(key);
 		}
 		

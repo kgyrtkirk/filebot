@@ -28,7 +28,7 @@ public class JunkClassifier implements ISectionVisitor {
 		if (node.getName().equalsIgnoreCase("sample") ){
 			return true;
 		}
-		if(node.getParent().hasTag1(MediaTag.isJunk)){
+		if(node.getParent().hasTag(MediaTag.isJunk)){
 			return true;
 		}
 		return false;

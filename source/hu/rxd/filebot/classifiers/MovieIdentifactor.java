@@ -65,13 +65,13 @@ public class MovieIdentifactor implements ISectionVisitor {
 		
 		if(polite) {
 			String movieName = node.getTag(MediaTag.movie);
-			if(node.hasTag1(MediaTag.imdbId)){
+			if(node.hasTag(MediaTag.imdbId)){
 				Set<Integer> imdbids = node.getTag(MediaTag.imdbId);
 				doImdbLookup(node,db,imdbids);
 			}
 			doSearch(node, db, language, movieName);
 		}else{
-			if(!node.getParent().hasTag1(MediaTag.isRoot))
+			if(!node.getParent().hasTag(MediaTag.isRoot))
 				if(doSearch(node, db, language, node.getParent().getName())){
 					return;
 				}
@@ -102,7 +102,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 				.collect(Collectors.toCollection(() -> new PriorityQueue<ScoredResult>(ScoredResult.SCORE_COMPARATOR)));
 
 		// if year is given ; but still needed in some cases 
-		if(node.hasTag1(MediaTag.year)){
+		if(node.hasTag(MediaTag.year)){
 			pq.removeIf(res -> {
 				if(movieYear!=res.getPayload().getYear()){
 //					throw 
@@ -135,7 +135,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		return false;
 	}
 	private int getYear(ISection node) {
-		if(node.hasTag1(MediaTag.year)){
+		if(node.hasTag(MediaTag.year)){
 			return node.getTag(MediaTag.year);
 		}
 		return -1;
@@ -144,7 +144,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		MediaBindingBean mbb = new MediaBindingBean(best.getPayload(),null,null);
 		ExpressionFormat	ef=new ExpressionFormat("{n} ({y})/{n} ({y})");
 		String a = ef.format(mbb);
-		if(node.hasTag1(MediaTag.part)){
+		if(node.hasTag(MediaTag.part)){
 			a+="."+node.getTag(MediaTag.part);
 		}
 		a+="."+node.getTag(MediaTag.extension);

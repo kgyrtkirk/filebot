@@ -22,14 +22,14 @@ public class SeriesMatcher implements ISectionVisitor {
 		if(sn!=null)
 			searchKeys.add(sn);
 		ISection parent = node.getParent();
-		if(parent.hasTag1(MediaTag.canBeSeries)){
+		if(parent.hasTag(MediaTag.canBeSeries)){
 			sn = seriesNameMatcher.matchByEpisodeIdentifier(parent.getName());
 			if(sn!=null)
 				searchKeys.add(sn);
 			searchKeys.add(parent.getName());
 		}
 		searchKeys.addAll(node.getSearchKeys(MediaTag.series));
-		if(parent.hasTag1(MediaTag.canBeSeries)){
+		if(parent.hasTag(MediaTag.canBeSeries)){
 			searchKeys.add(parent.getName());
 		}
 

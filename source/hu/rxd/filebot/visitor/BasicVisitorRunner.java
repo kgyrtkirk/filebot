@@ -34,12 +34,12 @@ public class BasicVisitorRunner {
 
 	private boolean accepted(ISection node) {
 		for (MediaTagType<?> mediaTag : excludedTags2) {
-			if (node.hasTag1(mediaTag)) {
+			if (node.hasTag(mediaTag)) {
 				return false;
 			}
 		}
 		for (MediaTagType<?> mediaTag : neededTags2) {
-			if (!node.hasTag1(mediaTag)) {
+			if (!node.hasTag(mediaTag)) {
 				return false;
 			}
 		}
