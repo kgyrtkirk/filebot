@@ -66,6 +66,7 @@ public class ClassificationIntegrationTests {
 		assertEquals(10,leaf.getTag(MediaTag.episode));
 		assertEquals(1,leaf.getTag(MediaTag.season));
 		assertEquals("Empire",leaf.getTag(MediaTag.series));
+		System.out.println(leaf);
 	}
 	@Test
 	public void badu() throws Exception {
@@ -77,7 +78,17 @@ public class ClassificationIntegrationTests {
 		assertEquals(1,leaf.getTag(MediaTag.season));
 		assertEquals("Bad Education",leaf.getTag(MediaTag.series));
 	}
-
+	@Test
+	public void szomszedok() throws Exception {
+		
+		Root root = basicSections("	Szomszedok.Complete.DVDRiP.XviD-x264.Hun-MrX","Szomszedok.1987.Se01.Complete.DVBRip.XviD.Hun-MrX","Szomszedok.1987.Se01.Ep03.DVBRip.XviD.Hun-MrX.avi");
+		ScanBot.runIdentification(root);
+		ISection leaf = getLeaf(root);
+		assertEquals(3,leaf.getTag(MediaTag.episode));
+		assertEquals(1,leaf.getTag(MediaTag.season));
+		assertEquals("Bad Education",leaf.getTag(MediaTag.series));
+	}
+	
 	
 	@Test
 	public void psych() throws Exception {
