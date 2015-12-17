@@ -51,11 +51,13 @@ public class ExtractionRunner implements ISectionVisitor {
 		Queue<File>	q=new PriorityQueue<>();
 		q.add(dir);
 		while(!q.isEmpty()){
-			File f = q.poll();
-			if(f.isDirectory()){
-				q.add(f);
-			}else{
-				ret.add(f);
+			File d = q.poll();
+			for(File f : d.listFiles()){
+				if(f.isDirectory()){
+					q.add(f);
+				}else{
+					ret.add(f);
+				}
 			}
 		}
 		return ret;
