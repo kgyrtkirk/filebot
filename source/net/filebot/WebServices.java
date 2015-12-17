@@ -16,6 +16,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 
+import com.google.common.util.concurrent.MoreExecutors;
+
 import net.filebot.media.XattrMetaInfoProvider;
 import net.filebot.similarity.MetricAvg;
 import net.filebot.web.AcoustIDClient;
@@ -106,7 +108,7 @@ public final class WebServices {
 		return StreamEx.of(services).findFirst(it -> it.getIdentifier().equalsIgnoreCase(name) || it.getName().equalsIgnoreCase(name)).orElse(null);
 	}
 
-	public static final ExecutorService requestThreadPool = Executors.newCachedThreadPool();
+	public static final ExecutorService requestThreadPool = 	MoreExecutors.newDirectExecutorService();//Executors.newCachedThreadPool();
 
 	public static class TheTVDBClientWithLocalSearch extends TheTVDBClient {
 
