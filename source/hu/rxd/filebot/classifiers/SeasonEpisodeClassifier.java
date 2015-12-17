@@ -29,7 +29,7 @@ public class SeasonEpisodeClassifier implements ISectionVisitor {
 			}
 			String head = sem.head(name);
 			if(head!=null) {
-				node.addSearchKey(MediaTag.series,head );
+				node.addSearchKey(MediaTag.series, SearchKeyPriorities.guessedFromFileName, head);
 			}
 		}
 

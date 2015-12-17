@@ -50,6 +50,7 @@ public class SeriesIdentifactor implements ISectionVisitor {
 
 		SortOrder sortOrder = SortOrder.DVD;
 		Locale language = Locale.getDefault();
+//		String seriesName = node.getName();
 		String seriesName = node.getTag(MediaTag.series);
 		List<SearchResult> results = db.search(seriesName, language);
 		

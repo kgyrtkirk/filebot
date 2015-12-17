@@ -22,7 +22,7 @@ public class SeriesDirParentPopulator implements ISectionVisitor {
 		
 		Collection<String> parentSearchKeys = node.getParent().getSearchKeys(MediaTag.series);
 		for (String string : parentSearchKeys) {
-			node.addSearchKey(MediaTag.series, string);
+			node.addSearchKey(MediaTag.series, 1.1f,string);
 		}
 
 	}

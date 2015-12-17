@@ -57,7 +57,7 @@ public class MediaSection {
 		public <T>boolean hasTag1(MediaTagType<T> key);
 
 		void addNormalization(INormalization suffixRemoval);
-		void addSearchKey(MediaTagType<?> tag, String head);
+		void addSearchKey(MediaTagType<?> tag, float weight, String head);
 		java.util.Collection<String> getSearchKeys(MediaTagType<?> series);
 		Path getPath();
 		ISection getShadowEntry(File file);
@@ -181,7 +181,7 @@ public class MediaSection {
 		}
 		
 		@Override
-		public void addSearchKey(MediaTagType<?> tag, String key) {
+		public void addSearchKey(MediaTagType<?> tag, float weight,String key) {
 			List<String> li = searchKeys.get(tag);
 			if(li==null){
 				searchKeys.put(tag,li=new ArrayList<>());
