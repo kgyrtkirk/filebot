@@ -199,9 +199,6 @@ public class ScanBot {
 			.run(root);
 		
 
-
-		
-		
 //		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
 		new BasicVisitorRunner(new SeriesMatcher())
 			.having(MediaTag.isVideo)
