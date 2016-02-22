@@ -32,7 +32,9 @@ public class YearIdentifier implements ISectionVisitor {
 				if(pt!=nt){
 					System.out.println(node);
 					System.out.println(node.getParent());
-					throw new RuntimeException("invalid: parent year/entry year mismatch parent:"+pt+" node:"+nt);
+					System.err.println("invalid: parent year/entry year mismatch parent:"+pt+" node:"+nt);
+					
+//					throw new RuntimeException("invalid: parent year/entry year mismatch parent:"+pt+" node:"+nt);
 				}
 			}else{
 				node.addTag(MediaTag.year,pt);
