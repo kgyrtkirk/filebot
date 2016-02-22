@@ -30,7 +30,7 @@ public class YearIdentifier implements ISectionVisitor {
 			if(node.hasTag(MediaTag.year)){
 				int nt = node.getTag(MediaTag.year);
 				if(pt!=nt){
-					throw new RuntimeException("invalid: parent year/entry year mismatch");
+					throw new RuntimeException("invalid: parent year/entry year mismatch parent:"+pt+" node:"+nt);
 				}
 			}else{
 				node.addTag(MediaTag.year,pt);
