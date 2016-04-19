@@ -18,6 +18,7 @@ import net.filebot.media.MediaDetection;
 import net.filebot.media.MediaDetection.IndexEntry;
 import net.filebot.web.Movie;
 
+@VisitName(label = "cl_moviematch")
 public class MovieMatcher implements ISectionVisitor {
 
 	static StringDistanceIndex<IndexEntry<Movie>, Function<IndexEntry<Movie>, String>> sdiMovies;

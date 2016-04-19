@@ -7,11 +7,13 @@ import static java.util.regex.Pattern.compile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
+@VisitName(label = "cl_yearident")
 public class YearIdentifier implements ISectionVisitor {
 
 	@Override

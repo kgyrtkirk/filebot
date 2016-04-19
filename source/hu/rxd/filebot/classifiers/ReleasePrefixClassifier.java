@@ -1,10 +1,12 @@
 package hu.rxd.filebot.classifiers;
 
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.normalization.PrefixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 
+@VisitName(label = "cl_releaseprefix")
 public class ReleasePrefixClassifier implements ISectionVisitor {
 
 	@Override

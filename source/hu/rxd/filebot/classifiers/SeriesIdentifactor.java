@@ -9,6 +9,7 @@ import java.util.PriorityQueue;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.classifiers.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
@@ -23,6 +24,7 @@ import net.filebot.web.Episode;
 import net.filebot.web.SearchResult;
 import net.filebot.web.SortOrder;
 
+@VisitName(label = "cl_seriesident")
 public class SeriesIdentifactor implements ISectionVisitor {
 
 	static class ScoredResult {

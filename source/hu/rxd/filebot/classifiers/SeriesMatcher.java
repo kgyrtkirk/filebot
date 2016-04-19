@@ -7,12 +7,14 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.MediaTagType;
 import hu.rxd.filebot.tree.SearchKey;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.similarity.SeriesNameMatcher;
 
+@VisitName(label = "cl_seriesmatch")
 public class SeriesMatcher implements ISectionVisitor {
 
 	@Override

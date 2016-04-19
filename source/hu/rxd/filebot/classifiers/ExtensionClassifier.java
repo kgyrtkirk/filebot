@@ -1,5 +1,6 @@
 package hu.rxd.filebot.classifiers;
 
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.normalization.SuffixRemoval;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
@@ -7,6 +8,7 @@ import hu.rxd.filebot.tree.MediaTagType;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.MediaTypes;
 
+@VisitName(label = "cl_ext")
 public class ExtensionClassifier implements ISectionVisitor {
 
 	@Override

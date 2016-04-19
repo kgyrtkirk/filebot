@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 import javax.script.ScriptException;
 
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.classifiers.SeriesMatch.KeyDistance;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.tree.MediaTag;
@@ -22,6 +23,7 @@ import net.filebot.format.MediaBindingBean;
 import net.filebot.web.Movie;
 import net.filebot.web.TMDbClient;
 
+@VisitName(label = "cl_movieident")
 public class MovieIdentifactor implements ISectionVisitor {
 
 	

@@ -3,6 +3,7 @@ package hu.rxd.filebot.classifiers;
 import java.util.List;
 
 import hu.rxd.filebot.tree.MediaSection.ISection;
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.tree.MediaTag;
 import hu.rxd.filebot.tree.SearchKeyPriorities;
 import hu.rxd.filebot.visitor.ISectionVisitor;
@@ -10,6 +11,7 @@ import net.filebot.media.SmartSeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher.SxE;
 
+@VisitName(label = "cl_seasonep")
 public class SeasonEpisodeClassifier implements ISectionVisitor {
 
 	private SmartSeasonEpisodeMatcher sem;

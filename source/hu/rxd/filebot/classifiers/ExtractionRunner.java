@@ -9,11 +9,13 @@ import java.util.Queue;
 
 import com.google.common.collect.Sets;
 
+import hu.rxd.filebot.VisitName;
 import hu.rxd.filebot.tree.MediaSection.ISection;
 import hu.rxd.filebot.visitor.ISectionVisitor;
 import net.filebot.cli.CmdlineOperations;
 import net.filebot.cli.ConflictAction;
 
+@VisitName(label = "cl_extract")
 public class ExtractionRunner implements ISectionVisitor {
 	
 	private File extractionRoot;
