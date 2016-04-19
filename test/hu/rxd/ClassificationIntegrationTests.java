@@ -1,6 +1,7 @@
 package hu.rxd;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -185,6 +186,16 @@ public class ClassificationIntegrationTests {
 	System.out.println(leaf);
 	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTag.movieOutput));
 	}
-	
+
+	@Test
+	public void sample() throws Exception {
+	Root root = basicSections("Fantastic.Four.2015.RETAiL.BDRip.x264.Hungarian-nCORE","!sample.mkv");
+	ScanBot.runIdentification(root);
+	ISection leaf = getLeaf(root);
+	System.out.println(leaf);
+	assertTrue(leaf.hasTag(MediaTag.isJunk));
+//	assertEquals("Fantastic Four (2015)/Fantastic Four (2015).mkv",leaf.getTag(MediaTag.movieOutput));
+	}
+
 	
 }

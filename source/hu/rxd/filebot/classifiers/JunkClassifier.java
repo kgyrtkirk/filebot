@@ -16,7 +16,10 @@ public class JunkClassifier implements ISectionVisitor {
 	}
 
 	private boolean isJunk(ISection node) {
-		String n = node.getName();
+		if(node.getParent().hasTag(MediaTag.isJunk)){
+			return true;
+		}
+		String n = node.getName().toLowerCase();
 		if (n.startsWith("sample-") ){
 			node.addNormalization(new PrefixRemoval(MediaTag.isJunk, "sample-"));
 			return true;
@@ -25,10 +28,14 @@ public class JunkClassifier implements ISectionVisitor {
 			node.addNormalization(new SuffixRemoval(MediaTag.isJunk, "-sample"));
 			return true;
 		}
-		if (node.getName().equalsIgnoreCase("sample") ){
+		if (n.equalsIgnoreCase("sample") ){
 			return true;
 		}
-		if(node.getParent().hasTag(MediaTag.isJunk)){
+		if (n.equalsIgnoreCase("minta") ){
+			return true;
+		}
+		// sample1 ; !sample and friends.
+		if(n.contains("sample") && n.length() <= 7 ){
 			return true;
 		}
 		return false;
