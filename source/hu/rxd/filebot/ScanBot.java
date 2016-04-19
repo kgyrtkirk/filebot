@@ -151,21 +151,22 @@ public class ScanBot {
 	}
 
 	public static void runIdentification(Root root, File dataDir) throws Exception {
-		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new ExtensionClassifier()))
+			.run(root);
 		
-		new BasicVisitorRunner(new ExtractionRunner(dataDir))
+		new BasicVisitorRunner(new VisitOncePolicy(new ExtractionRunner(dataDir)))
 		.having(MediaTag.isArchive)
 			.run(root);
 		// re-run extension classifier on decompressed
-		new BasicVisitorRunner(new ExtensionClassifier()).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new ExtensionClassifier())).run(root);
 		
-		new BasicVisitorRunner(new JunkClassifier()).run(root);
-		new BasicVisitorRunner(new ReleasePrefixClassifier()).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new JunkClassifier())).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new ReleasePrefixClassifier())).run(root);
 		
-		new BasicVisitorRunner(new MiscDataClassifier()).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new MiscDataClassifier())).run(root);
 		
 
-		new BasicVisitorRunner(new MultipartClassifier()).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new MultipartClassifier())).run(root);
 
 		new BasicVisitorRunner(new SeriesDirByVote())
 		.exclude(MediaTag.isRoot)
@@ -178,11 +179,11 @@ public class ScanBot {
 			.having(MediaTag.dir)
 			.run(root);
 		
-		new BasicVisitorRunner(new SeasonEpisodeClassifier()).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new SeasonEpisodeClassifier())).run(root);
 		
-		new BasicVisitorRunner(new YearIdentifier()).run(root);
+		new BasicVisitorRunner(new VisitOncePolicy(new YearIdentifier())).run(root);
 		
-		new BasicVisitorRunner(new NfoReader())
+		new BasicVisitorRunner(new VisitOncePolicy(new NfoReader()))
 			.having(MediaTag.isNfo)
 			.having(MediaTag.entry)
 			.run(root);
@@ -193,7 +194,7 @@ public class ScanBot {
 			.run(root);
 
 		
-		new BasicVisitorRunner(new MovieMatcher())
+		new BasicVisitorRunner(new VisitOncePolicy(new MovieMatcher()))
 			.having(MediaTag.isVideo)
 			.exclude(MediaTag.isJunk)
 			.exclude(MediaTag.isSeries)
@@ -201,13 +202,13 @@ public class ScanBot {
 		
 
 //		new BasicVisitorRunner(new MiscDataClassifier()).run(root);;
-		new BasicVisitorRunner(new SeriesMatcher())
+		new BasicVisitorRunner(new VisitOncePolicy(new SeriesMatcher()))
 			.having(MediaTag.isVideo)
 			.having(MediaTag.episode)
 			.exclude(MediaTag.isJunk)
 			.run(root);
 		
-		new BasicVisitorRunner(new SeriesIdentifactor())
+		new BasicVisitorRunner(new VisitOncePolicy(new SeriesIdentifactor()))
 //			.having((MediaTag.canBeSeries))
 			.having((MediaTag.season))
 			.having((MediaTag.episode))
@@ -216,7 +217,7 @@ public class ScanBot {
 			.exclude(MediaTag.isJunk)
 			.run(root);
 		
-		new BasicVisitorRunner(new MovieIdentifactor(true))
+		new BasicVisitorRunner(new VisitOncePolicy(new MovieIdentifactor(true)))
 		.having((MediaTag.canBeMovie))
 		.having((MediaTag.movie))
 		.exclude((MediaTag.canBeSeries))
@@ -224,7 +225,7 @@ public class ScanBot {
 		.exclude(MediaTag.isJunk)
 		.run(root);
 
-		new BasicVisitorRunner(new MovieIdentifactor(false))
+		new BasicVisitorRunner(new VisitOncePolicy(new MovieIdentifactor(false)))
 		.having(MediaTag.isVideo)
 		.exclude(MediaTag.movieOutput)
 		.exclude((MediaTag.canBeSeries))
