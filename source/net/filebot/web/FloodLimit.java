@@ -17,6 +17,8 @@ public class FloodLimit {
 		this.permits = new Semaphore(permitLimit, true);
 		this.releaseDelay = releaseDelay;
 		this.timeUnit = timeUnit;
+		timer.setKeepAliveTime(1,TimeUnit.SECONDS);
+		timer.allowCoreThreadTimeOut(true);
 	}
 
 	public ScheduledFuture<?> acquirePermit() throws InterruptedException {
