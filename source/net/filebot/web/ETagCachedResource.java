@@ -24,10 +24,9 @@ public abstract class ETagCachedResource<T extends Serializable> extends CachedR
 		super(resource, type, expirationTime, retryCountLimit, retryWaitTime);
 	}
 
-	
 	@Override
 	protected ByteBuffer fetchData(URL url, long lastModified) throws IOException {
-		String etagKey = "ETag1" + ":" + url.toString();
+		String etagKey = "ETag" + ":" + url.toString();
 		DB db = getCache();
 		Map<String,Element> cache = db.createHashMap("e"+expirationTime)
 				.expireAfterWrite(expirationTime)
@@ -37,24 +36,16 @@ public abstract class ETagCachedResource<T extends Serializable> extends CachedR
 
 		Map<String, String> requestParameters = new HashMap<String, String>();
 		if (etag != null && etag.getObjectValue() != null) {
-			requestParameters.put("If-None-Match", etag.getObjectKey().toString());
+			requestParameters.put("If-None-Match", etag.getObjectValue().toString());
 		}
 
 		// If-Modified-Since must not be set if If-None-Match is set
 		Map<String, List<String>> responseHeaders = new HashMap<String, List<String>>();
 		ByteBuffer data = WebRequest.fetch(url, requestParameters.size() > 0 ? -1 : lastModified, requestParameters, responseHeaders);
-		
-		if(data == null){
-			if(etag!=null){
-				return ByteBuffer.wrap((byte[]) etag.getObjectValue());
-			}else{
-				throw new IllegalStateException();
-			}
-		}
 
 		if (responseHeaders.containsKey("ETag")) {
 //			throw new RuntimeException("X");
-			cache.put(etagKey,new Element(responseHeaders.get("ETag").get(0), data.array()));
+			cache.put(etagKey,new Element(etagKey, responseHeaders.get("ETag").get(0)));
 		}
 		db.commit();
 		return data;
