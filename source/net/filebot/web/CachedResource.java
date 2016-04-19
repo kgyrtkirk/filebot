@@ -1,16 +1,14 @@
 package net.filebot.web;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
 import java.nio.ByteBuffer;
 
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
 
 public abstract class CachedResource<T extends Serializable> extends AbstractCachedResource<ByteBuffer, T> {
-
 
 	public CachedResource(String resource, Class<T> type, long expirationTime) {
 		this(resource, type, expirationTime, 2, 1000); // 3 retries in 1s intervals by default
@@ -18,6 +16,11 @@ public abstract class CachedResource<T extends Serializable> extends AbstractCac
 
 	public CachedResource(String resource, Class<T> type, long expirationTime, int retryCountLimit, long retryWaitTime) {
 		super(resource, type, expirationTime, retryCountLimit, retryWaitTime);
+	}
+
+	@Override
+	protected Cache getCache() {
+		return CacheManager.getInstance().getCache("web-persistent-datasource");
 	}
 
 	@Override

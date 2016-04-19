@@ -1,16 +1,11 @@
 package net.filebot.web;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
 
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.Element;
@@ -46,32 +41,15 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 
 	protected abstract T process(R data) throws Exception;
 
-	private static DB db;
-
-	protected final DB getCache() {
-		return getDB();
-	}
-
-	public static DB getDB() {
-		if(db==null){
-			db = DBMaker.newFileDB(new File("/tmp/a12.db")).closeOnJvmShutdown().make();
-		}
-		return db;
-		
-	}
+	protected abstract Cache getCache();
 
 	public synchronized T get() throws IOException {
 		String cacheKey = type.getName() + ":" + resource.toString();
 		Element element = null;
 		long lastUpdateTime = 0;
 
-		DB db = getCache();
-		Map<String,Element> cache = db.createHashMap("x"+type.toString())
-				.expireAfterWrite(expirationTime)
-				.makeOrGet();
-		try{
-		try{
-//			Cache cache = getCache();
+		try {
+			Cache cache = getCache();
 			element = cache.get(cacheKey);
 
 			// sanity check ehcache diskcache problems
@@ -129,8 +107,8 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 
 		try {
 			if (element != null) {
-//				Cache cache = getCache();
-				cache.put(cacheKey,element);
+				Cache cache = getCache();
+				cache.put(element);
 			}
 		} catch (Exception e) {
 			Logger.getLogger(getClass().getName()).log(Level.FINEST, e.getMessage());
@@ -145,11 +123,7 @@ public abstract class AbstractCachedResource<R, T extends Serializable> {
 			// just log error and continue with cached data
 			Logger.getLogger(getClass().getName()).log(Level.WARNING, networkException.toString());
 		}
-		db.commit();
 		return product;
-		}finally{
-			db.rollback();
-		}
 	}
 
 	protected URL getResourceLocation(String resource) throws IOException {

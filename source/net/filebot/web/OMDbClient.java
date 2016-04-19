@@ -25,8 +25,6 @@ import java.util.regex.Pattern;
 
 import javax.swing.Icon;
 
-import org.mapdb.DB;
-
 import net.filebot.ResourceManager;
 import net.filebot.web.TMDbClient.MovieInfo;
 import net.filebot.web.TMDbClient.MovieInfo.MovieProperty;
@@ -166,6 +164,10 @@ public class OMDbClient implements MovieIdentificationService {
 				}
 			}
 
+			@Override
+			protected Cache getCache() {
+				return CacheManager.getInstance().getCache("web-datasource-lv2");
+			}
 		};
 
 		return JsonReader.jsonToMaps(json.get());

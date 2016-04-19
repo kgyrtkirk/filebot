@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.mapdb.DB;
-
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
@@ -27,12 +25,7 @@ public abstract class ETagCachedResource<T extends Serializable> extends CachedR
 	@Override
 	protected ByteBuffer fetchData(URL url, long lastModified) throws IOException {
 		String etagKey = "ETag" + ":" + url.toString();
-		DB db = getCache();
-		Map<String,Element> cache = db.createHashMap("e"+expirationTime)
-				.expireAfterWrite(expirationTime)
-				.makeOrGet();
-		try{
-		Element etag = cache.get(etagKey);
+		Element etag = getCache().get(etagKey);
 
 		Map<String, String> requestParameters = new HashMap<String, String>();
 		if (etag != null && etag.getObjectValue() != null) {
@@ -44,15 +37,15 @@ public abstract class ETagCachedResource<T extends Serializable> extends CachedR
 		ByteBuffer data = WebRequest.fetch(url, requestParameters.size() > 0 ? -1 : lastModified, requestParameters, responseHeaders);
 
 		if (responseHeaders.containsKey("ETag")) {
-//			throw new RuntimeException("X");
-			cache.put(etagKey,new Element(etagKey, responseHeaders.get("ETag").get(0)));
+			getCache().put(new Element(etagKey, responseHeaders.get("ETag").get(0)));
 		}
-		db.commit();
+
 		return data;
-		}finally{
-			db.rollback();
-		}
 	}
 
+	@Override
+	protected Cache getCache() {
+		return CacheManager.getInstance().getCache("web-datasource-lv3");
+	}
 
 }

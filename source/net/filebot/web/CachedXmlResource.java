@@ -11,7 +11,6 @@ import javax.xml.parsers.SAXParserFactory;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 
-import org.mapdb.DB;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -22,6 +21,11 @@ public class CachedXmlResource extends AbstractCachedResource<String, String> {
 
 	public CachedXmlResource(String resource) {
 		super(resource, String.class, ONE_DAY, 2, 1000);
+	}
+
+	@Override
+	protected Cache getCache() {
+		return CacheManager.getInstance().getCache("web-datasource-lv3");
 	}
 
 	public Document getDocument() throws IOException {
