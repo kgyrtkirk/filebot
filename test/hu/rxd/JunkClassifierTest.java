@@ -37,6 +37,8 @@ public class JunkClassifierTest {
     	ret.add(new Object[] { "!sample", true} );
     	ret.add(new Object[] { "asdsajddfjk.sample", true} );
     	ret.add(new Object[] { "jklds fdf jkhle", false} );
+    	ret.add(new Object[] { "jklds_sample", true} );
+    	ret.add(new Object[] { "sample jklds", true} );
         return ret;
     }
 	

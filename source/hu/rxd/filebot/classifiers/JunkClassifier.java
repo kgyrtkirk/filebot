@@ -20,11 +20,11 @@ public class JunkClassifier implements ISectionVisitor {
 			return true;
 		}
 		String n = node.getName().toLowerCase();
-		if (n.startsWith("sample-") ){
+		if (n.matches("^sample[-_ .].*") ){
 			node.addNormalization(new PrefixRemoval(MediaTag.isJunk, "sample-"));
 			return true;
 		}
-		if (n.endsWith("-sample") ){
+		if (n.matches(".*[-_ .]sample$") ){
 			node.addNormalization(new SuffixRemoval(MediaTag.isJunk, "-sample"));
 			return true;
 		}
