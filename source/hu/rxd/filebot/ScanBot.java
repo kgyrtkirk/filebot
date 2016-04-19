@@ -1,6 +1,8 @@
 package hu.rxd.filebot;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
@@ -11,6 +13,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
 
 import hu.rxd.filebot.classifiers.ExtractionRunner;
@@ -82,6 +85,7 @@ public class ScanBot {
 
 	private File src;
 
+	// FIXME doesnt need field
 	private File stateFile;
     
 	private void run() throws Exception {
@@ -93,7 +97,17 @@ public class ScanBot {
 			throw new IllegalArgumentException(String.format("source directory: %s doesnt exists, or not a directory", srcDir));
 		}
 		
-		Root root = getRoot();
+		Root root;
+		
+		if (incremental) {
+			root = loadState();
+			Root configuredRoot = getRoot();
+			if(!configuredRoot.getAbsoluteFile().equals(root.getAbsoluteFile())){
+				throw new IllegalStateException("the root is different");
+			}
+		} else {
+			root = getRoot();
+		}
 		
 		new BasicVisitorRunner(new FileTreeWalker()).run(root);
 		
@@ -261,6 +275,15 @@ public class ScanBot {
 		FileWriter fos = new FileWriter(stateFile);
 		fos.write(JsonWriter.objectToJson(root,exportOptions));
 		fos.close();
+	}
+
+	private Root loadState() throws IOException {
+		
+		FileInputStream fer = new FileInputStream(stateFile);
+		Map<String, Object> importOptions=new HashMap<>();
+		Root reRead = (Root) JsonReader.jsonToJava(fer,importOptions);
+
+		return reRead;
 	}
 
 }
