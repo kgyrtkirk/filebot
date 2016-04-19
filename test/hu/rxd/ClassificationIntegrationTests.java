@@ -69,6 +69,17 @@ public class ClassificationIntegrationTests {
 		System.out.println(leaf);
 	}
 	@Test
+	public void empire1() throws Exception {
+		
+		Root root = basicSections("Empire S01 1080p", "1x01 - Sins Of The Father 1080p Bluray.mkv");
+		ScanBot.runIdentification(root);
+		ISection leaf = getLeaf(root);
+		assertEquals(1,leaf.getTag(MediaTag.episode));
+		assertEquals(1,leaf.getTag(MediaTag.season));
+		assertEquals("Empire (2015)",leaf.getTag(MediaTag.series));
+		System.out.println(leaf);
+	}
+	@Test
 	public void badu() throws Exception {
 		
 		Root root = basicSections("Bad.Education.S01.COMPLETE.HUN.WEB-DL.XviD-DART","dt-badu-102.avi");
