@@ -93,6 +93,8 @@ public class ScanBot {
 		src = new File(srcDir);
 		stateFile = new File(stateDir,STATEFILE_NAME);
 		
+		System.out.println("state: " +stateFile.getAbsolutePath());
+		
 		if(!src.exists() || !src.isDirectory()){
 			throw new IllegalArgumentException(String.format("source directory: %s doesnt exists, or not a directory", srcDir));
 		}

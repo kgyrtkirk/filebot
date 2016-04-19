@@ -29,6 +29,7 @@ public class ExtractionRunner implements ISectionVisitor {
 		CmdlineOperations cmdline = new CmdlineOperations();
 		File extractDir = new File(extractionRoot,node.getName());
 		System.out.println(" * extract: "+node.getAbsoluteFile());
+		System.out.println(" * into: "+extractDir);
 		if(node.getAbsoluteFile().length()==0){
 			System.out.println("!!! skip extract 0 length: "+node.getAbsoluteFile());
 			return;
