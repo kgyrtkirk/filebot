@@ -7,18 +7,25 @@ import java.util.TreeSet;
 
 import com.google.common.base.Function;
 
+import info.debatty.java.stringsimilarity.KShingling;
+import info.debatty.java.stringsimilarity.StringProfile;
 import info.debatty.java.stringsimilarity.interfaces.NormalizedStringDistance;
 
 public class StringDistanceIndex<S, K extends Function<S, String>> {
 
-	static class Entry<S> {
 
+    static class Entry<S> {
+        static KShingling ks = new KShingling(1);
+
+		StringProfile	ksProfile;
 		private String label;
 		private S payload;
 
 		public Entry(String label, S payload) {
 			this.label = label;
 			this.payload = payload;
+	        ksProfile = ks.getProfile(label);
+
 		}
 	}
 
@@ -59,9 +66,13 @@ public class StringDistanceIndex<S, K extends Function<S, String>> {
 		}
 	}
 
-	public TreeSet<Result<S>> query(String needle, double maxDistance) {
+	public TreeSet<Result<S>> query(String needle, double maxDistance) throws Exception {
+		Entry needleE = new Entry(needle,null);
 		TreeSet<Result<S>> ret = new TreeSet<>();
 		for (Entry<S> entry : entries) {
+			if ((1.0-needleE.ksProfile.cosineSimilarity(entry.ksProfile)) > maxDistance) {
+				continue;
+			}
 			double dist = m.distance(needle, entry.label);
 			if (dist > maxDistance) {
 				continue;
@@ -70,14 +81,20 @@ public class StringDistanceIndex<S, K extends Function<S, String>> {
 		}
 		return ret;
 	}
-	public Result<S> queryBest(String needle) {
-		
+
+	public Result<S> queryBest(String needle) throws Exception {
+		Entry needleE = new Entry(needle,null);
+		double maxDistance=1.0;
 		Result<S>	ret=null;
 		for (Entry<S> entry : entries) {
+			if ((1.0-needleE.ksProfile.cosineSimilarity(entry.ksProfile)) > maxDistance) {
+				continue;
+			}
 			double dist = m.distance(needle, entry.label);
 			if (ret != null && ret.distance < dist) {
 				continue;
 			}
+			maxDistance=dist;
 			ret=new Result<S>(dist, entry.payload);
 		}
 		return ret;
