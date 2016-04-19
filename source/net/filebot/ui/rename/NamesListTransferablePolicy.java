@@ -42,7 +42,7 @@ class NamesListTransferablePolicy extends FileTransferablePolicy {
 
 	@Override
 	public boolean accept(Transferable tr) throws Exception {
-		return tr.isDataFlavorSupported(stringFlavor) || hasFileListFlavor(tr);
+		return hasFileListFlavor(tr) || tr.isDataFlavorSupported(stringFlavor) || tr.isDataFlavorSupported(episodeArrayFlavor);
 	}
 
 	@Override
@@ -97,7 +97,7 @@ class NamesListTransferablePolicy extends FileTransferablePolicy {
 			loadTorrentFiles(files, values);
 		} else {
 			// load all files from the given folders recursively up do a depth of 32
-			values.addAll(FastFile.create(listFiles(files)));
+			listFiles(files).stream().map(FastFile::new).forEach(values::add);
 		}
 
 		model.addAll(values);
@@ -144,10 +144,7 @@ class NamesListTransferablePolicy extends FileTransferablePolicy {
 	protected void loadTorrentFiles(List<File> files, List<Object> values) throws IOException {
 		for (File file : files) {
 			Torrent torrent = new Torrent(file);
-
-			for (Torrent.Entry entry : torrent.getFiles()) {
-				values.add(new SimpleFileInfo(entry.getPath(), entry.getLength()));
-			}
+			values.addAll(torrent.getFiles());
 		}
 	}
 

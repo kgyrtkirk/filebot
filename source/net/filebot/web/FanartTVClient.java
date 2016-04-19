@@ -1,24 +1,22 @@
 package net.filebot.web;
 
-import java.io.Serializable;
+import static java.util.stream.Collectors.*;
+import static net.filebot.Logging.*;
+import static net.filebot.util.JsonUtilities.*;
+
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.stream.Stream;
 
-import net.filebot.web.FanartTVClient.FanartDescriptor.FanartProperty;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
+import javax.swing.Icon;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
+import net.filebot.Cache;
+import net.filebot.CacheType;
 
-public class FanartTVClient {
+public class FanartTVClient implements Datasource, ArtworkProvider {
 
 	private String apikey;
 
@@ -26,151 +24,42 @@ public class FanartTVClient {
 		this.apikey = apikey;
 	}
 
-	public List<FanartDescriptor> getSeriesArtwork(int tvdbid) throws Exception {
-		return getArtwork("tv", String.valueOf(tvdbid));
+	@Override
+	public String getName() {
+		return "FanartTV";
 	}
 
-	public List<FanartDescriptor> getMovieArtwork(int tmdbid) throws Exception {
-		return getArtwork("movies", String.valueOf(tmdbid));
+	@Override
+	public Icon getIcon() {
+		return null;
 	}
 
-	public List<FanartDescriptor> getArtwork(String category, String id) throws Exception {
-		String resource = getResource(category, id);
-
-		// cache results
-		CachedResource<FanartDescriptor[]> data = new CachedResource<FanartDescriptor[]>(resource, FanartDescriptor[].class, CachedResource.ONE_WEEK) {
-
-			@Override
-			public FanartDescriptor[] process(ByteBuffer data) throws Exception {
-				String json = Charset.forName("UTF-8").decode(data).toString();
-				Map<?, ?> maps = JsonReader.jsonToMaps(json);
-
-				List<FanartDescriptor> fanart = new ArrayList<FanartDescriptor>();
-				maps.forEach((k, v) -> {
-					if (v instanceof JsonObject) {
-						JsonObject<?, ?> mapping = (JsonObject<?, ?>) v;
-						if (mapping.isArray()) {
-							for (Object i : mapping.getArray()) {
-								if (i instanceof Map) {
-									Map<?, ?> item = (Map<?, ?>) i;
-									Map<FanartProperty, String> fields = new EnumMap<FanartProperty, String>(FanartProperty.class);
-									fields.put(FanartProperty.type, k.toString());
-									for (FanartProperty prop : FanartProperty.values()) {
-										Object value = item.get(prop.name());
-										if (value != null) {
-											fields.put(prop, value.toString());
-										}
-									}
-									if (fields.size() > 1) {
-										fanart.add(new FanartDescriptor(fields));
-									}
-								}
-							}
-						}
-					}
-				});
-
-				return fanart.toArray(new FanartDescriptor[0]);
-			}
-
-			@Override
-			protected Cache getCache() {
-				return CacheManager.getInstance().getCache("web-datasource-lv2");
-			}
-		};
-
-		return Arrays.asList(data.get());
-	}
-
-	public String getResource(String category, String id) {
+	public URL getResource(String path) throws Exception {
 		// e.g. http://webservice.fanart.tv/v3/movies/17645?api_key=6fa42b0ef3b5f3aab6a7edaa78675ac2
-		return "http://webservice.fanart.tv/v3/" + category + "/" + id + "?api_key=" + apikey;
+		return new URL("http://webservice.fanart.tv/v3/" + path + "?api_key=" + apikey);
 	}
 
-	public static class FanartDescriptor implements Serializable {
+	@Override
+	public List<Artwork> getArtwork(int id, String category, Locale locale) throws Exception {
+		Cache cache = Cache.getCache(getName(), CacheType.Weekly);
+		Object json = cache.json(category + '/' + id, s -> getResource(s)).expire(Cache.ONE_WEEK).get();
 
-		public static enum FanartProperty {
-			type, id, url, lang, likes, season, disc, disc_type
-		}
+		return asMap(json).entrySet().stream().flatMap(type -> {
+			return streamJsonObjects(type.getValue()).map(it -> {
+				try {
+					String url = getString(it, "url");
+					Locale language = getStringValue(it, "lang", Locale::new);
+					Double likes = getDecimal(it, "likes");
+					String season = getString(it, "season");
+					String discType = getString(it, "disc_type");
 
-		protected Map<FanartProperty, String> fields;
-
-		protected FanartDescriptor() {
-			// used by serializer
-		}
-
-		protected FanartDescriptor(Map<FanartProperty, String> fields) {
-			this.fields = new EnumMap<FanartProperty, String>(fields);
-		}
-
-		public String get(Object key) {
-			return fields.get(FanartProperty.valueOf(key.toString()));
-		}
-
-		public String get(FanartProperty key) {
-			return fields.get(key);
-		}
-
-		public String getType() {
-			return fields.get(FanartProperty.type);
-		}
-
-		public Integer getId() {
-			try {
-				return new Integer(fields.get(FanartProperty.id));
-			} catch (Exception e) {
-				return null;
-			}
-		}
-
-		public URL getUrl() {
-			try {
-				return new URL(fields.get(FanartProperty.url));
-			} catch (Exception e) {
-				return null;
-			}
-		}
-
-		public Integer getLikes() {
-			try {
-				return new Integer(fields.get(FanartProperty.likes));
-			} catch (Exception e) {
-				return null;
-			}
-		}
-
-		public Locale getLanguage() {
-			try {
-				return new Locale(fields.get(FanartProperty.lang));
-			} catch (Exception e) {
-				return null;
-			}
-		}
-
-		public Integer getSeason() {
-			try {
-				return new Integer(fields.get(FanartProperty.season));
-			} catch (Exception e) {
-				return null;
-			}
-		}
-
-		public Integer getDiskNumber() {
-			try {
-				return new Integer(fields.get(FanartProperty.disc));
-			} catch (Exception e) {
-				return null;
-			}
-		}
-
-		public String getDiskType() {
-			return fields.get(FanartProperty.disc_type);
-		}
-
-		@Override
-		public String toString() {
-			return fields.toString();
-		}
+					return new Artwork(this, Stream.of(type.getKey(), season, discType), new URL(url), language, likes);
+				} catch (Exception e) {
+					debug.log(Level.WARNING, e, e::getMessage);
+					return null;
+				}
+			});
+		}).filter(Objects::nonNull).collect(toList());
 	}
 
 }

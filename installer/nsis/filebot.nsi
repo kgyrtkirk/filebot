@@ -97,27 +97,31 @@ Var MSI_STATUS
 
 
 Section MAIN
-	DetailPrint "Uninstalling previous versions..."
-	nsExec::Exec `Powershell.exe -inputformat none -noprofile -windowstyle hidden -Command "(Get-WmiObject -Class Win32_Product -Filter \"Name = 'FileBot'\").uninstall()"`
-	
 	DetailPrint "Downloading latest version..."
 	${if} ${RunningX64}
 		inetc::get /USERAGENT "nsis" /caption "Downloading FileBot (64-bit)" "https://app.filebot.net/download.php?type=msi&arch=x64" "$PLUGINSDIR\FileBot.msi" /end
 	${else}
 		inetc::get /USERAGENT "nsis" /caption "Downloading FileBot (32-bit)" "https://app.filebot.net/download.php?type=msi&arch=x86" "$PLUGINSDIR\FileBot.msi" /end
 	${endif}
-	
+
 	DetailPrint "Installing latest version..."
 	nsExec::Exec `msiexec /passive /norestart /i "$PLUGINSDIR\FileBot.msi"`
 	Pop $MSI_STATUS # grab return value
-	
+
 	${if} $MSI_STATUS == "0"
 		DetailPrint "Optimizing..."
-		nsExec::Exec `"C:\Program Files\FileBot\filebot.exe" -script "g:java.util.prefs.Preferences.userRoot(); net.sf.ehcache.CacheManager.getInstance().clearAll(); net.filebot.media.MediaDetection.warmupCachedResources();"`
+		nsExec::ExecToLog `"C:\Program Files\FileBot\filebot.exe" -script "g:println Settings.applicationIdentifier; println 'JRE: '+Settings.javaRuntimeIdentifier; println 'JVM: '+(com.sun.jna.Platform.is64Bit() ? 64 : 32)+'-bit '+System.getProperty('java.vm.name'); java.util.prefs.Preferences.userRoot(); CacheManager.getInstance().clearAll(); MediaDetection.warmupCachedResources();" --log OFF`
+		ExecShell "open" "https://www.filebot.net/getting-started/index.html"
+		ExecShell "open" "https://www.filebot.net/manual.html"
 		DetailPrint "Done."
 	${else}
 		DetailPrint "msiexec error $MSI_STATUS"
-		DetailPrint "Install failed. Please download the .msi package manually."
+		ExecShell "open" "https://www.filebot.net/files/"
+		${if} ${RunningX64}
+			DetailPrint "Installation failed. Please download the x64 msi package yourself."
+		${else}
+			DetailPrint "Installation failed. Please download the x86 msi package yourself."
+		${endif}
 		Abort
 	${endif}
 SectionEnd

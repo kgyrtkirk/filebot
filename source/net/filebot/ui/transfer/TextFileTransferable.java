@@ -1,44 +1,36 @@
-
 package net.filebot.ui.transfer;
 
+import static java.nio.charset.StandardCharsets.*;
+import static java.util.Collections.*;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
-import java.util.Collections;
 import java.util.Set;
-
 
 public class TextFileTransferable extends ByteBufferTransferable {
 
 	private final String text;
 
-
 	public TextFileTransferable(String name, String text) {
-		this(name, text, Charset.forName("UTF-8"));
+		this(name, text, UTF_8);
 	}
 
-
-	public TextFileTransferable(final String name, final String text, final Charset charset) {
+	public TextFileTransferable(String name, String text, Charset charset) {
 		// lazy data map for file transfer
 		super(new AbstractMap<String, ByteBuffer>() {
 
 			@Override
 			public Set<Entry<String, ByteBuffer>> entrySet() {
-				// encode text
-				Entry<String, ByteBuffer> entry = new SimpleEntry<String, ByteBuffer>(name, charset.encode(text));
-
-				// return memory file entry
-				return Collections.singleton(entry);
+				return singletonMap(name, charset.encode(text)).entrySet();
 			}
 		});
 
 		// text transfer
 		this.text = text;
 	}
-
 
 	@Override
 	public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException {
@@ -55,14 +47,10 @@ public class TextFileTransferable extends ByteBufferTransferable {
 		throw new UnsupportedFlavorException(flavor);
 	}
 
-
 	@Override
 	public DataFlavor[] getTransferDataFlavors() {
-		return new DataFlavor[] {
-				DataFlavor.javaFileListFlavor, FileTransferable.uriListFlavor, DataFlavor.stringFlavor
-		};
+		return new DataFlavor[] { DataFlavor.javaFileListFlavor, FileTransferable.uriListFlavor, DataFlavor.stringFlavor };
 	}
-
 
 	@Override
 	public boolean isDataFlavorSupported(DataFlavor flavor) {

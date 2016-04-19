@@ -3,6 +3,8 @@ package net.filebot.similarity;
 import static java.util.Collections.*;
 import static java.util.regex.Pattern.*;
 import static net.filebot.util.FileUtilities.*;
+import static net.filebot.util.RegularExpressions.*;
+import static net.filebot.util.StringUtilities.*;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -10,7 +12,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
@@ -33,7 +34,7 @@ public class SeasonEpisodeMatcher {
 		Season_00_Episode_00 = new SeasonEpisodePattern(null, "(?<!\\p{Alnum})(?i:season|series)[^\\p{Alnum}]{0,3}(\\d{1,4})[^\\p{Alnum}]{0,3}(?i:episode)[^\\p{Alnum}]{0,3}(\\d{1,4})[^\\p{Alnum}]{0,3}(?!\\p{Digit})");
 
 		// match patterns like S01E01-E05
-		S00E00SEQ = new SeasonEpisodePattern(null, "(?<!\\p{Digit})[Ss](\\d{1,2}|\\d{4})[Ee](\\d{2,3})[-][Ee](\\d{2,3})(?!\\p{Digit})") {
+		S00E00SEQ = new SeasonEpisodePattern(null, "(?<!\\p{Alnum}|[-])[Ss](\\d{1,2}|\\d{4})[Ee](\\d{2,3})[-][Ee](\\d{2,3})(?!\\p{Alnum}|[-])") {
 
 			@Override
 			protected Collection<SxE> process(MatchResult match) {
@@ -54,9 +55,9 @@ public class SeasonEpisodeMatcher {
 			@Override
 			protected Collection<SxE> process(MatchResult match) {
 				List<SxE> matches = new ArrayList<SxE>(2);
-				Scanner epno = new Scanner(match.group(2)).useDelimiter("\\D+");
-				while (epno.hasNext()) {
-					matches.add(new SxE(match.group(1), epno.next()));
+				int seasonNumber = Integer.parseInt(match.group(1));
+				for (int episodeNumber : matchIntegers(match.group(2))) {
+					matches.add(new SxE(seasonNumber, episodeNumber));
 				}
 				return matches;
 			}
@@ -68,9 +69,9 @@ public class SeasonEpisodeMatcher {
 			@Override
 			protected Collection<SxE> process(MatchResult match) {
 				List<SxE> matches = new ArrayList<SxE>(2);
-				String[] num = match.group(0).split("\\D+");
-				for (int i = 0; i < num.length; i += 2) {
-					matches.add(new SxE(num[i], num[i + 1])); // SxE-SxE-SxE
+				String[] numbers = NON_DIGIT.split(match.group(0));
+				for (int i = 0; i < numbers.length; i += 2) {
+					matches.add(new SxE(numbers[i], numbers[i + 1])); // SxE-SxE-SxE
 				}
 				return matches;
 			}
@@ -82,9 +83,9 @@ public class SeasonEpisodeMatcher {
 			@Override
 			protected Collection<SxE> process(MatchResult match) {
 				List<SxE> matches = new ArrayList<SxE>(2);
-				Scanner epno = new Scanner(match.group(2)).useDelimiter("\\D+");
-				while (epno.hasNext()) {
-					matches.add(new SxE(match.group(1), epno.next()));
+				int seasonNumber = Integer.parseInt(match.group(1));
+				for (int episodeNumber : matchIntegers(match.group(2))) {
+					matches.add(new SxE(seasonNumber, episodeNumber));
 				}
 				return matches;
 			}
@@ -96,9 +97,9 @@ public class SeasonEpisodeMatcher {
 			@Override
 			protected Collection<SxE> process(MatchResult match) {
 				List<SxE> matches = new ArrayList<SxE>(2);
-				Scanner epno = new Scanner(match.group(2)).useDelimiter("\\D+");
-				while (epno.hasNext()) {
-					matches.add(new SxE(match.group(1), epno.next()));
+				int seasonNumber = Integer.parseInt(match.group(1));
+				for (int episodeNumber : matchIntegers(match.group(2))) {
+					matches.add(new SxE(seasonNumber, episodeNumber));
 				}
 				return matches;
 			}

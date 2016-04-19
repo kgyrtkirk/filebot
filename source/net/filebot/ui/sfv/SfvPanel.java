@@ -1,10 +1,11 @@
 package net.filebot.ui.sfv;
 
-import static java.lang.Math.*;
 import static net.filebot.ui.sfv.ChecksumTableModel.*;
 import static net.filebot.ui.transfer.BackgroundFileTransferablePolicy.*;
 import static net.filebot.util.FileUtilities.*;
+import static net.filebot.util.ui.SwingUI.*;
 
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.beans.PropertyChangeEvent;
@@ -28,14 +29,17 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.border.TitledBorder;
 
+import com.google.common.eventbus.Subscribe;
+
 import net.filebot.ResourceManager;
 import net.filebot.hash.HashType;
 import net.filebot.ui.SelectDialog;
 import net.filebot.ui.transfer.DefaultTransferHandler;
 import net.filebot.ui.transfer.LoadAction;
 import net.filebot.ui.transfer.SaveAction;
+import net.filebot.ui.transfer.TransferablePolicy;
+import net.filebot.ui.transfer.TransferablePolicy.TransferAction;
 import net.filebot.util.FileUtilities;
-import net.filebot.util.ui.SwingUI;
 import net.miginfocom.swing.MigLayout;
 
 public class SfvPanel extends JComponent {
@@ -44,7 +48,7 @@ public class SfvPanel extends JComponent {
 
 	private final ChecksumTable table = new ChecksumTable();
 
-	private final ChecksumTableTransferablePolicy transferablePolicy = new ChecksumTableTransferablePolicy(table.getModel(), computationService);
+	private final ChecksumTableTransferablePolicy transferablePolicy = new ChecksumTableTransferablePolicy(table, computationService);
 	private final ChecksumTableExportHandler exportHandler = new ChecksumTableExportHandler(table.getModel());
 
 	public SfvPanel() {
@@ -85,10 +89,12 @@ public class SfvPanel extends JComponent {
 			}
 		});
 
-		putClientProperty("transferablePolicy", transferablePolicy);
-
 		// Shortcut DELETE
-		SwingUI.installAction(this, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), removeAction);
+		installAction(this, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), removeAction);
+	}
+
+	public TransferablePolicy getTransferablePolicy() {
+		return transferablePolicy;
 	}
 
 	protected void restartComputation(HashType hash) {
@@ -124,9 +130,18 @@ public class SfvPanel extends JComponent {
 		}
 	}
 
+	@Subscribe
+	public void handle(Transferable transferable) throws Exception {
+		TransferablePolicy handler = getTransferablePolicy();
+
+		if (handler != null && handler.accept(transferable)) {
+			handler.handleTransferable(transferable, TransferAction.PUT);
+		}
+	}
+
 	private final SaveAction saveAction = new ChecksumTableSaveAction();
 
-	private final LoadAction loadAction = new LoadAction(transferablePolicy);
+	private final LoadAction loadAction = new LoadAction(this::getTransferablePolicy);
 
 	private final AbstractAction clearAction = new AbstractAction("Clear", ResourceManager.getIcon("action.clear")) {
 
@@ -168,7 +183,7 @@ public class SfvPanel extends JComponent {
 			computationService.purge();
 
 			// auto select next row
-			selectedRow = min(selectedRow, table.getRowCount() - 1);
+			selectedRow = Math.min(selectedRow, table.getRowCount() - 1);
 
 			table.getSelectionModel().setSelectionInterval(selectedRow, selectedRow);
 		}
@@ -263,7 +278,8 @@ public class SfvPanel extends JComponent {
 						}
 					};
 
-					selectDialog.getHeaderLabel().setText("Select checksum column:");
+					selectDialog.getMessageLabel().setText("Select checksum column:");
+					selectDialog.pack();
 					selectDialog.setLocationRelativeTo(SfvPanel.this);
 					selectDialog.setVisible(true);
 

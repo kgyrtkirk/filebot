@@ -3,8 +3,8 @@ package net.filebot.ui.rename;
 import static java.awt.Font.*;
 import static java.util.Collections.*;
 import static javax.swing.BorderFactory.*;
+import static net.filebot.Logging.*;
 import static net.filebot.Settings.*;
-import static net.filebot.ui.NotificationLogging.*;
 import static net.filebot.util.ExceptionUtilities.*;
 import static net.filebot.util.FileUtilities.*;
 import static net.filebot.util.ui.SwingUI.*;
@@ -39,7 +39,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.script.ScriptException;
 import javax.swing.AbstractAction;
@@ -51,14 +50,22 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
-import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
+
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
+
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.JsonWriter;
 
 import net.filebot.ResourceManager;
 import net.filebot.Settings;
@@ -86,14 +93,6 @@ import net.filebot.web.MovieFormat;
 import net.filebot.web.MovieIdentificationService;
 import net.filebot.web.MusicIdentificationService;
 import net.miginfocom.swing.MigLayout;
-
-import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
-import org.fife.ui.rtextarea.RTextScrollPane;
-
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.JsonWriter;
 
 public class FormatDialog extends JDialog {
 
@@ -133,7 +132,7 @@ public class FormatDialog extends JDialog {
 		public Format getFormat() {
 			switch (this) {
 			case Episode:
-				return new EpisodeFormat(true, true);
+				return new EpisodeFormat();
 			case Movie: // case Movie
 				return new MovieFormat(true, true, false);
 			case Music:
@@ -207,11 +206,11 @@ public class FormatDialog extends JDialog {
 
 		editorScrollPane.setVerticalScrollBarPolicy(RTextScrollPane.VERTICAL_SCROLLBAR_NEVER);
 		editorScrollPane.setHorizontalScrollBarPolicy(RTextScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		editorScrollPane.setViewportBorder(new EmptyBorder(7, 0, 7, 0));
-		editorScrollPane.setBackground(editor.getBackground());
+		editorScrollPane.setViewportBorder(createEmptyBorder(7, 2, 7, 2));
 		editorScrollPane.setOpaque(true);
+		editorScrollPane.setBorder(new JTextField().getBorder());
 
-		content.add(editorScrollPane, "w 120px:min(pref, 420px), h 40px!, growx, wrap 4px, id editor");
+		content.add(editorScrollPane, "w 120px:min(pref, 420px), h pref!, growx, wrap 4px, id editor");
 		content.add(createImageButton(changeSampleAction), "sg action, w 25!, h 19!, pos n editor.y2+2 editor.x2 n");
 		content.add(createImageButton(selectFolderAction), "sg action, w 25!, h 19!, pos n editor.y2+2 editor.x2-(27*1) n");
 		content.add(createImageButton(showRecentAction), "sg action, w 25!, h 19!, pos n editor.y2+2 editor.x2-(27*2) n");
@@ -271,7 +270,7 @@ public class FormatDialog extends JDialog {
 
 		// initialize window properties
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-		setMinimumSize(new Dimension(650, 470));
+		setMinimumSize(new Dimension(650, 500));
 
 		// initialize data
 		setState(initMode, lockOnBinding != null ? lockOnBinding : restoreSample(initMode), lockOnBinding != null);
@@ -329,7 +328,7 @@ public class FormatDialog extends JDialog {
 		final RSyntaxTextArea editor = new RSyntaxTextArea(new RSyntaxDocument(SyntaxConstants.SYNTAX_STYLE_GROOVY) {
 			@Override
 			public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
-				super.insertString(offs, str.replaceAll("\\s", " "), a); // FORCE SINGLE LINE
+				super.insertString(offs, str.replaceAll("\\R", ""), a); // FORCE SINGLE LINE
 			}
 		}, null, 1, 80);
 
@@ -418,7 +417,7 @@ public class FormatDialog extends JDialog {
 							try {
 								formatExample.setText(get());
 							} catch (Exception e) {
-								Logger.getLogger(getClass().getName()).log(Level.SEVERE, e.getMessage(), e);
+								debug.log(Level.SEVERE, e.getMessage(), e);
 							}
 						}
 					}.execute();
@@ -451,7 +450,7 @@ public class FormatDialog extends JDialog {
 				String sample = bundle.getString(mode.key() + ".sample");
 				info = JsonReader.jsonToJava(sample);
 			} catch (Exception illegalSample) {
-				Logger.getLogger(RenamePanel.class.getName()).log(Level.SEVERE, "Illegal Sample", e);
+				debug.log(Level.SEVERE, "Illegal Sample", e);
 			}
 		}
 
@@ -482,10 +481,10 @@ public class FormatDialog extends JDialog {
 						threadGroup.stop();
 
 						// log access of potentially unsafe method
-						Logger.getLogger(getClass().getName()).warning("Thread was forcibly terminated");
+						debug.warning("Thread was forcibly terminated");
 					}
 				} catch (Exception e) {
-					Logger.getLogger(getClass().getName()).log(Level.WARNING, "Thread was not terminated", e);
+					debug.log(Level.WARNING, "Thread was not terminated", e);
 				}
 
 				return remaining;
@@ -526,7 +525,7 @@ public class FormatDialog extends JDialog {
 				@Override
 				protected void done() {
 					try {
-						preview.setText(get());
+						preview.setText(get().trim());
 
 						// check internal script exception
 						if (format.caughtScriptException() != null) {
@@ -534,8 +533,8 @@ public class FormatDialog extends JDialog {
 						}
 
 						// check empty output
-						if (get().trim().isEmpty()) {
-							throw new RuntimeException("Formatted value is empty");
+						if (preview.getText().isEmpty()) {
+							throw new Exception("Formatted value is empty");
 						}
 
 						// no warning or error
@@ -545,12 +544,19 @@ public class FormatDialog extends JDialog {
 					} catch (Exception e) {
 						BindingException issue = findCause(e, BindingException.class);
 						if (issue != null && getMessage(issue).contains(MediaBindingBean.EXCEPTION_SAMPLE_FILE_NOT_SET)) {
+							// exception caused by file bindings because sample file has not been set
 							status.setText(getMessage(issue));
 							status.setIcon(ResourceManager.getIcon("action.variables"));
 						} else if (issue != null) {
+							// default binding exception handler
 							status.setText(getMessage(issue));
 							status.setIcon(ResourceManager.getIcon("status.info"));
+						} else if (e.getCause() != null && e.getCause().getClass().equals(Exception.class)) {
+							// ScriptShellMethods throws Exception type exceptions which are not unexpected
+							status.setText(e.getCause().getMessage());
+							status.setIcon(ResourceManager.getIcon("status.info"));
 						} else {
+							// default exception handler
 							status.setText(String.format("%s: %s", e.getClass().getSimpleName(), e.getMessage()));
 							status.setIcon(ResourceManager.getIcon("status.warning"));
 						}
@@ -672,7 +678,7 @@ public class FormatDialog extends JDialog {
 					mode.persistentSample().setValue(info == null ? "" : JsonWriter.objectToJson(info));
 					persistentSampleFile.setValue(file == null ? "" : sample.getFileObject().getAbsolutePath());
 				} catch (Exception e) {
-					Logger.getLogger(FormatDialog.class.getName()).log(Level.WARNING, e.getMessage(), e);
+					debug.log(Level.WARNING, e.getMessage(), e);
 				}
 
 				// reevaluate everything
@@ -770,7 +776,7 @@ public class FormatDialog extends JDialog {
 
 				finish(true);
 			} catch (ScriptException e) {
-				UILogger.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e));
+				log.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e));
 			}
 		}
 	};

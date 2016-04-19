@@ -2,29 +2,25 @@ package net.filebot;
 
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.Logging.*;
 import static net.filebot.Settings.*;
 import static net.filebot.media.MediaDetection.*;
 import static net.filebot.util.FileUtilities.*;
-import static net.filebot.util.StringUtilities.*;
 
-import java.io.IOException;
-import java.util.LinkedHashSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import net.filebot.media.XattrMetaInfoProvider;
 import net.filebot.similarity.MetricAvg;
 import net.filebot.web.AcoustIDClient;
 import net.filebot.web.AnidbClient;
-import net.filebot.web.AnidbSearchResult;
+import net.filebot.web.Datasource;
 import net.filebot.web.EpisodeListProvider;
 import net.filebot.web.FanartTVClient;
 import net.filebot.web.ID3Lookup;
@@ -38,38 +34,41 @@ import net.filebot.web.ShooterSubtitles;
 import net.filebot.web.SubtitleProvider;
 import net.filebot.web.SubtitleSearchResult;
 import net.filebot.web.TMDbClient;
+import net.filebot.web.TMDbTVClient;
 import net.filebot.web.TVMazeClient;
 import net.filebot.web.TheTVDBClient;
-import net.filebot.web.TheTVDBSearchResult;
 import net.filebot.web.VideoHashSubtitleService;
+import one.util.streamex.StreamEx;
 
 /**
  * Reuse the same web service client so login, cache, etc. can be shared.
  */
 public final class WebServices {
 
-	// episode dbs
+	// movie sources
+	public static final OMDbClient OMDb = new OMDbClient();
+	public static final TMDbClient TheMovieDB = new TMDbClient(getApiKey("themoviedb"));
+
+	// episode sources
 	public static final TVMazeClient TVmaze = new TVMazeClient();
 	public static final AnidbClient AniDB = new AnidbClientWithLocalSearch(getApiKey("anidb"), 6);
 
 	// extended TheTVDB module with local search
 	public static final TheTVDBClientWithLocalSearch TheTVDB = new TheTVDBClientWithLocalSearch(getApiKey("thetvdb"));
+	public static final TMDbTVClient TheMovieDB_TV = new TMDbTVClient(TheMovieDB);
 
-	// movie dbs
-	public static final OMDbClient OMDb = new OMDbClient();
-	public static final TMDbClient TheMovieDB = new TMDbClient(getApiKey("themoviedb"));
-
-	// subtitle dbs
+	// subtitle sources
 	public static final OpenSubtitlesClient OpenSubtitles = new OpenSubtitlesClientWithLocalSearch(getApiKey("opensubtitles"), getApplicationVersion());
 	public static final ShooterSubtitles Shooter = new ShooterSubtitles();
 
-	// misc
+	// other sources
 	public static final FanartTVClient FanartTV = new FanartTVClient(Settings.getApiKey("fanart.tv"));
 	public static final AcoustIDClient AcoustID = new AcoustIDClient(Settings.getApiKey("acoustid"));
 	public static final XattrMetaInfoProvider XattrMetaData = new XattrMetaInfoProvider();
+	public static final ID3Lookup MediaInfoID3 = new ID3Lookup();
 
 	public static EpisodeListProvider[] getEpisodeListProviders() {
-		return new EpisodeListProvider[] { TheTVDB, AniDB, TVmaze };
+		return new EpisodeListProvider[] { TheTVDB, AniDB, TheMovieDB_TV, TVmaze };
 	}
 
 	public static MovieIdentificationService[] getMovieIdentificationServices() {
@@ -88,31 +87,23 @@ public final class WebServices {
 	}
 
 	public static MusicIdentificationService[] getMusicIdentificationServices() {
-		return new MusicIdentificationService[] { AcoustID, new ID3Lookup() };
+		return new MusicIdentificationService[] { AcoustID, MediaInfoID3 };
 	}
 
 	public static EpisodeListProvider getEpisodeListProvider(String name) {
-		for (EpisodeListProvider it : WebServices.getEpisodeListProviders()) {
-			if (it.getName().equalsIgnoreCase(name))
-				return it;
-		}
-		return null; // default
+		return getService(name, getEpisodeListProviders());
 	}
 
 	public static MovieIdentificationService getMovieIdentificationService(String name) {
-		for (MovieIdentificationService it : getMovieIdentificationServices()) {
-			if (it.getName().equalsIgnoreCase(name))
-				return it;
-		}
-		return null; // default
+		return getService(name, getMovieIdentificationServices());
 	}
 
 	public static MusicIdentificationService getMusicIdentificationService(String name) {
-		for (MusicIdentificationService it : getMusicIdentificationServices()) {
-			if (it.getName().equalsIgnoreCase(name))
-				return it;
-		}
-		return null; // default
+		return getService(name, getMusicIdentificationServices());
+	}
+
+	private static <T extends Datasource> T getService(String name, T[] services) {
+		return StreamEx.of(services).findFirst(it -> it.getIdentifier().equalsIgnoreCase(name) || it.getName().equalsIgnoreCase(name)).orElse(null);
 	}
 
 	public static final ExecutorService requestThreadPool = Executors.newCachedThreadPool();
@@ -123,46 +114,28 @@ public final class WebServices {
 			super(apikey);
 		}
 
-		// index of local thetvdb data dump
-		private static LocalSearch<SearchResult> localIndex;
+		// local TheTVDB search index
+		private final Resource<LocalSearch<SearchResult>> localIndex = Resource.lazy(() -> {
+			return new LocalSearch<SearchResult>(releaseInfo.getTheTVDBIndex(), SearchResult::getEffectiveNames);
+		}).memoize();
 
-		public synchronized LocalSearch<SearchResult> getLocalIndex() throws IOException {
-			if (localIndex == null) {
-				// fetch data dump
-				TheTVDBSearchResult[] data = releaseInfo.getTheTVDBIndex();
-
-				// index data dump
-				localIndex = new LocalSearch<SearchResult>(asList(data)) {
-
-					@Override
-					protected Set<String> getFields(SearchResult object) {
-						return set(object.getEffectiveNames());
-					}
-				};
-
-				// make local search more restrictive
-				localIndex.setResultMinimumSimilarity(0.7f);
-			}
-
-			return localIndex;
+		private SearchResult merge(SearchResult prime, List<SearchResult> group) {
+			int id = prime.getId();
+			String name = prime.getName();
+			String[] aliasNames = StreamEx.of(group).flatMap(it -> stream(it.getAliasNames())).remove(name::equals).distinct().toArray(String[]::new);
+			return new SearchResult(id, name, aliasNames);
 		}
 
 		@Override
 		public List<SearchResult> fetchSearchResult(final String query, final Locale locale) throws Exception {
-			Callable<List<SearchResult>> apiSearch = () -> TheTVDBClientWithLocalSearch.super.fetchSearchResult(query, locale);
-			Callable<List<SearchResult>> localSearch = () -> getLocalIndex().search(query);
+			// run local search and API search in parallel
+			Future<List<SearchResult>> apiSearch = requestThreadPool.submit(() -> TheTVDBClientWithLocalSearch.super.fetchSearchResult(query, locale));
+			Future<List<SearchResult>> localSearch = requestThreadPool.submit(() -> localIndex.get().search(query));
 
-			Set<SearchResult> results = new LinkedHashSet<SearchResult>();
-			for (Future<List<SearchResult>> resultSet : requestThreadPool.invokeAll(asList(localSearch, apiSearch))) {
-				try {
-					results.addAll(resultSet.get());
-				} catch (ExecutionException e) {
-					if (e.getCause() instanceof Exception) {
-						throw (Exception) e.getCause(); // unwrap cause
-					}
-				}
-			}
-			return sortBySimilarity(results, singleton(query), getSeriesMatchMetric(), false);
+			// combine alias names into a single search results, and keep API search name as primary name
+			Collection<SearchResult> result = StreamEx.of(apiSearch.get()).append(localSearch.get()).groupingBy(SearchResult::getId, collectingAndThen(toList(), group -> merge(group.get(0), group))).values();
+
+			return sortBySimilarity(result, singleton(query), getSeriesMatchMetric());
 		}
 	}
 
@@ -173,8 +146,8 @@ public final class WebServices {
 		}
 
 		@Override
-		public List<AnidbSearchResult> getAnimeTitles() throws Exception {
-			return asList(releaseInfo.getAnidbIndex());
+		public SearchResult[] getAnimeTitles() throws Exception {
+			return releaseInfo.getAnidbIndex();
 		}
 	}
 
@@ -184,34 +157,15 @@ public final class WebServices {
 			super(name, version);
 		}
 
-		// index of local OpenSubtitles data dump
-		private static LocalSearch<SubtitleSearchResult> localIndex;
-
-		public synchronized LocalSearch<SubtitleSearchResult> getLocalIndex() throws IOException {
-			if (localIndex == null) {
-				// fetch data dump
-				SubtitleSearchResult[] data = releaseInfo.getOpenSubtitlesIndex();
-
-				// index data dump
-				localIndex = new LocalSearch<SubtitleSearchResult>(asList(data)) {
-
-					@Override
-					protected Set<String> getFields(SubtitleSearchResult object) {
-						return set(object.getEffectiveNames());
-					}
-				};
-			}
-
-			return localIndex;
-		}
+		// local OpenSubtitles search index
+		private final Resource<LocalSearch<SubtitleSearchResult>> localIndex = Resource.lazy(() -> {
+			return new LocalSearch<SubtitleSearchResult>(releaseInfo.getOpenSubtitlesIndex(), SearchResult::getEffectiveNames);
+		}).memoize();
 
 		@Override
-		public synchronized List<SubtitleSearchResult> search(final String query) throws Exception {
-			List<SubtitleSearchResult> results = getLocalIndex().search(query);
-
-			return sortBySimilarity(results, singleton(query), new MetricAvg(getSeriesMatchMetric(), getMovieMatchMetric()), false);
+		public List<SubtitleSearchResult> search(final String query) throws Exception {
+			return sortBySimilarity(localIndex.get().search(query), singleton(query), new MetricAvg(getSeriesMatchMetric(), getMovieMatchMetric()));
 		}
-
 	}
 
 	/**
@@ -239,7 +193,7 @@ public final class WebServices {
 				return values;
 			}
 		} catch (Exception e) {
-			Logger.getLogger(WebServices.class.getName()).log(Level.WARNING, e.getMessage(), e);
+			debug.log(Level.SEVERE, e.getMessage(), e);
 		}
 		return new String[] { "", "" };
 	}
@@ -262,7 +216,7 @@ public final class WebServices {
 			if (LOGIN_OPENSUBTITLES.equals(id)) {
 				String password_md5 = md5(password);
 				OpenSubtitles.setUser(user, password_md5);
-				Settings.forPackage(WebServices.class).put(id, join(LOGIN_SEPARATOR, user, password_md5));
+				Settings.forPackage(WebServices.class).put(id, user + LOGIN_SEPARATOR + password_md5);
 			} else {
 				throw new IllegalArgumentException();
 			}

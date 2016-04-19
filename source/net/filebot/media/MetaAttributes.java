@@ -6,15 +6,15 @@ import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 
-import net.filebot.MetaAttributeView;
-
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
 
+import net.filebot.MetaAttributeView;
+
 public class MetaAttributes {
 
-	private static final String FILENAME_KEY = "net.filebot.filename";
-	private static final String METADATA_KEY = "net.filebot.metadata";
+	public static final String FILENAME_KEY = "net.filebot.filename";
+	public static final String METADATA_KEY = "net.filebot.metadata";
 
 	private final BasicFileAttributeView fileAttributeView;
 	private final MetaAttributeView metaAttributeView;

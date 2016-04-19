@@ -5,9 +5,11 @@ import static java.util.Arrays.*;
 import static java.util.Collections.*;
 import static java.util.regex.Pattern.*;
 import static javax.swing.JOptionPane.*;
+import static net.filebot.Logging.*;
 import static net.filebot.Settings.*;
 import static net.filebot.UserFiles.*;
-import static net.filebot.util.FileUtilities.*;
+import static net.filebot.media.XattrMetaInfo.*;
+import static net.filebot.util.RegularExpressions.*;
 import static net.filebot.util.ui.SwingUI.*;
 
 import java.awt.Color;
@@ -34,7 +36,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -72,13 +73,13 @@ import net.filebot.History;
 import net.filebot.History.Element;
 import net.filebot.History.Sequence;
 import net.filebot.ResourceManager;
-import net.filebot.Settings;
+import net.filebot.StandardRenameAction;
 import net.filebot.mac.MacAppUtilities;
-import net.filebot.media.MetaAttributes;
 import net.filebot.ui.transfer.FileExportHandler;
 import net.filebot.ui.transfer.FileTransferablePolicy;
 import net.filebot.ui.transfer.LoadAction;
 import net.filebot.ui.transfer.SaveAction;
+import net.filebot.ui.transfer.TransferablePolicy;
 import net.filebot.ui.transfer.TransferablePolicy.TransferAction;
 import net.filebot.util.FileUtilities;
 import net.filebot.util.FileUtilities.ExtensionFileFilter;
@@ -103,7 +104,7 @@ class HistoryDialog extends JDialog {
 	private final JTable elementTable = createTable(elementModel);
 
 	public HistoryDialog(Window owner) {
-		super(owner, "Rename History", ModalityType.DOCUMENT_MODAL);
+		super(owner, "History", ModalityType.DOCUMENT_MODAL);
 
 		// bold title label in header
 		JLabel title = new JLabel(this.getTitle());
@@ -127,7 +128,7 @@ class HistoryDialog extends JDialog {
 		content.add(createScrollPaneGroup("Elements", elementTable), "growx, wrap paragraph");
 
 		// use ADD by default
-		Action importAction = new LoadAction("Import", ResourceManager.getIcon("action.load"), importHandler) {
+		Action importAction = new LoadAction("Import", ResourceManager.getIcon("action.load"), this::getTransferablePolicy) {
 
 			@Override
 			public TransferAction getTransferAction(ActionEvent evt) {
@@ -225,7 +226,7 @@ class HistoryDialog extends JDialog {
 				List<HistoryFilter> filterList = new ArrayList<HistoryFilter>();
 
 				// filter by all words
-				for (String word : filterEditor.getText().split("\\s+")) {
+				for (String word : SPACE.split(filterEditor.getText())) {
 					filterList.add(new HistoryFilter(word));
 				}
 
@@ -445,25 +446,15 @@ class HistoryDialog extends JDialog {
 		}
 
 		private enum Option {
-			Rename {
+			Revert, ChangeDirectory, Cancel;
 
-				@Override
-				public String toString() {
-					return "Rename";
-				}
-			},
-			ChangeDirectory {
-
-				@Override
-				public String toString() {
+			@Override
+			public String toString() {
+				switch (this) {
+				case ChangeDirectory:
 					return "Change Directory";
-				}
-			},
-			Cancel {
-
-				@Override
-				public String toString() {
-					return "Cancel";
+				default:
+					return name();
 				}
 			}
 		}
@@ -488,9 +479,9 @@ class HistoryDialog extends JDialog {
 				Set<Option> options;
 
 				if (missingFiles.isEmpty()) {
-					message = String.format("Are you sure you want to rename %d file(s)?", elements.size());
+					message = String.format("Are you sure you want to revert %d file(s)?", elements.size());
 					type = QUESTION_MESSAGE;
-					options = EnumSet.of(Option.Rename, Option.ChangeDirectory, Option.Cancel);
+					options = EnumSet.of(Option.Revert, Option.ChangeDirectory, Option.Cancel);
 				} else {
 					String text = "Some files are missing. Please select a different directory.";
 					JList missingFilesComponent = new JList(missingFiles.toArray()) {
@@ -530,12 +521,12 @@ class HistoryDialog extends JDialog {
 			}
 
 			// rename files
-			if (selectedOption == Option.Rename) {
-				rename(directory, elements);
+			if (selectedOption == Option.Revert) {
+				revert(directory, elements);
 			}
 		}
 
-		private void rename(File directory, List<Element> elements) {
+		private void revert(File directory, List<Element> elements) {
 			Map<File, File> renamePlan = getRenameMap(directory);
 			if (isMacSandbox()) {
 				if (!MacAppUtilities.askUnlockFolders(parent(), Stream.of(renamePlan.keySet(), renamePlan.values()).flatMap(c -> c.stream()).collect(Collectors.toList()))) {
@@ -544,26 +535,24 @@ class HistoryDialog extends JDialog {
 			}
 
 			int count = 0;
-			for (Entry<File, File> entry : renamePlan.entrySet()) {
-				try {
-					File destination = moveRename(entry.getKey(), entry.getValue());
+			try {
+				for (Entry<File, File> entry : renamePlan.entrySet()) {
+					File original = StandardRenameAction.revert(entry.getKey(), entry.getValue());
 					count++;
 
-					// remove xattr that may have been set
-					if (Settings.useExtendedFileAttributes()) {
-						new MetaAttributes(destination).clear();
-					}
-				} catch (Exception e) {
-					Logger.getLogger(HistoryDialog.class.getName()).log(Level.SEVERE, e.getMessage(), e);
+					// clear xattr that may or may not exist
+					xattr.clear(original);
 				}
+			} catch (Exception e) {
+				log.log(Level.WARNING, "Failed to revert files: " + e.getMessage(), e);
 			}
 
 			JLabel status = parent().getInfoLabel();
 			if (count == elements.size()) {
-				status.setText(String.format("%d file(s) have been renamed.", count));
+				status.setText(String.format("%d file(s) have been reverted.", count));
 				status.setIcon(ResourceManager.getIcon("status.ok"));
 			} else {
-				status.setText(String.format("Failed to revert %d file(s).", elements.size() - count, elements.size()));
+				status.setText(String.format("%d of %d file(s) have been reverted.", count, elements.size()));
 				status.setIcon(ResourceManager.getIcon("status.error"));
 			}
 
@@ -604,6 +593,10 @@ class HistoryDialog extends JDialog {
 
 			return missingFiles;
 		}
+	}
+
+	public TransferablePolicy getTransferablePolicy() {
+		return importHandler;
 	}
 
 	private final FileTransferablePolicy importHandler = new FileTransferablePolicy() {

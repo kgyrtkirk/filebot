@@ -1,11 +1,12 @@
 package net.filebot.util;
 
+import static net.filebot.Logging.*;
+
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public abstract class Timer implements Runnable {
 
@@ -33,19 +34,15 @@ public abstract class Timer implements Runnable {
 				addShutdownHook();
 			} catch (Exception e) {
 				// may fail if running with restricted permissions
-				Logger.getLogger(getClass().getName()).log(Level.WARNING, e.getClass().getName() + ": " + e.getMessage());
+				debug.log(Level.WARNING, e.getMessage(), e);
 			}
 
 			// remove shutdown hook after execution
-			runnable = new Runnable() {
-
-				@Override
-				public void run() {
-					try {
-						Timer.this.run();
-					} finally {
-						cancel();
-					}
+			runnable = () -> {
+				try {
+					Timer.this.run();
+				} finally {
+					cancel();
 				}
 			};
 		} else {
@@ -54,7 +51,7 @@ public abstract class Timer implements Runnable {
 				removeShutdownHook();
 			} catch (Exception e) {
 				// may fail if running with restricted permissions
-				Logger.getLogger(getClass().getName()).log(Level.WARNING, e.getClass().getName() + ": " + e.getMessage());
+				debug.log(Level.WARNING, e.getMessage(), e);
 			}
 		}
 

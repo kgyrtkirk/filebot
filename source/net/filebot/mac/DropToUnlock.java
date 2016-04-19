@@ -2,9 +2,9 @@ package net.filebot.mac;
 
 import static java.util.Collections.*;
 import static javax.swing.BorderFactory.*;
+import static net.filebot.Logging.*;
 import static net.filebot.UserFiles.*;
 import static net.filebot.mac.MacAppUtilities.*;
-import static net.filebot.ui.NotificationLogging.*;
 import static net.filebot.util.FileUtilities.*;
 import static net.filebot.util.ui.SwingUI.*;
 
@@ -38,8 +38,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -75,7 +73,7 @@ public class DropToUnlock extends JList<File> {
 					try {
 						NSURL_URLByResolvingBookmarkData_startAccessingSecurityScopedResource(persistentSecurityScopedBookmarks.get(bookmarkForFolder.get().getPath()));
 					} catch (Throwable e) {
-						Logger.getLogger(DropToUnlock.class.getName()).log(Level.WARNING, "NSURL.URLByResolvingBookmarkData.startAccessingSecurityScopedResource: " + e.toString());
+						debug.severe("NSURL.URLByResolvingBookmarkData.startAccessingSecurityScopedResource: " + e);
 					}
 				}
 			}
@@ -92,7 +90,7 @@ public class DropToUnlock extends JList<File> {
 						String bookmarkData = NSURL_bookmarkDataWithOptions(folder.getPath());
 						persistentSecurityScopedBookmarks.put(folder.getPath(), bookmarkData);
 					} catch (Throwable e) {
-						Logger.getLogger(DropToUnlock.class.getName()).log(Level.WARNING, "NSURL.bookmarkDataWithOptions: " + e.toString());
+						debug.severe("NSURL.bookmarkDataWithOptions: " + e);
 					}
 				}
 			}
@@ -242,9 +240,9 @@ public class DropToUnlock extends JList<File> {
 			try {
 				String owner = Files.getOwner(f.toPath()).getName();
 				String permissions = PosixFilePermissions.toString(Files.getPosixFilePermissions(f.toPath()));
-				UILogger.severe(String.format("Permission denied: %s (%s %s)", f, permissions, owner));
+				log.severe(format("Permission denied: %s (%s %s)", f, permissions, owner));
 			} catch (Exception e) {
-				UILogger.severe(String.format("Permission denied: %s", f));
+				log.severe(format("Permission denied: %s", f));
 			}
 		});
 	}

@@ -1,6 +1,7 @@
 package net.filebot.web;
 
 import static java.util.Collections.*;
+import static net.filebot.Logging.*;
 import static net.filebot.util.StringUtilities.*;
 
 import java.io.ByteArrayInputStream;
@@ -13,13 +14,13 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.DeflaterInputStream;
@@ -32,6 +33,7 @@ import redstone.xmlrpc.XmlRpcException;
 import redstone.xmlrpc.XmlRpcFault;
 import redstone.xmlrpc.util.Base64;
 
+@SuppressWarnings("unchecked")
 public class OpenSubtitlesXmlRpc {
 
 	private final String useragent;
@@ -84,19 +86,16 @@ public class OpenSubtitlesXmlRpc {
 		return token != null;
 	}
 
-	@SuppressWarnings("unchecked")
 	public Map<String, String> getServerInfo() throws XmlRpcFault {
 		return (Map<String, String>) invoke("ServerInfo", token);
 	}
 
-	public List<OpenSubtitlesSubtitleDescriptor> searchSubtitles(int imdbid, String... sublanguageids) throws XmlRpcFault {
-		return searchSubtitles(singleton(Query.forImdbId(imdbid, sublanguageids)));
-	}
-
-	@SuppressWarnings("unchecked")
 	public List<OpenSubtitlesSubtitleDescriptor> searchSubtitles(Collection<Query> queryList) throws XmlRpcFault {
+		// abort immediately if download quota has been exceeded
+		OpenSubtitlesSubtitleDescriptor.checkDownloadQuota();
+
 		List<OpenSubtitlesSubtitleDescriptor> subtitles = new ArrayList<OpenSubtitlesSubtitleDescriptor>();
-		Map<?, ?> response = invoke("SearchSubtitles", token, queryList, singletonMap("limit", 2000));
+		Map<?, ?> response = invoke("SearchSubtitles", token, queryList);
 
 		try {
 			List<Map<String, String>> subtitleData = (List<Map<String, String>>) response.get("data");
@@ -111,40 +110,44 @@ public class OpenSubtitlesXmlRpc {
 		return subtitles;
 	}
 
-	@SuppressWarnings("unchecked")
 	public List<SubtitleSearchResult> searchMoviesOnIMDB(String query) throws XmlRpcFault {
-		Map<?, ?> response = invoke("SearchMoviesOnIMDB", token, query);
+		try {
+			// search for movies / series
+			Map<?, ?> response = invoke("SearchMoviesOnIMDB", token, query);
 
-		List<Map<String, String>> movieData = (List<Map<String, String>>) response.get("data");
-		List<SubtitleSearchResult> movies = new ArrayList<SubtitleSearchResult>();
+			List<Map<String, String>> movieData = (List<Map<String, String>>) response.get("data");
+			List<SubtitleSearchResult> movies = new ArrayList<SubtitleSearchResult>();
 
-		// title pattern
-		Pattern pattern = Pattern.compile("(.+)[(](\\d{4})([/]I+)?[)]");
+			// title pattern
+			Pattern pattern = Pattern.compile("(.+)[(](\\d{4})([/]I+)?[)]");
 
-		for (Map<String, String> movie : movieData) {
-			try {
-				String imdbid = movie.get("id");
-				if (!imdbid.matches("\\d{1,7}"))
-					throw new IllegalArgumentException("Illegal IMDb movie ID: Must be a 7-digit number");
+			for (Map<String, String> movie : movieData) {
+				try {
+					String imdbid = movie.get("id");
+					if (!imdbid.matches("\\d{1,7}"))
+						throw new IllegalArgumentException("Illegal IMDb movie ID: Must be a 7-digit number");
 
-				// match movie name and movie year from search result
-				Matcher matcher = pattern.matcher(movie.get("title"));
-				if (!matcher.find())
-					throw new IllegalArgumentException("Illegal title: Must be in 'name (year)' format");
+					// match movie name and movie year from search result
+					Matcher matcher = pattern.matcher(movie.get("title"));
+					if (!matcher.find())
+						throw new IllegalArgumentException("Illegal title: Must be in 'name (year)' format");
 
-				String name = matcher.group(1).replaceAll("\"", "").trim();
-				int year = Integer.parseInt(matcher.group(2));
+					String name = matcher.group(1).replaceAll("\"", "").trim();
+					int year = Integer.parseInt(matcher.group(2));
 
-				movies.add(new SubtitleSearchResult(Integer.parseInt(imdbid), name, year, null, -1));
-			} catch (Exception e) {
-				Logger.getLogger(OpenSubtitlesXmlRpc.class.getName()).log(Level.FINE, String.format("Ignore movie [%s]: %s", movie, e.getMessage()));
+					movies.add(new SubtitleSearchResult(Integer.parseInt(imdbid), name, year, null, -1));
+				} catch (Exception e) {
+					debug.log(Level.FINE, String.format("Ignore movie [%s]: %s", movie, e.getMessage()));
+				}
 			}
-		}
 
-		return movies;
+			return movies;
+		} catch (ClassCastException e) {
+			// unexpected xmlrpc responses (e.g. error messages instead of results) will trigger this
+			throw new XmlRpcException("Illegal XMLRPC response on searchMoviesOnIMDB");
+		}
 	}
 
-	@SuppressWarnings("unchecked")
 	public Movie getIMDBMovieDetails(int imdbid) throws XmlRpcFault {
 		Map<?, ?> response = invoke("GetIMDBMovieDetails", token, imdbid);
 
@@ -157,20 +160,29 @@ public class OpenSubtitlesXmlRpc {
 			return new Movie(name, year, imdbid, -1);
 		} catch (RuntimeException e) {
 			// ignore, invalid response
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, String.format("Failed to lookup movie by imdbid %s: %s", imdbid, e.getMessage()));
+			debug.log(Level.WARNING, String.format("Failed to lookup movie by imdbid %s: %s", imdbid, e.getMessage()));
 		}
 
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
-	public TryUploadResponse tryUploadSubtitles(SubFile... subtitles) throws XmlRpcFault {
-		Map<String, SubFile> struct = new HashMap<String, SubFile>();
+	private Map<String, Object> getUploadStruct(BaseInfo baseInfo, SubFile... subtitles) {
+		Map<String, Object> struct = new LinkedHashMap<String, Object>();
 
-		// put cd1, cd2, ...
-		for (SubFile cd : subtitles) {
-			struct.put(String.format("cd%d", struct.size() + 1), cd);
+		// put baseinfo
+		if (baseInfo != null) {
+			struct.put("baseinfo", baseInfo);
 		}
+
+		for (int i = 0; i < subtitles.length; i++) {
+			struct.put("cd" + (i + 1), subtitles[i]);
+		}
+
+		return struct;
+	}
+
+	public TryUploadResponse tryUploadSubtitles(SubFile... subtitles) throws XmlRpcFault {
+		Map<String, Object> struct = getUploadStruct(null, subtitles);
 
 		Map<?, ?> response = invoke("TryUploadSubtitles", token, struct);
 
@@ -187,15 +199,7 @@ public class OpenSubtitlesXmlRpc {
 	}
 
 	public URI uploadSubtitles(BaseInfo baseInfo, SubFile... subtitles) throws XmlRpcFault {
-		Map<String, Object> struct = new HashMap<String, Object>();
-
-		// put cd1, cd2, ...
-		for (SubFile cd : subtitles) {
-			struct.put(String.format("cd%d", struct.size() + 1), cd);
-		}
-
-		// put baseinfo
-		struct.put("baseinfo", baseInfo);
+		Map<String, Object> struct = getUploadStruct(baseInfo, subtitles);
 
 		Map<?, ?> response = invoke("UploadSubtitles", token, struct);
 
@@ -203,7 +207,6 @@ public class OpenSubtitlesXmlRpc {
 		return URI.create(response.get("data").toString());
 	}
 
-	@SuppressWarnings("unchecked")
 	public List<String> detectLanguage(byte[] data) throws XmlRpcFault {
 		// compress and base64 encode
 		String parameter = encodeData(data);
@@ -218,7 +221,6 @@ public class OpenSubtitlesXmlRpc {
 		return languages;
 	}
 
-	@SuppressWarnings("unchecked")
 	public Map<String, Integer> checkSubHash(Collection<String> hashes) throws XmlRpcFault {
 		Map<?, ?> response = invoke("CheckSubHash", token, hashes);
 
@@ -261,7 +263,6 @@ public class OpenSubtitlesXmlRpc {
 		return results;
 	}
 
-	@SuppressWarnings("unchecked")
 	public Map<String, Movie> checkMovieHash(Collection<String> hashes, int minSeenCount) throws XmlRpcFault {
 		Map<String, Movie> movieHashMap = new HashMap<String, Movie>();
 
@@ -298,7 +299,7 @@ public class OpenSubtitlesXmlRpc {
 						movieHashMap.put(hash, matches.get(0));
 					} else if (matches.size() > 1) {
 						// multiple hash matches => ignore all
-						Logger.getLogger(getClass().getName()).log(Level.WARNING, "Ignore hash match due to hash collision: " + matches);
+						debug.log(Level.WARNING, "Ignore hash match due to hash collision: " + matches);
 					}
 				}
 			}
@@ -311,7 +312,6 @@ public class OpenSubtitlesXmlRpc {
 		return getSubLanguages("en");
 	}
 
-	@SuppressWarnings("unchecked")
 	public Map<String, String> getSubLanguages(String languageCode) throws XmlRpcFault {
 		Map<String, List<Map<String, String>>> response = (Map<String, List<Map<String, String>>>) invoke("GetSubLanguages", languageCode);
 
@@ -424,9 +424,15 @@ public class OpenSubtitlesXmlRpc {
 			return query;
 		}
 
-		public static Query forImdbId(int imdbid, String... sublanguageids) {
+		public static Query forImdbId(int imdbid, int season, int episode, String... sublanguageids) {
 			Query query = new Query(sublanguageids);
 			query.put("imdbid", Integer.toString(imdbid));
+			if (season >= 0) {
+				query.put("season", Integer.toString(season));
+			}
+			if (episode >= 0) {
+				query.put("episode", Integer.toString(episode));
+			}
 			return query;
 		}
 	}
@@ -496,6 +502,11 @@ public class OpenSubtitlesXmlRpc {
 			if (movieframes.length() > 0) {
 				put("movieframes", movieframes);
 			}
+		}
+
+		@Override
+		public String toString() {
+			return String.format("(%s, %s)", get("moviefilename"), get("subfilename"));
 		}
 
 	}

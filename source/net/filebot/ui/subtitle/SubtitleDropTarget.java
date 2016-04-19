@@ -1,9 +1,9 @@
 package net.filebot.ui.subtitle;
 
+import static net.filebot.Logging.*;
 import static net.filebot.MediaTypes.*;
+import static net.filebot.Settings.*;
 import static net.filebot.UserFiles.*;
-import static net.filebot.media.MediaDetection.*;
-import static net.filebot.ui.NotificationLogging.*;
 import static net.filebot.ui.transfer.FileTransferable.*;
 import static net.filebot.util.FileUtilities.*;
 import static net.filebot.util.ui.SwingUI.*;
@@ -23,15 +23,20 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.logging.Level;
 
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.SwingUtilities;
 
 import net.filebot.ResourceManager;
 import net.filebot.Settings;
+import net.filebot.mac.MacAppUtilities;
+import net.filebot.ui.subtitle.upload.SubtitleUploadDialog;
 import net.filebot.util.FileUtilities;
 import net.filebot.util.FileUtilities.ParentFilter;
 import net.filebot.web.OpenSubtitlesClient;
@@ -40,7 +45,7 @@ import net.filebot.web.VideoHashSubtitleService;
 
 abstract class SubtitleDropTarget extends JButton {
 
-	private enum DropAction {
+	public enum DropAction {
 		Accept, Cancel
 	}
 
@@ -112,14 +117,21 @@ abstract class SubtitleDropTarget extends JButton {
 		@Override
 		public void drop(DropTargetDropEvent dtde) {
 			dtde.acceptDrop(DnDConstants.ACTION_REFERENCE);
+			boolean accept = false;
 
 			try {
-				dtde.dropComplete(handleDrop(getFilesFromTransferable(dtde.getTransferable())));
+				List<File> files = getFilesFromTransferable(dtde.getTransferable());
+				accept = getDropAction(files) != DropAction.Cancel;
+
+				if (accept) {
+					// invoke later so we don't block the DnD operation with the download dialog
+					SwingUtilities.invokeLater(() -> handleDrop(files));
+				}
 			} catch (Exception e) {
-				UILogger.log(Level.WARNING, e.getMessage(), e);
+				log.log(Level.WARNING, e.getMessage(), e);
 			}
 
-			// reset to default state
+			dtde.dropComplete(accept);
 			dragExit(dtde);
 		}
 
@@ -132,10 +144,8 @@ abstract class SubtitleDropTarget extends JButton {
 			// collect media file extensions (video and subtitle files)
 			List<File> files = showLoadDialogSelectFiles(true, true, null, combineFilter(VIDEO_FILES, SUBTITLE_FILES), "Select Video Folder", evt);
 
-			if (files.size() > 0) {
-				if (getDropAction(files) != DropAction.Cancel) {
-					handleDrop(files);
-				}
+			if (files.size() > 0 && getDropAction(files) != DropAction.Cancel) {
+				handleDrop(files);
 			}
 		}
 	};
@@ -157,12 +167,12 @@ abstract class SubtitleDropTarget extends JButton {
 		@Override
 		protected boolean handleDrop(List<File> input) {
 			if (getQueryLanguage() == null) {
-				UILogger.info("Please select your preferred subtitle language.");
+				log.info("Please select your preferred subtitle language.");
 				return false;
 			}
 
 			if (getSubtitleService().isAnonymous() && !Settings.isAppStore()) {
-				UILogger.info(String.format("%s: Please enter your login details first.", getSubtitleService().getName()));
+				log.info(String.format("%s: Please enter your login details.", getSubtitleService().getName()));
 				return false;
 			}
 
@@ -173,14 +183,7 @@ abstract class SubtitleDropTarget extends JButton {
 			videoFiles.addAll(filter(listFiles(input), VIDEO_FILES));
 
 			if (videoFiles.size() > 0) {
-				// invoke later so we don't block the DnD operation with the download dialog
-				invokeLater(0, new Runnable() {
-
-					@Override
-					public void run() {
-						handleDownload(videoFiles);
-					}
-				});
+				handleDownload(videoFiles);
 				return true;
 			}
 
@@ -233,17 +236,22 @@ abstract class SubtitleDropTarget extends JButton {
 		@Override
 		protected DropAction getDropAction(List<File> input) {
 			// accept video files and folders
-			return (filter(input, VIDEO_FILES).size() > 0 && filter(input, SUBTITLE_FILES).size() > 0) || filter(input, FOLDERS).size() > 0 ? DropAction.Accept : DropAction.Cancel;
+			return filter(input, SUBTITLE_FILES).size() > 0 || filter(input, FOLDERS).size() > 0 ? DropAction.Accept : DropAction.Cancel;
 		}
 
 		@Override
 		protected boolean handleDrop(List<File> input) {
 			if (getSubtitleService().isAnonymous()) {
-				UILogger.info(String.format("%s: Please enter your login details first.", getSubtitleService().getName()));
+				log.info(String.format("%s: You must be logged in to upload subtitles.", getSubtitleService().getName()));
 				return false;
 			}
 
 			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+			// make sure we have access to the parent folder structure, not just the dropped file
+			if (isMacSandbox()) {
+				MacAppUtilities.askUnlockFolders(getWindow(this), input);
+			}
 
 			// perform a drop action depending on the given files
 			final Collection<File> files = new TreeSet<File>();
@@ -263,14 +271,7 @@ abstract class SubtitleDropTarget extends JButton {
 			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 
 			if (uploadPlan.size() > 0) {
-				// invoke later so we don't block the DnD operation with the download dialog
-				invokeLater(0, new Runnable() {
-
-					@Override
-					public void run() {
-						handleUpload(uploadPlan);
-					}
-				});
+				handleUpload(uploadPlan);
 				return true;
 			}
 			return false;
@@ -296,16 +297,21 @@ abstract class SubtitleDropTarget extends JButton {
 		}
 
 		protected File getVideoForSubtitle(File subtitle, List<File> videos) {
-			String baseName = stripReleaseInfo(FileUtilities.getName(subtitle)).toLowerCase();
+			// 1. try to find exact match in drop data
+			return findMatch(subtitle, videos, FileUtilities::getName).orElseGet(() -> {
+				// 2. guess movie file from the parent folder if only a subtitle file was dropped in
+				return findMatch(subtitle, getChildren(subtitle.getParentFile(), VIDEO_FILES), FileUtilities::getName).orElse(null);
+			});
+		}
 
-			// find corresponding movie file
-			for (File it : videos) {
-				if (!baseName.isEmpty() && stripReleaseInfo(FileUtilities.getName(it)).toLowerCase().startsWith(baseName)) {
-					return it;
+		private Optional<File> findMatch(File file, List<File> options, Function<File, String> comparator) {
+			String subtitleFileName = comparator.apply(file).toLowerCase();
+			for (File it : options) {
+				if (subtitleFileName.length() > 0 && subtitleFileName.startsWith(comparator.apply(it).toLowerCase())) {
+					return Optional.of(it);
 				}
 			}
-
-			return null;
+			return Optional.empty();
 		}
 
 		@Override

@@ -2,46 +2,55 @@ package net.filebot.format;
 
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static java.util.stream.Collectors.*;
 import static net.filebot.MediaTypes.*;
 import static net.filebot.format.Define.*;
 import static net.filebot.format.ExpressionFormatMethods.*;
 import static net.filebot.hash.VerificationUtilities.*;
 import static net.filebot.media.MediaDetection.*;
+import static net.filebot.media.XattrMetaInfo.*;
 import static net.filebot.similarity.Normalization.*;
+import static net.filebot.subtitle.SubtitleUtilities.*;
 import static net.filebot.util.FileUtilities.*;
+import static net.filebot.util.RegularExpressions.*;
 import static net.filebot.util.StringUtilities.*;
 import static net.filebot.web.EpisodeFormat.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import com.cedarsoftware.util.io.JsonWriter;
+
 import net.filebot.Cache;
+import net.filebot.CacheType;
 import net.filebot.Language;
 import net.filebot.MediaTypes;
 import net.filebot.MetaAttributeView;
 import net.filebot.Settings;
+import net.filebot.Settings.ApplicationFolder;
 import net.filebot.WebServices;
 import net.filebot.hash.HashType;
-import net.filebot.media.MetaAttributes;
+import net.filebot.media.NamingStandard;
 import net.filebot.mediainfo.MediaInfo;
 import net.filebot.mediainfo.MediaInfo.StreamKind;
+import net.filebot.mediainfo.MediaInfoException;
 import net.filebot.similarity.SimilarityComparator;
 import net.filebot.util.FileUtilities;
 import net.filebot.util.WeakValueHashMap;
@@ -57,13 +66,11 @@ import net.filebot.web.SortOrder;
 import net.filebot.web.TMDbClient.MovieInfo;
 import net.filebot.web.TheTVDBSeriesInfo;
 
-import com.cedarsoftware.util.io.JsonWriter;
-
 public class MediaBindingBean {
 
 	private final Object infoObject;
 	private final File mediaFile;
-	private final Map<File, Object> context;
+	private final Map<File, ?> context;
 
 	private MediaInfo mediaInfo;
 	private Object metaInfo;
@@ -72,7 +79,7 @@ public class MediaBindingBean {
 		this(infoObject, mediaFile, singletonMap(mediaFile, infoObject));
 	}
 
-	public MediaBindingBean(Object infoObject, File mediaFile, Map<File, Object> context) {
+	public MediaBindingBean(Object infoObject, File mediaFile, Map<File, ?> context) {
 		this.infoObject = infoObject;
 		this.mediaFile = mediaFile;
 		this.context = context;
@@ -96,11 +103,13 @@ public class MediaBindingBean {
 	public String getName() {
 		if (infoObject instanceof Episode)
 			return getEpisode().getSeriesName();
-		if (infoObject instanceof Movie)
+		else if (infoObject instanceof Movie)
 			return getMovie().getName();
-		if (infoObject instanceof AudioTrack)
-			return getAlbumArtist() != null ? getAlbumArtist() : getArtist();
-		if (infoObject instanceof File)
+		else if (infoObject instanceof AudioTrack && getAlbumArtist() != null)
+			return getAlbumArtist();
+		else if (infoObject instanceof AudioTrack)
+			return getArtist();
+		else if (infoObject instanceof File)
 			return FileUtilities.getName((File) infoObject);
 
 		return null;
@@ -139,7 +148,7 @@ public class MediaBindingBean {
 	public List<Integer> getEpisodeNumbers() {
 		List<Integer> n = new ArrayList<Integer>();
 		for (Episode it : getEpisodes()) {
-			n.add(it.getEpisode());
+			n.add(it.getEpisode() == null ? it.getSpecial() == null ? -1 : it.getSpecial() : it.getEpisode());
 		}
 		return n;
 	}
@@ -161,19 +170,7 @@ public class MediaBindingBean {
 		}
 
 		// enforce title length limit by default
-		int limit = 150;
-
-		// single episode format
-		if (getEpisodes().size() == 1) {
-			return truncateText(getEpisode().getTitle(), limit);
-		}
-
-		// multi-episode format
-		Set<String> title = new LinkedHashSet<String>();
-		for (Episode it : getEpisodes()) {
-			title.add(removeTrailingBrackets(it.getTitle()));
-		}
-		return truncateText(join(title, " & "), limit);
+		return truncateText(infoObject instanceof MultiEpisode ? SeasonEpisode.formatMultiTitle(getEpisodes()) : getEpisode().getTitle(), 150);
 	}
 
 	@Define("d")
@@ -251,7 +248,7 @@ public class MediaBindingBean {
 
 		if (infoObject instanceof Episode) {
 			// force English series name for TheTVDB data
-			if (WebServices.TheTVDB.getName().equals(getSeriesInfo().getDatabase())) {
+			if (WebServices.TheTVDB.getIdentifier().equals(getSeriesInfo().getDatabase())) {
 				return WebServices.TheTVDB.getSeriesInfo(getSeriesInfo().getId(), Locale.ENGLISH).getName();
 			}
 
@@ -308,7 +305,7 @@ public class MediaBindingBean {
 		String codec = getMediaInfo(StreamKind.Video, 0, "Encoded_Library_Name", "Encoded_Library/Name", "CodecID/Hint", "Format");
 
 		// get first token (e.g. DivX 5 => DivX)
-		return new Scanner(codec).next();
+		return SPACE.splitAsStream(codec).findFirst().get();
 	}
 
 	@Define("ac")
@@ -326,7 +323,7 @@ public class MediaBindingBean {
 		String extensions = getMediaInfo(StreamKind.General, 0, "Codec/Extensions", "Format");
 
 		// get first extension
-		return new Scanner(extensions).next().toLowerCase();
+		return SPACE.splitAsStream(extensions).findFirst().get().toLowerCase();
 	}
 
 	@Define("vf")
@@ -363,8 +360,20 @@ public class MediaBindingBean {
 	public String getAudioChannels() {
 		String channels = getMediaInfo(StreamKind.Audio, 0, "Channel(s)_Original", "Channel(s)");
 
-		// e.g. 6ch
-		return channels + "ch";
+		// get first number, e.g. 6ch
+		return SPACE.splitAsStream(channels).findFirst().get() + "ch";
+	}
+
+	@Define("channels")
+	public String getAudioChannelPositions() {
+		String channels = getMediaInfo(StreamKind.Audio, 0, "ChannelPositions/String2", "Channel(s)_Original", "Channel(s)");
+
+		// e.g. ChannelPositions/String2: 3/2/2.1 / 3/2/0.1 (one audio stream may contain multiple multi-channel streams)
+		double d = SPACE.splitAsStream(channels).mapToDouble(s -> {
+			return SLASH.splitAsStream(s).mapToDouble(Double::parseDouble).reduce(0, (a, b) -> a + b);
+		}).filter(it -> it > 0).max().getAsDouble();
+
+		return BigDecimal.valueOf(d).setScale(1, RoundingMode.HALF_UP).toPlainString();
 	}
 
 	@Define("resolution")
@@ -383,7 +392,7 @@ public class MediaBindingBean {
 		List<Integer> dim = getDimension();
 
 		// width-to-height aspect ratio greater than 1.37:1
-		return (float) dim.get(0) / dim.get(1) > 1.37f ? "ws" : null;
+		return (float) dim.get(0) / dim.get(1) > 1.37f ? "WS" : null;
 	}
 
 	@Define("sdhd")
@@ -403,17 +412,17 @@ public class MediaBindingBean {
 	}
 
 	@Define("original")
-	public String getOriginalFileName() throws Exception {
+	public String getOriginalFileName() {
 		return getOriginalFileName(getMediaFile());
 	}
 
 	@Define("xattr")
 	public Object getMetaAttributesObject() throws Exception {
-		return new MetaAttributes(getMediaFile()).getObject();
+		return xattr.getMetaInfo(getMediaFile());
 	}
 
 	@Define("crc32")
-	public String getCRC32() throws IOException, InterruptedException {
+	public String getCRC32() throws Exception {
 		// use inferred media file
 		File inferredMediaFile = getInferredMediaFile();
 
@@ -445,7 +454,8 @@ public class MediaBindingBean {
 		}
 
 		// calculate checksum from file
-		return crc32(inferredMediaFile);
+		Cache cache = Cache.getCache("crc32", CacheType.Ephemeral);
+		return (String) cache.computeIfAbsent(inferredMediaFile.getCanonicalPath(), it -> crc32(inferredMediaFile));
 	}
 
 	@Define("fn")
@@ -495,7 +505,7 @@ public class MediaBindingBean {
 	}
 
 	@Define("group")
-	public String getReleaseGroup() throws IOException {
+	public String getReleaseGroup() throws Exception {
 		// use inferred media file
 		File inferredMediaFile = getInferredMediaFile();
 
@@ -508,25 +518,55 @@ public class MediaBindingBean {
 			if (filenames[i] == null)
 				continue;
 
-			filenames[i] = releaseInfo.clean(filenames[i], nonGroupPattern, releaseInfo.getVideoSourcePattern(), releaseInfo.getVideoFormatPattern(true), releaseInfo.getResolutionPattern());
+			filenames[i] = releaseInfo.clean(filenames[i], nonGroupPattern, releaseInfo.getVideoSourcePattern(), releaseInfo.getVideoFormatPattern(true), releaseInfo.getResolutionPattern(), releaseInfo.getStructureRootPattern());
 		}
 
 		// look for release group names in media file and it's parent folder
 		return releaseInfo.getReleaseGroup(filenames);
 	}
 
-	@Define("lang")
-	public Language detectSubtitleLanguage() throws Exception {
-		Locale languageSuffix = releaseInfo.getLanguageSuffix(FileUtilities.getName(getMediaFile()));
-		if (languageSuffix != null)
-			return Language.getLanguage(languageSuffix);
-
-		// require subtitle file
+	@Define("subt")
+	public String getSubtitleTags() throws Exception {
 		if (!SUBTITLE_FILES.accept(getMediaFile())) {
 			return null;
 		}
 
+		Language language = getLanguageTag();
+		if (language != null) {
+			String tag = '.' + language.getISO3B();
+			String category = releaseInfo.getSubtitleCategoryTag(FileUtilities.getName(getMediaFile()), getOriginalFileName(getMediaFile()));
+			if (category != null) {
+				return tag + '.' + category;
+			}
+			return tag;
+		}
+
 		return null;
+	}
+
+	@Define("lang")
+	public Language getLanguageTag() throws Exception {
+		Locale languageSuffix = releaseInfo.getSubtitleLanguageTag(FileUtilities.getName(getMediaFile()), getOriginalFileName(getMediaFile()));
+		if (languageSuffix != null) {
+			return Language.getLanguage(languageSuffix);
+		}
+
+		// try to auto-detect subtitle language
+		if (SUBTITLE_FILES.accept(getMediaFile())) {
+			try {
+				return Language.getLanguage(detectSubtitleLanguage(getMediaFile()));
+			} catch (Throwable e) {
+				throw new RuntimeException("Failed to auto-detect subtitle language: " + e, e);
+			}
+		}
+
+		return null;
+	}
+
+	@Define("languages")
+	public Object getSpokenLanguages() {
+		List<?> languages = infoObject instanceof Movie ? (List<?>) getMetaInfo().getProperty("spokenLanguages") : singletonList(getMetaInfo().getProperty("language"));
+		return languages.stream().map(it -> new Locale(it.toString()).getDisplayLanguage(Locale.ENGLISH)).collect(toList());
 	}
 
 	@Define("actors")
@@ -586,7 +626,7 @@ public class MediaBindingBean {
 			throw new UnsupportedOperationException("Extended metadata not available");
 		}
 
-		return createMapBindings(new PropertyBindings(metaInfo, null));
+		return createPropertyBindings(metaInfo);
 	}
 
 	@Define("omdb")
@@ -595,10 +635,10 @@ public class MediaBindingBean {
 
 		try {
 			if (infoObject instanceof Episode) {
-				if (WebServices.TheTVDB.getName().equals(getSeriesInfo().getDatabase())) {
+				if (WebServices.TheTVDB.getIdentifier().equals(getSeriesInfo().getDatabase())) {
 					TheTVDBSeriesInfo extendedSeriesInfo = (TheTVDBSeriesInfo) WebServices.TheTVDB.getSeriesInfo(getSeriesInfo().getId(), Locale.ENGLISH);
 					if (extendedSeriesInfo.getImdbId() != null) {
-						metaInfo = WebServices.OMDb.getMovieInfo(new Movie(null, -1, grepImdbId(extendedSeriesInfo.getImdbId()).iterator().next(), -1));
+						metaInfo = WebServices.OMDb.getMovieInfo(new Movie(grepImdbId(extendedSeriesInfo.getImdbId()).iterator().next()));
 					}
 				}
 			}
@@ -606,7 +646,7 @@ public class MediaBindingBean {
 				if (getMovie().getTmdbId() > 0) {
 					MovieInfo movieInfo = WebServices.TheMovieDB.getMovieInfo(getMovie(), Locale.ENGLISH, false);
 					if (movieInfo.getImdbId() != null) {
-						metaInfo = WebServices.OMDb.getMovieInfo(new Movie(null, -1, movieInfo.getImdbId(), -1));
+						metaInfo = WebServices.OMDb.getMovieInfo(new Movie(movieInfo.getImdbId()));
 					}
 				} else if (getMovie().getImdbId() > 0) {
 					metaInfo = WebServices.OMDb.getMovieInfo(getMovie());
@@ -620,17 +660,47 @@ public class MediaBindingBean {
 			throw new UnsupportedOperationException("Extended metadata not available");
 		}
 
-		return createMapBindings(new PropertyBindings(metaInfo, null));
+		return createPropertyBindings(metaInfo);
+	}
+
+	@Define("az")
+	public String getSortInitial() {
+		try {
+			return sortInitial(getCollection().toString());
+		} catch (Exception e) {
+			return sortInitial(getName());
+		}
 	}
 
 	@Define("episodelist")
 	public Object getEpisodeList() throws Exception {
-		for (EpisodeListProvider service : WebServices.getEpisodeListProviders()) {
-			if (getSeriesInfo().getDatabase().equals(service.getName())) {
-				return service.getEpisodeList(getSeriesInfo().getId(), SortOrder.forName(getSeriesInfo().getOrder()), new Locale(getSeriesInfo().getLanguage()));
+		return WebServices.getEpisodeListProvider(getSeriesInfo().getDatabase()).getEpisodeList(getSeriesInfo().getId(), SortOrder.forName(getSeriesInfo().getOrder()), new Locale(getSeriesInfo().getLanguage()));
+	}
+
+	@Define("localize")
+	public Object getLocalizedInfoObject() throws Exception {
+		return new DynamicBindings(key -> {
+			Language language = Language.findLanguage(key);
+			if (language != null) {
+				Object localizedInfo = null;
+				try {
+					if (infoObject instanceof Movie) {
+						localizedInfo = WebServices.TheMovieDB.getMovieInfo(getMovie(), language.getLocale(), true);
+					} else if (infoObject instanceof Episode) {
+						EpisodeListProvider db = WebServices.getEpisodeListProvider(getSeriesInfo().getDatabase());
+						List<Episode> episodes = db.getEpisodeList(getSeriesInfo().getId(), SortOrder.forName(getSeriesInfo().getOrder()), language.getLocale());
+						localizedInfo = episodes.stream().filter(it -> getEpisode().getNumbers().equals(it.getNumbers())).findFirst().orElse(null);
+					}
+				} catch (Exception e) {
+					throw new BindingException(key, e);
+				}
+
+				if (localizedInfo != null) {
+					return createPropertyBindings(localizedInfo);
+				}
 			}
-		}
-		return null;
+			return undefined(key);
+		}, Language.availableLanguages().stream().map(Language::getName));
 	}
 
 	@Define("bitrate")
@@ -655,37 +725,37 @@ public class MediaBindingBean {
 
 	@Define("media")
 	public AssociativeScriptObject getGeneralMediaInfo() {
-		return createMapBindings(getMediaInfo().snapshot(StreamKind.General, 0));
+		return createMediaInfoBindings(StreamKind.General).get(0);
+	}
+
+	@Define("menu")
+	public AssociativeScriptObject getMenuInfo() {
+		return createMediaInfoBindings(StreamKind.Menu).get(0);
+	}
+
+	@Define("image")
+	public AssociativeScriptObject getImageInfo() {
+		return createMediaInfoBindings(StreamKind.Image).get(0);
 	}
 
 	@Define("video")
-	public AssociativeScriptObject getVideoInfo() {
-		return createMapBindings(getMediaInfo().snapshot(StreamKind.Video, 0));
+	public List<AssociativeScriptObject> getVideoInfoList() {
+		return createMediaInfoBindings(StreamKind.Video);
 	}
 
 	@Define("audio")
-	public AssociativeScriptObject getAudioInfo() {
-		return createMapBindings(getMediaInfo().snapshot(StreamKind.Audio, 0));
+	public List<AssociativeScriptObject> getAudioInfoList() {
+		return createMediaInfoBindings(StreamKind.Audio);
 	}
 
 	@Define("text")
-	public AssociativeScriptObject getTextInfo() {
-		return createMapBindings(getMediaInfo().snapshot(StreamKind.Text, 0));
-	}
-
-	@Define("videos")
-	public List<AssociativeScriptObject> getVideoInfoList() {
-		return createMapBindingsList(getMediaInfo().snapshot().get(StreamKind.Video));
-	}
-
-	@Define("audios")
-	public List<AssociativeScriptObject> getAudioInfoList() {
-		return createMapBindingsList(getMediaInfo().snapshot().get(StreamKind.Audio));
-	}
-
-	@Define("texts")
 	public List<AssociativeScriptObject> getTextInfoList() {
-		return createMapBindingsList(getMediaInfo().snapshot().get(StreamKind.Text));
+		return createMediaInfoBindings(StreamKind.Text);
+	}
+
+	@Define("chapters")
+	public List<AssociativeScriptObject> getChaptersInfoList() {
+		return createMediaInfoBindings(StreamKind.Chapters);
 	}
 
 	@Define("artist")
@@ -745,7 +815,8 @@ public class MediaBindingBean {
 
 	@Define("mediaType")
 	public List<String> getMediaType() throws Exception {
-		return asList(MediaTypes.getDefault().getMediaType(getExtension()).split("/")); // format engine does not allow / in binding value
+		// format engine does not allow / in binding value
+		return SLASH.splitAsStream(MediaTypes.getDefault().getMediaType(getExtension())).collect(toList());
 	}
 
 	@Define("file")
@@ -763,9 +834,24 @@ public class MediaBindingBean {
 		return getMediaFile().getParentFile();
 	}
 
+	@Define("bytes")
+	public Long getFileSize() {
+		return getInferredMediaFile().length();
+	}
+
+	@Define("megabytes")
+	public String getFileSizeInMegaBytes() {
+		return String.format("%.0f", getFileSize() / Math.pow(1000, 2));
+	}
+
+	@Define("gigabytes")
+	public String getFileSizeInGigaBytes() {
+		return String.format("%.1f", getFileSize() / Math.pow(1000, 3));
+	}
+
 	@Define("home")
-	public File getUserHome() throws IOException {
-		return Settings.getRealUserHome();
+	public File getUserHome() {
+		return ApplicationFolder.UserHome.getCanonicalFile();
 	}
 
 	@Define("now")
@@ -811,6 +897,17 @@ public class MediaBindingBean {
 		return 1 + identityIndexOf(duplicates, getInfoObject());
 	}
 
+	@Define("plex")
+	public File getPlexStandardPath() throws Exception {
+		String path = NamingStandard.Plex.getPath(infoObject);
+		try {
+			path = path.concat(getSubtitleTags());
+		} catch (Exception e) {
+			// ignore => no language tags
+		}
+		return new File(path);
+	}
+
 	@Define("self")
 	public AssociativeScriptObject getSelf() {
 		return createBindingObject(mediaFile, infoObject, context);
@@ -819,14 +916,14 @@ public class MediaBindingBean {
 	@Define("model")
 	public List<AssociativeScriptObject> getModel() {
 		List<AssociativeScriptObject> result = new ArrayList<AssociativeScriptObject>();
-		for (Entry<File, Object> it : context.entrySet()) {
+		for (Entry<File, ?> it : context.entrySet()) {
 			result.add(createBindingObject(it.getKey(), it.getValue(), context));
 		}
 		return result;
 	}
 
 	@Define("json")
-	public String getInfoObjectDump() throws Exception {
+	public String getInfoObjectDump() {
 		return JsonWriter.objectToJson(infoObject);
 	}
 
@@ -840,7 +937,7 @@ public class MediaBindingBean {
 		} else if (SUBTITLE_FILES.accept(getMediaFile()) || ((infoObject instanceof Episode || infoObject instanceof Movie) && !VIDEO_FILES.accept(getMediaFile()))) {
 			// prefer equal match from current context if possible
 			if (context != null) {
-				for (Entry<File, Object> it : context.entrySet()) {
+				for (Entry<File, ?> it : context.entrySet()) {
 					if (infoObject.equals(it.getValue()) && VIDEO_FILES.accept(it.getKey())) {
 						return it.getKey();
 					}
@@ -860,13 +957,7 @@ public class MediaBindingBean {
 
 			// still no good match found -> just take the most probable video from the same folder
 			if (videos.size() > 0) {
-				sort(videos, new SimilarityComparator(FileUtilities.getName(getMediaFile())) {
-
-					@Override
-					public int compare(Object o1, Object o2) {
-						return super.compare(FileUtilities.getName((File) o1), FileUtilities.getName((File) o2));
-					}
-				});
+				sort(videos, SimilarityComparator.compareTo(FileUtilities.getName(getMediaFile()), FileUtilities::getName));
 				return videos.get(0);
 			}
 		}
@@ -883,15 +974,13 @@ public class MediaBindingBean {
 			File inferredMediaFile = getInferredMediaFile();
 
 			synchronized (sharedMediaInfoObjects) {
-				mediaInfo = sharedMediaInfoObjects.get(inferredMediaFile);
-				if (mediaInfo == null) {
-					MediaInfo mi = new MediaInfo();
-					if (!mi.open(inferredMediaFile)) {
-						throw new RuntimeException("Cannot open media file: " + inferredMediaFile);
+				mediaInfo = sharedMediaInfoObjects.computeIfAbsent(inferredMediaFile, f -> {
+					try {
+						return new MediaInfo().open(f);
+					} catch (Exception e) {
+						throw new MediaInfoException(e.getMessage());
 					}
-					sharedMediaInfoObjects.put(inferredMediaFile, mi);
-					mediaInfo = mi;
-				}
+				});
 			}
 		}
 
@@ -918,8 +1007,9 @@ public class MediaBindingBean {
 		return undefined(String.format("%s[%d][%s]", streamKind, streamNumber, join(keys, ", ")));
 	}
 
-	private AssociativeScriptObject createBindingObject(File file, Object info, Map<File, Object> context) {
+	private AssociativeScriptObject createBindingObject(File file, Object info, Map<File, ?> context) {
 		MediaBindingBean mediaBindingBean = new MediaBindingBean(info, file, context) {
+
 			@Override
 			@Define(undefined)
 			public <T> T undefined(String name) {
@@ -929,56 +1019,30 @@ public class MediaBindingBean {
 		return new AssociativeScriptObject(new ExpressionBindings(mediaBindingBean));
 	}
 
-	private AssociativeScriptObject createMapBindings(Map<?, ?> map) {
-		return new AssociativeScriptObject(map) {
+	private AssociativeScriptObject createPropertyBindings(Object object) {
+		return new AssociativeScriptObject(new PropertyBindings(object, null)) {
 
 			@Override
 			public Object getProperty(String name) {
 				Object value = super.getProperty(name);
-
 				if (value == null) {
-					undefined(name);
+					return undefined(name);
 				}
-
-				// auto-clean value of path separators
 				if (value instanceof CharSequence) {
-					return replacePathSeparators(value.toString()).trim();
+					return replacePathSeparators(value.toString()).trim(); // auto-clean value of path separators
 				}
-
 				return value;
 			}
 		};
 	}
 
-	private List<AssociativeScriptObject> createMapBindingsList(List<Map<String, String>> mapList) {
-		List<AssociativeScriptObject> bindings = new ArrayList<AssociativeScriptObject>();
-		for (Map<?, ?> it : mapList) {
-			bindings.add(createMapBindings(it));
-		}
-		return bindings;
-	}
-
-	private String crc32(File file) throws IOException, InterruptedException {
-		// try to get checksum from cache
-		Cache cache = Cache.getCache(Cache.EPHEMERAL);
-
-		String hash = cache.get(file, String.class);
-		if (hash != null) {
-			return hash;
-		}
-
-		// compute and cache checksum
-		hash = computeHash(file, HashType.SFV);
-		cache.put(file, hash);
-		return hash;
+	private List<AssociativeScriptObject> createMediaInfoBindings(StreamKind kind) {
+		return getMediaInfo().snapshot().get(kind).stream().map(AssociativeScriptObject::new).collect(toList());
 	}
 
 	private String getOriginalFileName(File file) {
-		try {
-			return getNameWithoutExtension(new MetaAttributes(file).getOriginalName());
-		} catch (Throwable e) {
-			return null;
-		}
+		String name = xattr.getOriginalName(file);
+		return name == null ? null : getNameWithoutExtension(name);
 	}
 
 	private List<String> getKeywords() {

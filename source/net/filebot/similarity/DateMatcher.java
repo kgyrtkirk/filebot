@@ -3,42 +3,88 @@ package net.filebot.similarity;
 import static net.filebot.util.FileUtilities.*;
 
 import java.io.File;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.chrono.ChronoLocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.function.Predicate;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.filebot.web.SimpleDate;
+import one.util.streamex.IntStreamEx;
+import one.util.streamex.StreamEx;
 
 public class DateMatcher {
 
+	public static final DateFilter DEFAULT_SANITY = new DateFilter(LocalDate.of(1930, Month.JANUARY, 1), LocalDate.of(2050, Month.JANUARY, 1));
+
 	private final DatePattern[] patterns;
 
-	public DateMatcher() {
-		patterns = new DatePattern[6];
+	public DateMatcher(DateFilter sanity, Locale... locale) {
+		// generate default date format patterns
+		String[] format = new String[7];
 
 		// match yyyy-mm-dd patterns like 2010-10-24, 2009/6/1, etc
-		patterns[0] = new NumericDatePattern("(?<!\\p{Alnum})(\\d{4})[^\\p{Alnum}](\\d{1,2})[^\\p{Alnum}](\\d{1,2})(?!\\p{Alnum})", new int[] { 1, 2, 3 });
+		format[0] = "y M d";
 
 		// match dd-mm-yyyy patterns like 1.1.2010, 01/06/2010, etc
-		patterns[1] = new NumericDatePattern("(?<!\\p{Alnum})(\\d{1,2})[^\\p{Alnum}](\\d{1,2})[^\\p{Alnum}](\\d{4})(?!\\p{Alnum})", new int[] { 3, 2, 1 });
+		format[1] = "d M y";
 
 		// match yyyy.MMMMM.dd patterns like 2015.October.05
-		patterns[2] = new DateFormatPattern("(?<!\\p{Alnum})(\\d{4})[^\\p{Alnum}](?i:January|February|March|April|May|June|July|August|September|October|November|December)[^\\p{Alnum}](\\d{1,2})(?!\\p{Alnum})", "yyyy MMMMM dd");
+		format[2] = "y MMMM d";
 
-		// match yyyy.MMM.dd patterns like 2015.Oct.06
-		patterns[3] = new DateFormatPattern("(?<!\\p{Alnum})(\\d{4})[^\\p{Alnum}](?i:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[^\\p{Alnum}](\\d{1,2})(?!\\p{Alnum})", "yyyy MMM dd");
+		// match yyyy.MMM.dd patterns like 2015.Oct.6
+		format[3] = "y MMM d";
 
 		// match dd.MMMMM.yyyy patterns like 25 July 2014
-		patterns[4] = new DateFormatPattern("(?<!\\p{Alnum})(\\d{1,2})[^\\p{Alnum}](?i:January|February|March|April|May|June|July|August|September|October|November|December)[^\\p{Alnum}](\\d{4})(?!\\p{Alnum})", "dd MMMMM yyyy");
+		format[4] = "d MMMM y";
 
 		// match dd.MMM.yyyy patterns like 8 Sep 2015
-		patterns[5] = new DateFormatPattern("(?<!\\p{Alnum})(\\d{1,2})[^\\p{Alnum}](?i:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[^\\p{Alnum}](\\d{4})(?!\\p{Alnum})", "dd MMM yyyy");
+		format[5] = "d MMM y";
+
+		// match yyyymmdd patterns like 20140408
+		format[6] = "yyyyMMdd";
+
+		this.patterns = compile(format, sanity, locale);
 	}
 
-	public DateMatcher(DatePattern... patterns) {
-		this.patterns = patterns;
+	protected DatePattern[] compile(String[] pattern, DateFilter sanity, Locale... locale) {
+		return StreamEx.of(pattern).flatMap(dateFormat -> {
+			return StreamEx.of(locale).distinct(Locale::getLanguage).map(formatLocale -> {
+				String regex = StreamEx.split(dateFormat, DateFormatPattern.DELIMITER).map(g -> getPatternGroup(g, formatLocale)).joining("\\D", "(?<!\\p{Alnum})", "(?!\\p{Alnum})");
+				return new DateFormatPattern(regex, dateFormat, formatLocale, sanity);
+			}).distinct(DateFormatPattern::toString);
+		}).toArray(DateFormatPattern[]::new);
+	}
+
+	protected String getPatternGroup(String token, Locale locale) {
+		switch (token) {
+		case "y":
+			return "(\\d{4})";
+		case "M":
+			return "(\\d{1,2})";
+		case "d":
+			return "(\\d{1,2})";
+		case "yyyyMMdd":
+			return "(\\d{8})";
+		case "MMMM":
+			return getMonthNamePatternGroup(TextStyle.FULL, locale);
+		case "MMM":
+			return getMonthNamePatternGroup(TextStyle.SHORT, locale);
+		default:
+			throw new IllegalArgumentException(token);
+		}
+	}
+
+	protected String getMonthNamePatternGroup(TextStyle style, Locale locale) {
+		return StreamEx.of(Month.values()).map(m -> m.getDisplayName(style, locale)).map(Pattern::quote).joining("|", "(", ")");
 	}
 
 	public SimpleDate match(CharSequence seq) {
@@ -49,7 +95,6 @@ public class DateMatcher {
 				return match;
 			}
 		}
-
 		return null;
 	}
 
@@ -61,7 +106,6 @@ public class DateMatcher {
 				return pos;
 			}
 		}
-
 		return -1;
 	}
 
@@ -86,7 +130,7 @@ public class DateMatcher {
 		return tail;
 	}
 
-	private static interface DatePattern {
+	public static interface DatePattern {
 
 		public SimpleDate match(CharSequence seq);
 
@@ -94,68 +138,41 @@ public class DateMatcher {
 
 	}
 
-	private static class NumericDatePattern implements DatePattern {
+	public static class DateFormatPattern implements DatePattern {
 
-		protected final Pattern pattern;
-		protected final int[] order;
+		public static final String DELIMITER = " ";
 
-		public NumericDatePattern(String pattern, int[] order) {
-			this.pattern = Pattern.compile(pattern);
-			this.order = order;
+		public final Pattern pattern;
+		public final DateTimeFormatter format;
+		public final DateFilter sanity;
+
+		public DateFormatPattern(String pattern, String format, Locale locale, DateFilter sanity) {
+			this.pattern = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
+			this.format = DateTimeFormatter.ofPattern(format, locale);
+			this.sanity = sanity;
 		}
 
 		protected SimpleDate process(MatchResult match) {
-			return new SimpleDate(Integer.parseInt(match.group(order[0])), Integer.parseInt(match.group(order[1])), Integer.parseInt(match.group(order[2])));
-		}
+			try {
+				String dateString = IntStreamEx.rangeClosed(1, match.groupCount()).mapToObj(match::group).joining(DELIMITER);
+				LocalDate date = LocalDate.parse(dateString, format);
 
-		@Override
-		public SimpleDate match(CharSequence seq) {
-			Matcher matcher = pattern.matcher(seq);
-
-			if (matcher.find()) {
-				return process(matcher);
+				if (sanity == null || sanity.test(date)) {
+					return new SimpleDate(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
+				}
+			} catch (DateTimeParseException e) {
+				// date is invalid
 			}
-
 			return null;
 		}
 
 		@Override
-		public int find(CharSequence seq, int fromIndex) {
-			Matcher matcher = pattern.matcher(seq).region(fromIndex, seq.length());
-
-			if (matcher.find()) {
-				return matcher.start();
-			}
-
-			return -1;
-		}
-
-	}
-
-	private static class DateFormatPattern implements DatePattern {
-
-		protected final Pattern space = Pattern.compile("[^\\p{Alnum}]+");
-
-		protected final Pattern pattern;
-		protected final String dateFormat;
-
-		public DateFormatPattern(String pattern, String dateFormat) {
-			this.pattern = Pattern.compile(pattern);
-			this.dateFormat = dateFormat;
-		}
-
-		protected SimpleDate process(MatchResult match) {
-			return SimpleDate.parse(space.matcher(match.group()).replaceAll(" "), dateFormat);
-		}
-
-		@Override
 		public SimpleDate match(CharSequence seq) {
 			Matcher matcher = pattern.matcher(seq);
 
 			if (matcher.find()) {
 				return process(matcher);
 			}
-
 			return null;
 		}
 
@@ -168,8 +185,37 @@ public class DateMatcher {
 					return matcher.start();
 				}
 			}
-
 			return -1;
+		}
+
+		@Override
+		public String toString() {
+			return pattern.pattern();
+		}
+
+	}
+
+	public static class DateFilter implements Predicate<ChronoLocalDate> {
+
+		public final ChronoLocalDate lowerBound;
+		public final ChronoLocalDate upperBound;
+
+		public DateFilter(ChronoLocalDate lowerBound, ChronoLocalDate upperBound) {
+			this.lowerBound = lowerBound;
+			this.upperBound = upperBound;
+		}
+
+		@Override
+		public boolean test(ChronoLocalDate date) {
+			return date.isAfter(lowerBound) && date.isBefore(upperBound);
+		}
+
+		public boolean acceptDate(int year, int month, int day) {
+			return test(LocalDate.of(year, month, day));
+		}
+
+		public boolean acceptYear(int year) {
+			return test(LocalDate.of(year, 1, 1));
 		}
 
 	}

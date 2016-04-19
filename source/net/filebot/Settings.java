@@ -1,25 +1,20 @@
 package net.filebot;
 
+import static net.filebot.Logging.*;
 import static net.filebot.util.FileUtilities.*;
-import static net.filebot.util.StringUtilities.*;
 
 import java.awt.GraphicsEnvironment;
 import java.io.File;
-import java.net.URI;
-import java.util.LinkedHashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 import net.filebot.UserFiles.FileChooser;
 import net.filebot.archive.Archive.Extractor;
 import net.filebot.cli.ArgumentBean;
-import net.filebot.util.ExceptionUtilities;
 import net.filebot.util.PreferencesList;
 import net.filebot.util.PreferencesMap;
 import net.filebot.util.PreferencesMap.PreferencesEntry;
@@ -53,7 +48,7 @@ public final class Settings {
 			try {
 				return bundle.getString("apikey.appstore." + name);
 			} catch (MissingResourceException e) {
-				// ignore, fall back to default
+				// use default value
 			}
 		}
 		return bundle.getString("apikey." + name);
@@ -77,6 +72,10 @@ public final class Settings {
 
 	public static boolean useCreationDate() {
 		return Boolean.parseBoolean(System.getProperty("useCreationDate"));
+	}
+
+	public static boolean useRenameHistory() {
+		return Boolean.parseBoolean(System.getProperty("application.rename.history", "true"));
 	}
 
 	public static String getApplicationDeployment() {
@@ -127,65 +126,10 @@ public final class Settings {
 				return Integer.parseInt(threadPool);
 			}
 		} catch (Exception e) {
-			Logger.getLogger(Settings.class.getName()).log(Level.WARNING, e.toString());
+			debug.log(Level.WARNING, e.getMessage(), e);
 		}
 
 		return Runtime.getRuntime().availableProcessors();
-	}
-
-	public static File getApplicationFolder() {
-		String applicationFolderPath = System.getProperty("application.dir");
-		File applicationFolder = null;
-
-		if (applicationFolderPath != null && !applicationFolderPath.isEmpty()) {
-			// use given path
-			applicationFolder = new File(applicationFolderPath);
-		} else {
-			// create folder in user home (can't use working directory for web start applications)
-			applicationFolder = new File(System.getProperty("user.home"), ".filebot");
-		}
-
-		// create folder if necessary
-		try {
-			createFolders(applicationFolder);
-		} catch (Exception e) {
-			throw new IllegalStateException("application.dir", e);
-		}
-
-		return applicationFolder;
-	}
-
-	public static File getApplicationCache() {
-		String cacheFolderPath = System.getProperty("application.cache");
-		File cacheFolder = null;
-
-		if (cacheFolderPath != null && !cacheFolderPath.isEmpty()) {
-			cacheFolder = new File(cacheFolderPath);
-		} else {
-			cacheFolder = new File(getApplicationFolder(), "cache");
-		}
-
-		// create folder if necessary
-		try {
-			createFolders(cacheFolder);
-		} catch (Exception e) {
-			throw new IllegalStateException("application.cache", e);
-		}
-
-		return cacheFolder;
-	}
-
-	public static File getRealUserHome() {
-		if (isMacSandbox()) {
-			// when running sandboxed applications user.home may point to the application-specific container
-			String username = System.getProperty("user.name");
-			if (username != null && username.length() > 0) {
-				return new File("/Users", username);
-			}
-		}
-
-		// default home
-		return new File(System.getProperty("user.home"));
 	}
 
 	public static String getAppStoreName() {
@@ -197,11 +141,11 @@ public final class Settings {
 		return null;
 	}
 
-	public static URI getAppStoreURI() {
+	public static String getAppStoreLink() {
 		if (isMacApp())
-			return getApplicationLink("link.mas");
+			return getApplicationProperty("link.mas");
 		if (isUbuntuApp())
-			return getApplicationLink("link.usc");
+			return getApplicationProperty("link.usc");
 
 		return null;
 	}
@@ -215,19 +159,103 @@ public final class Settings {
 		return getApplicationProperty("link.app.help") + '#' + getApplicationDeployment();
 	}
 
-	public static Map<String, URI> getHelpURIs() {
-		Map<String, URI> links = new LinkedHashMap<String, URI>();
-		links.put("Getting Started", getApplicationLink("link.intro"));
-		links.put("FAQ", getApplicationLink("link.faq"));
-		links.put("Forums", getApplicationLink("link.forums"));
-		links.put("Twitter", getApplicationLink("link.twitter"));
-		links.put("Report Bugs", getApplicationLink(isMacSandbox() ? "link.help.mas" : "link.bugs"));
-		links.put("Request Help", getApplicationLink(isMacSandbox() ? "link.help.mas" : "link.help"));
-		return links;
+	public static String getApplicationIdentifier() {
+		return String.format("%s %s (r%d)", getApplicationName(), getApplicationVersion(), getApplicationRevisionNumber());
 	}
 
-	public static URI getApplicationLink(String key) {
-		return URI.create(getApplicationProperty(key));
+	public static String getJavaRuntimeIdentifier() {
+		return String.format("%s %s %s", System.getProperty("java.runtime.name"), System.getProperty("java.version"), GraphicsEnvironment.isHeadless() ? "(headless)" : "").trim();
+	}
+
+	private static String[] applicationArgumentArray;
+
+	protected static void setApplicationArgumentArray(String[] args) {
+		applicationArgumentArray = args;
+	}
+
+	public static ArgumentBean getApplicationArguments() {
+		try {
+			return ArgumentBean.parse(applicationArgumentArray);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	public static File getApplicationFolder() {
+		return ApplicationFolder.AppData.get(); // added for script compatibility
+	}
+
+	public static enum ApplicationFolder {
+
+		AppData {
+
+			@Override
+			public File get() {
+				String appdata = System.getProperty("application.dir");
+
+				if (appdata != null) {
+					// use given $APP_DATA folder
+					return new File(appdata);
+				} else {
+					// use $HOME/.filebot as application data folder
+					return new File(System.getProperty("user.home"), ".filebot");
+				}
+			}
+		},
+
+		UserHome {
+
+			@Override
+			public File get() {
+				// The user.home of sandboxed applications will point to the application-specific container
+				if (isMacSandbox()) {
+					return new File("/Users", System.getProperty("user.name", "anonymous"));
+				}
+
+				// default user home
+				return new File(System.getProperty("user.home"));
+			}
+
+		},
+
+		Temp {
+
+			@Override
+			public File get() {
+				return new File(System.getProperty("java.io.tmpdir"));
+			}
+		},
+
+		Cache {
+
+			@Override
+			public File get() {
+				String cache = System.getProperty("application.cache");
+				if (cache != null) {
+					return new File(cache);
+				}
+
+				// default to $APP_DATA/cache
+				return AppData.resolve("cache");
+			}
+		};
+
+		public abstract File get();
+
+		public File resolve(String name) {
+			return new File(getCanonicalFile(), name);
+		}
+
+		public File getCanonicalFile() {
+			File path = get();
+			try {
+				return createFolders(path.getCanonicalFile());
+			} catch (Exception e) {
+				debug.log(Level.SEVERE, String.format("Failed to create application folder: %s => %s", this, path), e);
+				return path;
+			}
+		}
+
 	}
 
 	public static Settings forPackage(Class<?> type) {
@@ -286,32 +314,7 @@ public final class Settings {
 			// remove entries
 			prefs.clear();
 		} catch (BackingStoreException e) {
-			throw ExceptionUtilities.asRuntimeException(e);
-		}
-	}
-
-	public static String getApplicationIdentifier() {
-		return join(" ", getApplicationName(), getApplicationVersion(), String.format("(r%s)", getApplicationRevisionNumber()));
-	}
-
-	public static String getJavaRuntimeIdentifier() {
-		String name = System.getProperty("java.runtime.name");
-		String version = System.getProperty("java.version");
-		String headless = GraphicsEnvironment.isHeadless() ? "(headless)" : null;
-		return join(" ", name, version, headless);
-	}
-
-	private static String[] applicationArgumentArray;
-
-	protected static void setApplicationArgumentArray(String[] args) {
-		applicationArgumentArray = args;
-	}
-
-	public static ArgumentBean getApplicationArguments() {
-		try {
-			return ArgumentBean.parse(applicationArgumentArray);
-		} catch (Exception e) {
-			throw new IllegalStateException(e);
+			debug.warning(e.getMessage());
 		}
 	}
 

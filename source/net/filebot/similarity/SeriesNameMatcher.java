@@ -8,6 +8,7 @@ import static net.filebot.util.StringUtilities.*;
 
 import java.io.File;
 import java.text.CollationKey;
+import java.text.Collator;
 import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,23 +31,25 @@ import net.filebot.util.FileUtilities;
 
 public class SeriesNameMatcher {
 
-	protected SeasonEpisodeMatcher seasonEpisodeMatcher;
-	protected DateMatcher dateMatcher;
+	protected final SimilarityMetric metric;
+	protected final SeasonEpisodeMatcher seasonEpisodeMatcher;
+	protected final DateMatcher dateMatcher;
+	protected final CommonSequenceMatcher commonSequenceMatcher;
 
-	protected NameSimilarityMetric nameSimilarityMetric;
-
-	protected CommonSequenceMatcher commonSequenceMatcher;
-
-	public SeriesNameMatcher() {
-		this(Locale.ROOT, true);
+	public SeriesNameMatcher(boolean strict) {
+		this(new NameSimilarityMetric(), getLenientCollator(Locale.ENGLISH), new SmartSeasonEpisodeMatcher(SeasonEpisodeMatcher.DEFAULT_SANITY, strict), new DateMatcher(DateMatcher.DEFAULT_SANITY, Locale.ENGLISH));
 	}
 
-	public SeriesNameMatcher(Locale locale, boolean strict) {
-		seasonEpisodeMatcher = new SmartSeasonEpisodeMatcher(SeasonEpisodeMatcher.DEFAULT_SANITY, strict);
-		dateMatcher = new DateMatcher();
-		nameSimilarityMetric = new NameSimilarityMetric();
+	public SeriesNameMatcher(SeasonEpisodeMatcher seasonEpisodeMatcher, DateMatcher dateMatcher) {
+		this(new NameSimilarityMetric(), getLenientCollator(Locale.ENGLISH), seasonEpisodeMatcher, dateMatcher);
+	}
 
-		commonSequenceMatcher = new CommonSequenceMatcher(getLenientCollator(locale), 3, true) {
+	public SeriesNameMatcher(SimilarityMetric metric, Collator collator, SeasonEpisodeMatcher seasonEpisodeMatcher, DateMatcher dateMatcher) {
+		this.metric = metric;
+		this.seasonEpisodeMatcher = seasonEpisodeMatcher;
+		this.dateMatcher = dateMatcher;
+
+		this.commonSequenceMatcher = new CommonSequenceMatcher(collator, 3, true) {
 
 			@Override
 			public CollationKey[] split(String sequence) {
@@ -65,7 +68,7 @@ public class SeriesNameMatcher {
 
 			for (String nameMatch : matchAll(names)) {
 				String commonMatch = commonSequenceMatcher.matchFirstCommonSequence(nameMatch, parent);
-				float similarity = commonMatch == null ? 0 : nameSimilarityMetric.getSimilarity(commonMatch, nameMatch);
+				float similarity = commonMatch == null ? 0 : metric.getSimilarity(commonMatch, nameMatch);
 
 				// prefer common match, but only if it's very similar to the original match
 				seriesNames.add(similarity > 0.7 ? commonMatch : nameMatch);
@@ -193,20 +196,20 @@ public class SeriesNameMatcher {
 		// series name ends at the first season episode pattern
 		String seriesName = seasonEpisodeMatcher.head(name);
 		if (seriesName != null && seriesName.length() > 0) {
-			return normalizePunctuation(seriesName);
+			return seriesName;
 		}
 
 		int datePosition = dateMatcher.find(name, 0);
 		if (datePosition > 0) {
 			// series name ends at the first season episode pattern
-			return normalizePunctuation(name.substring(0, datePosition));
+			return name.substring(0, datePosition);
 		}
 
 		return null;
 	}
 
 	public String matchBySeparator(String name) {
-		Pattern separator = Pattern.compile("[\\s]+[-]+[\\s]+");
+		Pattern separator = Pattern.compile("[\\s]+[-]+[\\s]+", Pattern.UNICODE_CHARACTER_CLASS);
 
 		Matcher matcher = separator.matcher(name);
 		if (matcher.find() && matcher.start() > 0) {

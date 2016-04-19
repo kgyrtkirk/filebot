@@ -1,25 +1,21 @@
 package net.filebot.web;
 
+import static java.util.Arrays.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.util.JsonUtilities.*;
 import static net.filebot.web.WebRequest.*;
 
-import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.net.URL;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import javax.swing.Icon;
 
 import net.filebot.Cache;
+import net.filebot.CacheType;
 import net.filebot.ResourceManager;
-
-import com.cedarsoftware.util.io.JsonObject;
 
 public class TVMazeClient extends AbstractEpisodeListProvider {
 
@@ -49,100 +45,73 @@ public class TVMazeClient extends AbstractEpisodeListProvider {
 	}
 
 	@Override
-	protected SearchResult createSearchResult(int id) {
-		return new TVMazeSearchResult(id, null);
-	}
-
-	@Override
-	public ResultCache getCache() {
-		return new ResultCache(getName(), Cache.getCache("web-datasource"));
-	}
-
-	@Override
-	public List<SearchResult> fetchSearchResult(String query, Locale locale) throws IOException {
+	public List<SearchResult> fetchSearchResult(String query, Locale locale) throws Exception {
 		// e.g. http://api.tvmaze.com/search/shows?q=girls
-		JsonObject<?, ?> response = request("search/shows?q=" + encode(query, true));
+		Object response = request("search/shows?q=" + encode(query, true));
 
-		List<SearchResult> results = new ArrayList<SearchResult>();
-		if (response.isArray()) {
-			for (Object result : response.getArray()) {
-				Map<?, ?> show = (Map<?, ?>) ((Map<?, ?>) result).get("show");
+		// FUTURE WORK: consider adding TVmaze aka titles for each result, e.g. http://api.tvmaze.com/shows/1/akas
+		return streamJsonObjects(response).map(it -> {
+			Object show = it.get("show");
+			Integer id = getInteger(show, "id");
+			String name = getString(show, "name");
 
-				int id = Integer.parseInt(show.get("id").toString());
-				String name = show.get("name").toString();
-
-				// FUTURE WORK: consider adding TVmaze aka titles for each result, e.g. http://api.tvmaze.com/shows/1/akas
-				results.add(new TVMazeSearchResult(id, name));
-			}
-		}
-
-		return results;
+			return new SearchResult(id, name);
+		}).collect(toList());
 	}
 
-	protected SeriesInfo fetchSeriesInfo(TVMazeSearchResult show, SortOrder sortOrder, Locale locale) throws IOException {
+	protected SeriesInfo fetchSeriesInfo(SearchResult show, SortOrder sortOrder, Locale locale) throws Exception {
 		// e.g. http://api.tvmaze.com/shows/1
-		JsonObject<?, ?> response = request("shows/" + show.getId());
+		Object response = request("shows/" + show.getId());
 
-		String status = (String) response.get("status");
-		String premiered = (String) response.get("premiered");
-		String runtime = response.get("runtime").toString();
-		JsonObject<?, ?> genres = (JsonObject<?, ?>) response.get("genres");
-		JsonObject<?, ?> rating = (JsonObject<?, ?>) response.get("rating");
+		String status = getStringValue(response, "status", String::new);
+		SimpleDate premiered = getStringValue(response, "premiered", SimpleDate::parse);
+		Integer runtime = getStringValue(response, "runtime", Integer::new);
+		Object[] genres = getArray(response, "genres");
+		Double rating = getStringValue(getMap(response, "rating"), "average", Double::new);
 
-		SeriesInfo seriesInfo = new SeriesInfo(getName(), sortOrder, locale, show.getId());
+		SeriesInfo seriesInfo = new SeriesInfo(this, sortOrder, locale, show.getId());
 		seriesInfo.setName(show.getName());
-		seriesInfo.setAliasNames(show.getEffectiveNames());
+		seriesInfo.setAliasNames(show.getAliasNames());
 		seriesInfo.setStatus(status);
-		seriesInfo.setRuntime(new Integer(runtime));
-		seriesInfo.setStartDate(SimpleDate.parse(premiered, "yyyy-MM-dd"));
-
-		if (genres != null && genres.isArray()) {
-			seriesInfo.setGenres(Arrays.stream(genres.getArray()).map(Objects::toString).collect(Collectors.toList()));
-		}
-		if (rating != null && !rating.isEmpty()) {
-			seriesInfo.setRating(new Double(rating.get("average").toString()));
-		}
+		seriesInfo.setRuntime(runtime);
+		seriesInfo.setStartDate(premiered);
+		seriesInfo.setRating(rating);
+		seriesInfo.setGenres(stream(genres).map(Objects::toString).collect(toList()));
 
 		return seriesInfo;
 	}
 
 	@Override
 	protected SeriesData fetchSeriesData(SearchResult searchResult, SortOrder sortOrder, Locale locale) throws Exception {
-		TVMazeSearchResult show = (TVMazeSearchResult) searchResult;
-
-		SeriesInfo seriesInfo = fetchSeriesInfo(show, sortOrder, locale);
+		SeriesInfo seriesInfo = fetchSeriesInfo(searchResult, sortOrder, locale);
 
 		// e.g. http://api.tvmaze.com/shows/1/episodes
-		JsonObject<?, ?> response = request("shows/" + show.getId() + "/episodes");
+		Object response = request("shows/" + seriesInfo.getId() + "/episodes");
 
-		List<Episode> episodes = new ArrayList<Episode>(25);
+		List<Episode> episodes = streamJsonObjects(response).map(episode -> {
+			String episodeTitle = getString(episode, "name");
+			Integer seasonNumber = getInteger(episode, "season");
+			Integer episodeNumber = getInteger(episode, "number");
+			SimpleDate airdate = getStringValue(episode, "airdate", SimpleDate::parse);
 
-		if (response.isArray()) {
-			for (Object element : response.getArray()) {
-				JsonObject<?, ?> episode = (JsonObject<?, ?>) element;
-				try {
-					String episodeTitle = episode.get("name").toString();
-					Integer seasonNumber = Integer.parseInt(episode.get("season").toString());
-					Integer episodeNumber = Integer.parseInt(episode.get("number").toString());
-					SimpleDate airdate = SimpleDate.parse(episode.get("airdate").toString(), "yyyy-MM-dd");
-
-					episodes.add(new Episode(seriesInfo.getName(), seasonNumber, episodeNumber, episodeTitle, null, null, airdate, new SeriesInfo(seriesInfo)));
-				} catch (Exception e) {
-					Logger.getLogger(TVMazeClient.class.getName()).log(Level.WARNING, "Illegal episode data: " + e + ": " + episode);
-				}
-			}
-		}
+			return new Episode(seriesInfo.getName(), seasonNumber, episodeNumber, episodeTitle, null, null, airdate, seriesInfo);
+		}).collect(toList());
 
 		return new SeriesData(seriesInfo, episodes);
 	}
 
-	public JsonObject<?, ?> request(String resource) throws IOException {
-		return new CachedJsonResource("http://api.tvmaze.com/" + resource).getJSON();
+	protected Object request(String resource) throws Exception {
+		Cache cache = Cache.getCache(getName(), CacheType.Monthly);
+		return cache.json(resource, s -> getResource(resource)).get();
+	}
+
+	protected URL getResource(String resource) throws Exception {
+		return new URL("http://api.tvmaze.com/" + resource);
 	}
 
 	@Override
 	public URI getEpisodeListLink(SearchResult searchResult) {
-		return URI.create("http://www.tvmaze.com/shows/" + ((TVMazeSearchResult) searchResult).getId());
+		return URI.create("http://www.tvmaze.com/shows/" + searchResult.getId());
 	}
 
 }

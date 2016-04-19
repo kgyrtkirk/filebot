@@ -1,6 +1,7 @@
 package net.filebot.cli;
 
 import static java.util.Collections.*;
+import static net.filebot.Logging.*;
 import static net.filebot.util.FileUtilities.*;
 
 import java.io.File;
@@ -11,25 +12,25 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import net.filebot.Language;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.kohsuke.args4j.ParserProperties;
 import org.kohsuke.args4j.spi.ExplicitBooleanOptionHandler;
+
+import net.filebot.Language;
 
 public class ArgumentBean {
 
-	@Option(name = "--mode", usage = "Open GUI in single panel mode", metaVar = "[rename, subtitles, sfv]")
+	@Option(name = "--mode", usage = "Open GUI in single panel mode", metaVar = "[Rename, Subtitles, SFV]")
 	public String mode = null;
 
-	@Option(name = "-rename", usage = "Rename media files", metaVar = "fileset")
+	@Option(name = "-rename", usage = "Rename media files")
 	public boolean rename = false;
 
-	@Option(name = "--db", usage = "Database", metaVar = "[TheTVDB, AniDB] or [TheMovieDB, OMDb] or [AcoustID, ID3 Tags] or [xattr]")
+	@Option(name = "--db", usage = "Database", metaVar = "[TheTVDB, AniDB] or [TheMovieDB] or [AcoustID, ID3] or [xattr]")
 	public String db;
 
 	@Option(name = "--order", usage = "Episode order", metaVar = "[Airdate, Absolute, DVD]")
@@ -38,7 +39,7 @@ public class ArgumentBean {
 	@Option(name = "--action", usage = "Rename action", metaVar = "[move, copy, keeplink, symlink, hardlink, test]")
 	public String action = "move";
 
-	@Option(name = "--conflict", usage = "Conflict resolution", metaVar = "[skip, override, auto, fail]")
+	@Option(name = "--conflict", usage = "Conflict resolution", metaVar = "[skip, override, auto, index, fail]")
 	public String conflict = "skip";
 
 	@Option(name = "--filter", usage = "Filter expression", metaVar = "expression")
@@ -47,28 +48,25 @@ public class ArgumentBean {
 	@Option(name = "--format", usage = "Format expression", metaVar = "expression")
 	public String format;
 
-	@Option(name = "-non-strict", usage = "Enable advanced matching and more aggressive guess work")
+	@Option(name = "-non-strict", usage = "Enable advanced matching and more aggressive guessing")
 	public boolean nonStrict = false;
 
-	@Option(name = "-get-subtitles", usage = "Fetch subtitles", metaVar = "fileset")
+	@Option(name = "-get-subtitles", usage = "Fetch subtitles")
 	public boolean getSubtitles;
-
-	@Option(name = "-get-missing-subtitles", usage = "Fetch missing subtitles", metaVar = "fileset")
-	public boolean getMissingSubtitles;
 
 	@Option(name = "--q", usage = "Force lookup query", metaVar = "series/movie title")
 	public String query;
 
-	@Option(name = "--lang", usage = "Language", metaVar = "2-letter language code")
+	@Option(name = "--lang", usage = "Language", metaVar = "3-letter language code")
 	public String lang = "en";
 
-	@Option(name = "-check", usage = "Create/Check verification files", metaVar = "fileset")
+	@Option(name = "-check", usage = "Create/Check verification files")
 	public boolean check;
 
-	@Option(name = "--output", usage = "Output path", metaVar = "folder")
+	@Option(name = "--output", usage = "Output path", metaVar = "/path")
 	public String output;
 
-	@Option(name = "--encoding", usage = "Output character encoding", metaVar = "[UTF-8, Windows-1252, GB18030]")
+	@Option(name = "--encoding", usage = "Output character encoding", metaVar = "[UTF-8, Windows-1252]")
 	public String encoding;
 
 	@Option(name = "-list", usage = "Fetch episode list")
@@ -77,16 +75,19 @@ public class ArgumentBean {
 	@Option(name = "-mediainfo", usage = "Get media info")
 	public boolean mediaInfo = false;
 
+	@Option(name = "-revert", usage = "Revert files")
+	public boolean revert = false;
+
 	@Option(name = "-extract", usage = "Extract archives")
 	public boolean extract = false;
 
-	@Option(name = "-script", usage = "Run Groovy script", metaVar = "path/to/script.groovy")
+	@Option(name = "-script", usage = "Run Groovy script", metaVar = "[fn:name] or [dev:name] or [/path/to/script.groovy]")
 	public String script = null;
 
 	@Option(name = "--log", usage = "Log level", metaVar = "[all, fine, info, warning, off]")
 	public String log = "all";
 
-	@Option(name = "--log-file", usage = "Log file", metaVar = "path/to/log.txt")
+	@Option(name = "--log-file", usage = "Log file", metaVar = "/path/to/log.txt")
 	public String logFile = null;
 
 	@Option(name = "--log-lock", usage = "Lock log file", metaVar = "[yes, no]", handler = ExplicitBooleanOptionHandler.class)
@@ -120,7 +121,7 @@ public class ArgumentBean {
 	public List<String> arguments = new ArrayList<String>();
 
 	public boolean runCLI() {
-		return rename || getSubtitles || getMissingSubtitles || check || list || mediaInfo || extract || script != null;
+		return rename || getSubtitles || check || list || mediaInfo || revert || extract || script != null;
 	}
 
 	public boolean printVersion() {
@@ -154,7 +155,7 @@ public class ArgumentBean {
 			try {
 				file = file.getCanonicalFile();
 			} catch (Exception e) {
-				Logger.getLogger(getClass().getName()).log(Level.WARNING, String.format("Illegal Argument: %s (%s)", e, argument));
+				debug.warning(format("Illegal Argument: %s (%s)", e, argument));
 			}
 
 			if (resolveFolders && file.isDirectory()) {
@@ -201,7 +202,7 @@ public class ArgumentBean {
 	}
 
 	public static void printHelp(ArgumentBean argumentBean, OutputStream out) {
-		new CmdLineParser(argumentBean).printUsage(out);
+		new CmdLineParser(argumentBean, ParserProperties.defaults().withShowDefaults(false).withOptionSorter(null)).printUsage(out);
 	}
 
 }

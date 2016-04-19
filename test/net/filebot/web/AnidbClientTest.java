@@ -5,51 +5,40 @@ import static org.junit.Assert.*;
 import java.util.List;
 import java.util.Locale;
 
-import net.sf.ehcache.CacheManager;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class AnidbClientTest {
 
+	static AnidbClient anidb = new AnidbClient("filebot", 6);
+
 	/**
 	 * 74 episodes
 	 */
-	private static AnidbSearchResult monsterSearchResult;
+	SearchResult monsterSearchResult = new SearchResult(1539, "Monster");
 
 	/**
 	 * 45 episodes
 	 */
-	private static AnidbSearchResult twelvekingdomsSearchResult;
+	SearchResult twelvekingdomsSearchResult = new SearchResult(26, "Juuni Kokuki");
 
 	/**
 	 * 38 episodes, lots of special characters
 	 */
-	private static AnidbSearchResult princessTutuSearchResult;
-
-	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
-		monsterSearchResult = new AnidbSearchResult(1539, "Monster", null);
-		twelvekingdomsSearchResult = new AnidbSearchResult(26, "Juuni Kokuki", null);
-		princessTutuSearchResult = new AnidbSearchResult(516, "Princess Tutu", null);
-	}
-
-	private AnidbClient anidb = new AnidbClient("filebot", 6);
+	SearchResult princessTutuSearchResult = new SearchResult(516, "Princess Tutu");
 
 	@Test
 	public void getAnimeTitles() throws Exception {
-		List<AnidbSearchResult> animeTitles = anidb.getAnimeTitles();
-		assertTrue(animeTitles.size() > 8000);
+		SearchResult[] animeTitles = anidb.getAnimeTitles();
+		assertTrue(animeTitles.length > 8000);
 	}
 
 	@Test
 	public void search() throws Exception {
 		List<SearchResult> results = anidb.search("one piece", Locale.ENGLISH);
 
-		AnidbSearchResult result = (AnidbSearchResult) results.get(0);
+		SearchResult result = results.get(0);
 		assertEquals("One Piece", result.getName());
-		assertEquals(69, result.getAnimeId());
+		assertEquals(69, result.getId());
 	}
 
 	@Test
@@ -90,7 +79,7 @@ public class AnidbClientTest {
 	public void getEpisodeListAllShortLink() throws Exception {
 		List<Episode> list = anidb.getEpisodeList(twelvekingdomsSearchResult, SortOrder.Airdate, Locale.ENGLISH);
 
-		assertEquals(46, list.size());
+		assertEquals(47, list.size());
 
 		Episode first = list.get(0);
 
@@ -113,7 +102,7 @@ public class AnidbClientTest {
 		List<Episode> list = anidb.getEpisodeList(monsterSearchResult, SortOrder.Airdate, Locale.JAPANESE);
 
 		Episode last = list.get(73);
-		assertEquals("モンスター", last.getSeriesName());
+		assertEquals("MONSTER", last.getSeriesName());
 		assertEquals("2004-04-07", last.getSeriesInfo().getStartDate().toString());
 		assertEquals("本当の怪物", last.getTitle());
 		assertEquals("74", last.getEpisode().toString());
@@ -130,12 +119,6 @@ public class AnidbClientTest {
 	@Test
 	public void getEpisodeListLink() throws Exception {
 		assertEquals("http://anidb.net/a1539", anidb.getEpisodeListLink(monsterSearchResult).toURL().toString());
-	}
-
-	@BeforeClass
-	@AfterClass
-	public static void clearCache() {
-		CacheManager.getInstance().clearAll();
 	}
 
 }

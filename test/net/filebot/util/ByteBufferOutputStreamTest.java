@@ -1,17 +1,15 @@
-
 package net.filebot.util;
 
-
+import static java.nio.charset.StandardCharsets.*;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.channels.Channels;
-import java.nio.charset.Charset;
 
 import org.junit.Test;
 
-
+@SuppressWarnings("resource")
 public class ByteBufferOutputStreamTest {
 
 	@Test
@@ -22,12 +20,11 @@ public class ByteBufferOutputStreamTest {
 		buffer.write("asdf".getBytes("utf-8"));
 
 		// check content
-		assertEquals("asdf", Charset.forName("utf-8").decode(buffer.getByteBuffer()).toString());
+		assertEquals("asdf", UTF_8.decode(buffer.getByteBuffer()).toString());
 
 		// check capacity
 		assertEquals(4, buffer.capacity());
 	}
-
 
 	@Test
 	public void transferFrom() throws Exception {
@@ -41,7 +38,7 @@ public class ByteBufferOutputStreamTest {
 		assertEquals(4, n);
 
 		// check content
-		assertEquals("asdf", Charset.forName("utf-8").decode(buffer.getByteBuffer()).toString());
+		assertEquals("asdf", UTF_8.decode(buffer.getByteBuffer()).toString());
 	}
 
 }

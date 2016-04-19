@@ -2,13 +2,16 @@ package net.filebot.ui.sfv;
 
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static net.filebot.Logging.*;
 import static net.filebot.MediaTypes.*;
+import static net.filebot.Settings.*;
 import static net.filebot.hash.VerificationUtilities.*;
-import static net.filebot.ui.NotificationLogging.*;
 import static net.filebot.util.FileUtilities.*;
+import static net.filebot.util.ui.SwingUI.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,16 +22,20 @@ import java.util.logging.Level;
 import net.filebot.MediaTypes;
 import net.filebot.hash.HashType;
 import net.filebot.hash.VerificationFileReader;
+import net.filebot.mac.MacAppUtilities;
 import net.filebot.ui.transfer.BackgroundFileTransferablePolicy;
 import net.filebot.util.ExceptionUtilities;
+import net.filebot.util.FileSet;
 
 class ChecksumTableTransferablePolicy extends BackgroundFileTransferablePolicy<ChecksumCell> {
 
+	private final ChecksumTable table;
 	private final ChecksumTableModel model;
 	private final ChecksumComputationService computationService;
 
-	public ChecksumTableTransferablePolicy(ChecksumTableModel model, ChecksumComputationService checksumComputationService) {
-		this.model = model;
+	public ChecksumTableTransferablePolicy(ChecksumTable table, ChecksumComputationService checksumComputationService) {
+		this.table = table;
+		this.model = table.getModel();
 		this.computationService = checksumComputationService;
 	}
 
@@ -60,7 +67,7 @@ class ChecksumTableTransferablePolicy extends BackgroundFileTransferablePolicy<C
 
 	@Override
 	protected void process(Exception e) {
-		UILogger.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
+		log.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
 	}
 
 	private final ThreadLocal<ExecutorService> executor = new ThreadLocal<ExecutorService>();
@@ -68,25 +75,52 @@ class ChecksumTableTransferablePolicy extends BackgroundFileTransferablePolicy<C
 
 	@Override
 	protected void load(List<File> files, TransferAction action) throws IOException {
+		// make sure we have access to the parent folder structure, not just the dropped file
+		if (isMacSandbox()) {
+			MacAppUtilities.askUnlockFolders(getWindow(table), files);
+		}
+
 		// initialize drop parameters
 		executor.set(computationService.newExecutor());
 		verificationTracker.set(new VerificationTracker(5));
 
 		try {
 			// handle single verification file drop
-			if (files.size() == 1 && getHashType(files.get(0)) != null) {
-				loadVerificationFile(files.get(0), getHashType(files.get(0)));
-			}
-			// handle single folder drop
-			else if (files.size() == 1 && files.get(0).isDirectory()) {
-				for (File file : getChildren(files.get(0), NOT_HIDDEN, CASE_INSENSITIVE_PATH)) {
-					load(file, null, files.get(0));
+			if (containsOnly(files, VERIFICATION_FILES)) {
+				for (File file : files) {
+					loadVerificationFile(file, getHashType(file));
 				}
+				return;
 			}
-			// handle all other drops
-			else {
+
+			// handle single folder drop
+			if (files.size() == 1 && containsOnly(files, FOLDERS)) {
+				for (File folder : files) {
+					for (File file : getChildren(folder, NOT_HIDDEN, CASE_INSENSITIVE_PATH)) {
+						load(file, null, folder);
+					}
+				}
+				return;
+			}
+
+			// handle files and folders dropped from the same parent folder
+			if (mapByFolder(files).size() == 1) {
 				for (File file : files) {
 					load(file, null, file.getParentFile());
+				}
+				return;
+			}
+
+			// handle all other drops and auto-detect common root folder from dropped fileset
+			FileSet fileset = new FileSet();
+			files.forEach(fileset::add);
+
+			for (Entry<Path, List<Path>> it : fileset.getRoots().entrySet()) {
+				File root = it.getKey().toFile();
+				for (Path path : it.getValue()) {
+					File relativeFile = path.toFile().getParentFile();
+					File absoluteFile = new File(root, path.toString());
+					load(absoluteFile, relativeFile, root);
 				}
 			}
 		} catch (InterruptedException e) {
@@ -110,8 +144,9 @@ class ChecksumTableTransferablePolicy extends BackgroundFileTransferablePolicy<C
 
 			while (parser.hasNext()) {
 				// make this possibly long-running operation interruptible
-				if (Thread.interrupted())
+				if (Thread.interrupted()) {
 					throw new InterruptedException();
+				}
 
 				Entry<File, String> entry = parser.next();
 
@@ -121,7 +156,8 @@ class ChecksumTableTransferablePolicy extends BackgroundFileTransferablePolicy<C
 				ChecksumCell correct = new ChecksumCell(name, file, singletonMap(type, hash));
 				ChecksumCell current = createComputationCell(name, baseFolder, type);
 
-				publish(correct, current);
+				ChecksumCell[] columns = { correct, current };
+				publish(columns);
 			}
 		} finally {
 			parser.close();
@@ -129,12 +165,14 @@ class ChecksumTableTransferablePolicy extends BackgroundFileTransferablePolicy<C
 	}
 
 	protected void load(File absoluteFile, File relativeFile, File root) throws IOException, InterruptedException {
-		if (Thread.interrupted())
+		if (Thread.interrupted()) {
 			throw new InterruptedException();
+		}
 
 		// ignore hidden files/folders
-		if (absoluteFile.isHidden())
+		if (absoluteFile.isHidden()) {
 			return;
+		}
 
 		// add next name to relative path
 		relativeFile = new File(relativeFile, absoluteFile.getName());
@@ -148,14 +186,17 @@ class ChecksumTableTransferablePolicy extends BackgroundFileTransferablePolicy<C
 			String name = normalizePathSeparators(relativeFile.getPath());
 
 			// publish computation cell first
-			publish(createComputationCell(name, root, model.getHashType()));
+			ChecksumCell[] computeCell = { createComputationCell(name, root, model.getHashType()) };
+			publish(computeCell);
 
 			// publish verification cell, if we can
 			Map<File, String> hashByVerificationFile = verificationTracker.get().getHashByVerificationFile(absoluteFile);
 
 			for (Entry<File, String> entry : hashByVerificationFile.entrySet()) {
 				HashType hashType = verificationTracker.get().getVerificationFileType(entry.getKey());
-				publish(new ChecksumCell(name, entry.getKey(), singletonMap(hashType, entry.getValue())));
+
+				ChecksumCell[] verifyCell = { new ChecksumCell(name, entry.getKey(), singletonMap(hashType, entry.getValue())) };
+				publish(verifyCell);
 			}
 		}
 	}

@@ -2,12 +2,10 @@ package net.filebot.util;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 public class FastFile extends File {
 
+	private String name;
 	private Long length;
 	private Long lastModified;
 	private Boolean isDirectory;
@@ -16,14 +14,21 @@ public class FastFile extends File {
 
 	private String[] list;
 	private File[] listFiles;
-	private String canonicalPath;
 
-	public FastFile(String path) {
-		super(path);
+	private File canonicalFile;
+	private File parentFile;
+
+	public FastFile(File file) {
+		super(file.getPath());
 	}
 
 	public FastFile(File parent, String child) {
 		super(parent, child);
+	}
+
+	@Override
+	public String getName() {
+		return name != null ? name : (name = super.getName());
 	}
 
 	@Override
@@ -52,8 +57,13 @@ public class FastFile extends File {
 	}
 
 	@Override
-	public String getCanonicalPath() throws IOException {
-		return canonicalPath != null ? canonicalPath : (canonicalPath = super.getCanonicalPath());
+	public File getCanonicalFile() throws IOException {
+		return canonicalFile != null ? canonicalFile : (canonicalFile = get(super.getCanonicalFile()));
+	}
+
+	@Override
+	public File getParentFile() {
+		return parentFile != null ? parentFile : (parentFile = get(super.getParentFile()));
 	}
 
 	@Override
@@ -199,14 +209,8 @@ public class FastFile extends File {
 		throw new UnsupportedOperationException();
 	}
 
-	public static List<FastFile> create(Collection<File> files) {
-		List<FastFile> result = new ArrayList<FastFile>(files.size());
-
-		for (File file : files) {
-			result.add(new FastFile(file.getPath()));
-		}
-
-		return result;
+	public static FastFile get(File f) {
+		return f == null ? null : new FastFile(f);
 	}
 
 }

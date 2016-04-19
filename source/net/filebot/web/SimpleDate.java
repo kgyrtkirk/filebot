@@ -1,15 +1,15 @@
 package net.filebot.web;
 
-import static java.util.Calendar.*;
-
 import java.io.Serializable;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SimpleDate implements Serializable, Comparable<Object> {
 
@@ -27,12 +27,12 @@ public class SimpleDate implements Serializable, Comparable<Object> {
 		this.day = day;
 	}
 
+	public SimpleDate(LocalDate date) {
+		this(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
+	}
+
 	public SimpleDate(long t) {
-		GregorianCalendar c = new GregorianCalendar();
-		c.setTime(new Date(t));
-		year = c.get(Calendar.YEAR);
-		month = c.get(Calendar.MONTH) + 1;
-		day = c.get(Calendar.DAY_OF_MONTH);
+		this(LocalDateTime.ofInstant(Instant.ofEpochMilli(t), ZoneId.systemDefault()).toLocalDate());
 	}
 
 	public int getYear() {
@@ -48,7 +48,7 @@ public class SimpleDate implements Serializable, Comparable<Object> {
 	}
 
 	public long getTimeStamp() {
-		return new GregorianCalendar(year, month - 1, day).getTimeInMillis(); // Month value is 0-based, e.g. 0 for January
+		return this.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
 	}
 
 	@Override
@@ -91,39 +91,29 @@ public class SimpleDate implements Serializable, Comparable<Object> {
 		return new SimpleDate(year, month, day);
 	}
 
+	public String format(String pattern) {
+		return DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH).format(this.toLocalDate());
+	}
+
+	public LocalDate toLocalDate() {
+		return LocalDate.of(year, month, day);
+	}
+
 	@Override
 	public String toString() {
 		return String.format("%04d-%02d-%02d", year, month, day);
 	}
 
-	public String format(String pattern) {
-		return format(pattern, Locale.ROOT);
-	}
-
-	public String format(String pattern, Locale locale) {
-		return new SimpleDateFormat(pattern, locale).format(new GregorianCalendar(year, month - 1, day).getTime()); // Calendar months start at 0
-	}
-
-	public static SimpleDate parse(String string) {
-		return parse(string, "yyyy-MM-dd");
-	}
-
-	public static SimpleDate parse(String string, String pattern) {
-		if (string == null || string.isEmpty())
-			return null;
-
-		SimpleDateFormat formatter = new SimpleDateFormat(pattern, Locale.ROOT);
-		formatter.setLenient(false); // enable strict mode (e.g. fail on invalid dates like 0000-00-00)
-
-		try {
-			Calendar date = new GregorianCalendar(Locale.ROOT);
-			date.setTime(formatter.parse(string));
-			return new SimpleDate(date.get(YEAR), date.get(MONTH) + 1, date.get(DAY_OF_MONTH)); // Calendar months start at 0
-		} catch (ParseException e) {
-			// no result if date is invalid
-			// Logger.getLogger(Date.class.getName()).log(Level.WARNING, e.getMessage());
-			return null;
+	public static SimpleDate parse(String date) {
+		if (date != null && date.length() > 0) {
+			Matcher m = DATE_FORMAT.matcher(date);
+			if (m.matches()) {
+				return new SimpleDate(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
+			}
 		}
+		return null;
 	}
+
+	public static final Pattern DATE_FORMAT = Pattern.compile("(\\d{4})\\D(\\d{1,2})\\D(\\d{1,2})");
 
 }

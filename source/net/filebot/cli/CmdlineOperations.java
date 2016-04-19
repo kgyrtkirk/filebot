@@ -1,16 +1,19 @@
 package net.filebot.cli;
 
-import static java.lang.String.*;
+import static java.nio.charset.StandardCharsets.*;
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.Logging.*;
 import static net.filebot.MediaTypes.*;
 import static net.filebot.Settings.*;
 import static net.filebot.WebServices.*;
-import static net.filebot.cli.CLILogging.*;
 import static net.filebot.hash.VerificationUtilities.*;
 import static net.filebot.media.MediaDetection.*;
+import static net.filebot.media.XattrMetaInfo.*;
 import static net.filebot.subtitle.SubtitleUtilities.*;
 import static net.filebot.util.FileUtilities.*;
+import static net.filebot.util.RegularExpressions.*;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -18,10 +21,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,12 +32,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import net.filebot.HistorySpooler;
 import net.filebot.Language;
@@ -50,15 +56,15 @@ import net.filebot.format.MediaBindingBean;
 import net.filebot.hash.HashType;
 import net.filebot.hash.VerificationFileReader;
 import net.filebot.hash.VerificationFileWriter;
+import net.filebot.media.AutoDetection;
+import net.filebot.media.AutoDetection.Group;
+import net.filebot.media.AutoDetection.Type;
 import net.filebot.media.MediaDetection;
+import net.filebot.media.VideoQuality;
 import net.filebot.media.XattrMetaInfoProvider;
 import net.filebot.similarity.CommonSequenceMatcher;
 import net.filebot.similarity.EpisodeMatcher;
 import net.filebot.similarity.Match;
-import net.filebot.similarity.NameSimilarityMetric;
-import net.filebot.similarity.SeriesNameMatcher;
-import net.filebot.similarity.SimilarityComparator;
-import net.filebot.similarity.SimilarityMetric;
 import net.filebot.subtitle.SubtitleFormat;
 import net.filebot.subtitle.SubtitleNaming;
 import net.filebot.util.EntryList;
@@ -93,58 +99,53 @@ public class CmdlineOperations implements CmdlineInterface {
 		Locale locale = getLanguage(lang).getLocale();
 		ConflictAction conflictAction = ConflictAction.forName(conflict);
 
-		if (getEpisodeListProvider(db) != null) {
-			// tv series mode
-			return renameSeries(files, action, conflictAction, outputDir, format, getEpisodeListProvider(db), query, SortOrder.forName(sortOrder), filter, locale, strict);
-		}
-
 		if (getMovieIdentificationService(db) != null) {
 			// movie mode
 			return renameMovie(files, action, conflictAction, outputDir, format, getMovieIdentificationService(db), query, filter, locale, strict);
 		}
 
-		if (getMusicIdentificationService(db) != null || containsOnly(files, AUDIO_FILES)) {
+		if (getEpisodeListProvider(db) != null) {
+			// tv series mode
+			return renameSeries(files, action, conflictAction, outputDir, format, getEpisodeListProvider(db), query, SortOrder.forName(sortOrder), filter, locale, strict);
+		}
+
+		if (getMusicIdentificationService(db) != null) {
 			// music mode
-			return renameMusic(files, action, conflictAction, outputDir, format, getMusicIdentificationService(db) == null ? AcoustID : getMusicIdentificationService(db));
+			return renameMusic(files, action, conflictAction, outputDir, format, getMusicIdentificationService(db));
 		}
 
 		if (XattrMetaData.getName().equalsIgnoreCase(db)) {
 			return renameByMetaData(files, action, conflictAction, outputDir, format, filter, XattrMetaData);
 		}
 
-		// auto-determine mode
-		List<File> mediaFiles = filter(files, VIDEO_FILES, SUBTITLE_FILES);
-		double max = mediaFiles.size();
-		int sxe = 0; // SxE
-		int cws = 0; // common word sequence
+		// auto-detect mode for each fileset
+		AutoDetection auto = new AutoDetection(files, false, locale);
+		List<File> results = new ArrayList<File>();
 
-		SeriesNameMatcher nameMatcher = new SeriesNameMatcher(locale, true);
-		Collection<String> cwsList = emptySet();
-		if (max >= 5) {
-			cwsList = nameMatcher.matchAll(mediaFiles.toArray(new File[0]));
-		}
-
-		for (File f : mediaFiles) {
-			// count SxE matches
-			if (MediaDetection.getEpisodeIdentifier(f.getName(), true) != null) {
-				sxe++;
-			}
-
-			// count CWS matches
-			for (String base : cwsList) {
-				if (base.equalsIgnoreCase(nameMatcher.matchByFirstCommonWordSequence(base, f.getName()))) {
-					cws++;
-					break;
+		for (Entry<Group, Set<File>> it : auto.group().entrySet()) {
+			if (it.getKey().types().length == 1) {
+				for (Type key : it.getKey().types()) {
+					switch (key) {
+					case Movie:
+						results.addAll(renameMovie(it.getValue(), action, conflictAction, outputDir, format, TheMovieDB, query, filter, locale, strict));
+						break;
+					case Series:
+						results.addAll(renameSeries(it.getValue(), action, conflictAction, outputDir, format, TheTVDB, query, SortOrder.forName(sortOrder), filter, locale, strict));
+						break;
+					case Anime:
+						results.addAll(renameSeries(it.getValue(), action, conflictAction, outputDir, format, AniDB, query, SortOrder.forName(sortOrder), filter, locale, strict));
+						break;
+					case Music:
+						results.addAll(renameMusic(it.getValue(), action, conflictAction, outputDir, format, MediaInfoID3, AcoustID));
+						break;
+					}
 				}
+			} else {
+				debug.warning(format("Failed to process group: %s => %s", it.getKey(), it.getValue()));
 			}
 		}
 
-		CLILogger.finest(format("Filename pattern: [%.02f] SxE, [%.02f] CWS", sxe / max, cws / max));
-		if (sxe > (max * 0.65) || cws > (max * 0.65)) {
-			return renameSeries(files, action, conflictAction, outputDir, format, TheTVDB, query, SortOrder.forName(sortOrder), filter, locale, strict); // use default episode db
-		} else {
-			return renameMovie(files, action, conflictAction, outputDir, format, TheMovieDB, query, filter, locale, strict); // use default movie db
-		}
+		return results;
 	}
 
 	@Override
@@ -154,7 +155,7 @@ public class CmdlineOperations implements CmdlineInterface {
 	}
 
 	public List<File> renameSeries(Collection<File> files, RenameAction renameAction, ConflictAction conflictAction, File outputDir, ExpressionFormat format, EpisodeListProvider db, String query, SortOrder sortOrder, ExpressionFilter filter, Locale locale, boolean strict) throws Exception {
-		CLILogger.config(format("Rename episodes using [%s]", db.getName()));
+		log.config(format("Rename episodes using [%s]", db.getName()));
 
 		// ignore sample files
 		List<File> fileset = sortByUniquePath(filter(files, not(getClutterFileFilter())));
@@ -168,7 +169,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		List<Match<File, ?>> matches = new ArrayList<Match<File, ?>>();
 
 		// auto-determine optimal batch sets
-		for (Entry<Set<File>, Set<String>> sameSeriesGroup : mapSeriesNamesByFiles(mediaFiles, locale, db != AniDB, db == AniDB).entrySet()) {
+		for (Entry<Set<File>, Set<String>> sameSeriesGroup : mapSeriesNamesByFiles(mediaFiles, locale, db == AniDB).entrySet()) {
 			List<List<File>> batchSets = new ArrayList<List<File>>();
 
 			if (sameSeriesGroup.getValue() != null && sameSeriesGroup.getValue().size() > 0) {
@@ -185,11 +186,11 @@ public class CmdlineOperations implements CmdlineInterface {
 				// auto-detect series name if not given
 				if (query == null) {
 					// detect series name by common word sequence
-					seriesNames = detectSeriesNames(batch, db != AniDB, db == AniDB, locale);
-					CLILogger.config("Auto-detected query: " + seriesNames);
+					seriesNames = detectSeriesNames(batch, db == AniDB, locale);
+					log.config("Auto-detected query: " + seriesNames);
 				} else {
 					// use --q option
-					seriesNames = asList(query.split("[|]"));
+					seriesNames = asList(PIPE.split(query));
 				}
 
 				if (strict && seriesNames.size() > 1) {
@@ -197,14 +198,14 @@ public class CmdlineOperations implements CmdlineInterface {
 				}
 
 				if (seriesNames.size() == 0) {
-					CLILogger.warning("Failed to detect query for files: " + batch);
+					log.warning("Failed to detect query for files: " + batch);
 					continue;
 				}
 
 				// fetch episode data
-				Collection<Episode> episodes = fetchEpisodeSet(db, seriesNames, sortOrder, locale, strict);
+				List<Episode> episodes = fetchEpisodeSet(db, seriesNames, sortOrder, locale, strict);
 				if (episodes.size() == 0) {
-					CLILogger.warning("Failed to fetch episode data: " + seriesNames);
+					log.warning("Failed to fetch episode data: " + seriesNames);
 					continue;
 				}
 
@@ -218,7 +219,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		}
 
 		if (matches.isEmpty()) {
-			throw new CmdlineException("Unable to match files to episode data");
+			throw new CmdlineException("Failed to match files to episode data");
 		}
 
 		// handle derived files
@@ -259,7 +260,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		List<Match<File, Object>> matches = matcher.match();
 
 		for (File failedMatch : matcher.remainingValues()) {
-			CLILogger.warning("No matching episode: " + failedMatch.getName());
+			log.warning("No matching episode: " + failedMatch.getName());
 		}
 
 		// in non-strict mode just pass back results as we got it from the matcher
@@ -277,7 +278,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		return validMatches;
 	}
 
-	private Set<Episode> fetchEpisodeSet(final EpisodeListProvider db, final Collection<String> names, final SortOrder sortOrder, final Locale locale, final boolean strict) throws Exception {
+	private List<Episode> fetchEpisodeSet(final EpisodeListProvider db, final Collection<String> names, final SortOrder sortOrder, final Locale locale, final boolean strict) throws Exception {
 		Set<SearchResult> shows = new LinkedHashSet<SearchResult>();
 		Set<Episode> episodes = new LinkedHashSet<Episode>();
 
@@ -287,16 +288,16 @@ public class CmdlineOperations implements CmdlineInterface {
 
 			// select search result
 			if (results.size() > 0) {
-				List<SearchResult> selectedSearchResults = selectSearchResult(query, results, strict);
+				List<SearchResult> selectedSearchResults = selectSearchResult(query, results, true, strict);
 
 				if (selectedSearchResults != null) {
 					for (SearchResult it : selectedSearchResults) {
 						if (shows.add(it)) {
 							try {
-								CLILogger.fine(format("Fetching episode data for [%s]", it.getName()));
+								log.fine(format("Fetching episode data for [%s]", it.getName()));
 								episodes.addAll(db.getEpisodeList(it, sortOrder, locale));
 							} catch (IOException e) {
-								CLILogger.log(Level.SEVERE, e.getMessage());
+								throw new CmdlineException(String.format("Failed to fetch episode data for [%s]: %s", it, e.getMessage()), e);
 							}
 						}
 					}
@@ -304,11 +305,11 @@ public class CmdlineOperations implements CmdlineInterface {
 			}
 		}
 
-		return episodes;
+		return new ArrayList<Episode>(episodes);
 	}
 
 	public List<File> renameMovie(Collection<File> files, RenameAction renameAction, ConflictAction conflictAction, File outputDir, ExpressionFormat format, MovieIdentificationService service, String query, ExpressionFilter filter, Locale locale, boolean strict) throws Exception {
-		CLILogger.config(format("Rename movies using [%s]", service.getName()));
+		log.config(format("Rename movies using [%s]", service.getName()));
 
 		// ignore sample files
 		List<File> fileset = sortByUniquePath(filter(files, not(getClutterFileFilter())));
@@ -341,18 +342,6 @@ public class CmdlineOperations implements CmdlineInterface {
 		// match movie hashes online
 		final Map<File, Movie> movieByFile = new TreeMap<File, Movie>();
 		if (query == null) {
-			if (movieFiles.size() > 0) {
-				try {
-					Map<File, Movie> hashLookup = service.getMovieDescriptors(movieFiles, locale);
-					if (hashLookup.size() > 0) {
-						CLILogger.finest(format("Looking up up movie by hash via [%s]", service.getName()));
-						movieByFile.putAll(hashLookup);
-					}
-				} catch (UnsupportedOperationException e) {
-					// ignore logging => hash lookup only supported by OpenSubtitles
-				}
-			}
-
 			// collect useful nfo files even if they are not part of the selected fileset
 			Set<File> effectiveNfoFileSet = new TreeSet<File>(nfoFiles);
 			for (File dir : mapByFolder(movieFiles).keySet()) {
@@ -394,19 +383,19 @@ public class CmdlineOperations implements CmdlineInterface {
 						}
 					}
 				} catch (NoSuchElementException e) {
-					CLILogger.warning("Failed to grep IMDbID: " + nfo.getName());
+					log.warning("Failed to grep IMDbID: " + nfo.getName());
 				}
 			}
 		} else {
-			CLILogger.fine(format("Looking up movie by query [%s]", query));
+			log.fine(format("Looking up movie by query [%s]", query));
 			List<Movie> results = service.searchMovie(query, locale);
 			List<Movie> validResults = applyExpressionFilter(results, filter);
 			if (validResults.isEmpty()) {
-				throw new CmdlineException("Unable to find a valid match: " + results);
+				throw new CmdlineException("Failed to find a valid match: " + results);
 			}
 
 			// force all mappings
-			Movie result = (Movie) selectSearchResult(query, validResults, strict).get(0);
+			Movie result = (Movie) selectSearchResult(query, validResults, false, strict).get(0);
 			for (File file : files) {
 				movieByFile.put(file, result);
 			}
@@ -433,8 +422,8 @@ public class CmdlineOperations implements CmdlineInterface {
 
 			// unknown hash, try via imdb id from nfo file
 			if (movie == null) {
-				CLILogger.fine(format("Auto-detect movie from context: [%s]", file));
-				Collection<Movie> options = detectMovie(file, service, locale, strict);
+				log.fine(format("Auto-detect movie from context: [%s]", file));
+				List<Movie> options = detectMovie(file, service, locale, strict);
 
 				// apply filter if defined
 				options = applyExpressionFilter(options, filter);
@@ -449,10 +438,10 @@ public class CmdlineOperations implements CmdlineInterface {
 					// select first element if matches are reliable
 					if (options.size() > 0) {
 						// make sure to get the language-specific movie object for the selected option
-						movie = service.getMovieDescriptor((Movie) selectSearchResult(null, options, strict).get(0), locale);
+						movie = service.getMovieDescriptor((Movie) selectSearchResult(null, options, false, strict).get(0), locale);
 					}
 				} catch (Exception e) {
-					CLILogger.log(Level.WARNING, String.format("%s: [%s/%s] %s", e.getClass().getSimpleName(), guessMovieFolder(file) != null ? guessMovieFolder(file).getName() : null, file.getName(), e.getMessage()));
+					log.log(Level.WARNING, format("%s: [%s/%s] %s", e.getClass().getSimpleName(), guessMovieFolder(file) != null ? guessMovieFolder(file).getName() : null, file.getName(), e.getMessage()));
 				}
 			}
 
@@ -512,16 +501,22 @@ public class CmdlineOperations implements CmdlineInterface {
 		return renameAll(renameMap, renameAction, conflictAction, matches);
 	}
 
-	public List<File> renameMusic(Collection<File> files, RenameAction renameAction, ConflictAction conflictAction, File outputDir, ExpressionFormat format, MusicIdentificationService service) throws Exception {
-		CLILogger.config(format("Rename music using [%s]", service.getName()));
+	public List<File> renameMusic(Collection<File> files, RenameAction renameAction, ConflictAction conflictAction, File outputDir, ExpressionFormat format, MusicIdentificationService... services) throws Exception {
 		List<File> audioFiles = sortByUniquePath(filter(files, AUDIO_FILES, VIDEO_FILES));
 
-		// check audio files against acoustid
+		// check audio files against all services if necessary
 		List<Match<File, ?>> matches = new ArrayList<Match<File, ?>>();
-		for (Entry<File, AudioTrack> it : service.lookup(audioFiles).entrySet()) {
-			if (it.getKey() != null && it.getValue() != null) {
-				matches.add(new Match<File, AudioTrack>(it.getKey(), it.getValue().clone()));
-			}
+		LinkedHashSet<File> remaining = new LinkedHashSet<File>(audioFiles);
+
+		// check audio files against all services
+		for (int i = 0; i < services.length && remaining.size() > 0; i++) {
+			log.config(format("Rename music using %s", services[i]));
+			services[i].lookup(remaining).forEach((file, music) -> {
+				if (music != null) {
+					matches.add(new Match<File, AudioTrack>(file, music.clone()));
+					remaining.remove(file);
+				}
+			});
 		}
 
 		// map old files to new paths by applying formatting and validating filenames
@@ -529,27 +524,21 @@ public class CmdlineOperations implements CmdlineInterface {
 
 		for (Match<File, ?> it : matches) {
 			File file = it.getValue();
-			AudioTrack music = (AudioTrack) it.getCandidate();
-			String newName = (format != null) ? format.format(new MediaBindingBean(music, file, getContext(matches))) : validateFileName(music.toString());
+			Object music = it.getCandidate();
+			String path = format != null ? format.format(new MediaBindingBean(music, file, getContext(matches))) : validateFileName(music.toString());
 
-			renameMap.put(file, getDestinationFile(file, newName, outputDir));
+			renameMap.put(file, getDestinationFile(file, path, outputDir));
 		}
 
 		// error logging
-		if (renameMap.size() != audioFiles.size()) {
-			for (File f : audioFiles) {
-				if (!renameMap.containsKey(f)) {
-					CLILogger.warning(String.format("Unable to lookup %s: %s", service.getName(), f.getName()));
-				}
-			}
-		}
+		remaining.forEach(f -> log.warning(format("Failed to process music file: %s", f)));
 
 		// rename movies
 		return renameAll(renameMap, renameAction, conflictAction, null);
 	}
 
 	public List<File> renameByMetaData(Collection<File> files, RenameAction renameAction, ConflictAction conflictAction, File outputDir, ExpressionFormat format, ExpressionFilter filter, XattrMetaInfoProvider service) throws Exception {
-		CLILogger.config(format("Rename files using [%s]", service.getName()));
+		log.config(format("Rename files using [%s]", service.getName()));
 
 		// force sort order
 		List<File> selection = sortByUniquePath(files);
@@ -568,18 +557,12 @@ public class CmdlineOperations implements CmdlineInterface {
 		return renameAll(renameMap, renameAction, conflictAction, null);
 	}
 
-	private Map<File, Object> getContext(final Collection<Match<File, ?>> matches) {
+	private Map<File, Object> getContext(List<Match<File, ?>> matches) {
 		return new AbstractMap<File, Object>() {
 
 			@Override
 			public Set<Entry<File, Object>> entrySet() {
-				Set<Entry<File, Object>> context = new LinkedHashSet<Entry<File, Object>>();
-				for (Match<File, ?> it : matches) {
-					if (it.getValue() != null && it.getCandidate() != null) {
-						context.add(new SimpleImmutableEntry<File, Object>(it.getValue(), it.getCandidate()));
-					}
-				}
-				return context;
+				return matches.stream().collect(toMap(it -> it.getValue(), it -> (Object) it.getCandidate())).entrySet();
 			}
 		};
 	}
@@ -594,7 +577,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		}
 
 		if (isInvalidFilePath(newFile) && !isUnixFS()) {
-			CLILogger.config("Stripping invalid characters from new path: " + newName);
+			log.config("Stripping invalid characters from new path: " + newName);
 			newFile = validateFilePath(newFile);
 		}
 
@@ -603,11 +586,11 @@ public class CmdlineOperations implements CmdlineInterface {
 
 	public List<File> renameAll(Map<File, File> renameMap, RenameAction renameAction, ConflictAction conflictAction, List<Match<File, ?>> matches) throws Exception {
 		if (renameMap.isEmpty()) {
-			throw new CmdlineException("Unable to identify or process any files");
+			throw new CmdlineException("Failed to identify or process any files");
 		}
 
 		// rename files
-		final List<Entry<File, File>> renameLog = new ArrayList<Entry<File, File>>();
+		Map<File, File> renameLog = new LinkedHashMap<File, File>();
 
 		try {
 			for (Entry<File, File> it : renameMap.entrySet()) {
@@ -618,7 +601,7 @@ public class CmdlineOperations implements CmdlineInterface {
 					// resolve destination
 					if (!destination.isAbsolute()) {
 						// same folder, different name
-						destination = new File(source.getParentFile(), destination.getPath());
+						destination = resolve(source, destination);
 					}
 
 					if (!destination.equals(source) && destination.exists() && renameAction != StandardRenameAction.TEST) {
@@ -626,63 +609,61 @@ public class CmdlineOperations implements CmdlineInterface {
 							throw new CmdlineException("File already exists: " + destination);
 						}
 
-						if (conflictAction == ConflictAction.OVERRIDE || (conflictAction == ConflictAction.AUTO && VIDEO_SIZE_ORDER.compare(source, destination) > 0)) {
+						if (conflictAction == ConflictAction.OVERRIDE || (conflictAction == ConflictAction.AUTO && VideoQuality.isBetter(source, destination))) {
 							if (!destination.delete()) {
-								CLILogger.log(Level.SEVERE, "Failed to override file: " + destination);
+								log.log(Level.SEVERE, "Failed to override file: " + destination);
 							}
+						} else if (conflictAction == ConflictAction.INDEX) {
+							destination = nextAvailableIndexedName(destination);
 						}
 					}
 
 					// rename file, throw exception on failure
 					if (!destination.equals(source) && !destination.exists()) {
-						CLILogger.info(format("[%s] Rename [%s] to [%s]", renameAction, it.getKey(), it.getValue()));
+						log.info(format("[%s] Rename [%s] to [%s]", renameAction, source, destination));
 						destination = renameAction.rename(source, destination);
-					} else {
-						CLILogger.info(format("Skipped [%s] because [%s] already exists", source, destination));
-					}
 
-					// remember successfully renamed matches for history entry and possible revert
-					renameLog.add(new SimpleImmutableEntry<File, File>(source, destination));
+						// remember successfully renamed matches for history entry and possible revert
+						renameLog.put(source, destination);
+					} else {
+						log.info(format("Skipped [%s] because [%s] already exists", source, destination));
+					}
 				} catch (IOException e) {
-					CLILogger.warning(format("[%s] Failed to rename [%s]", renameAction, it.getKey()));
+					log.warning(format("[%s] Failed to rename [%s]", renameAction, it.getKey()));
 					throw e;
 				}
 			}
 		} finally {
-			if (renameLog.size() > 0) {
-				// update rename history
-				HistorySpooler.getInstance().append(renameMap.entrySet());
+			// update rename history
+			HistorySpooler.getInstance().append(renameLog.entrySet());
 
-				// printer number of renamed files if any
-				CLILogger.fine(format("Processed %d files", renameLog.size()));
-			}
+			// printer number of renamed files if any
+			log.fine(format("Processed %d files", renameLog.size()));
 		}
 
 		// write metadata into xattr if xattr is enabled
-		if (matches != null && (useExtendedFileAttributes() || useCreationDate()) && renameAction != StandardRenameAction.TEST) {
-			try {
-				for (Match<File, ?> match : matches) {
-					File file = match.getValue();
-					Object meta = match.getCandidate();
-					if (renameMap.containsKey(file) && meta != null) {
-						File destination = resolveDestination(file, renameMap.get(file), false);
-						if (destination.isFile()) {
-							MediaDetection.storeMetaInfo(destination, meta, file.getName(), useExtendedFileAttributes(), useCreationDate());
-						}
+		if (matches != null && renameLog.size() > 0 && renameAction != StandardRenameAction.TEST) {
+			for (Match<File, ?> match : matches) {
+				File source = match.getValue();
+				Object infoObject = match.getCandidate();
+				if (infoObject != null) {
+					File destination = renameLog.get(source);
+					if (destination != null && destination.isFile()) {
+						xattr.setMetaInfo(destination, infoObject, source.getName());
 					}
 				}
-			} catch (Throwable e) {
-				CLILogger.warning("Failed to write xattr: " + e.getMessage());
 			}
 		}
 
 		// new file names
-		List<File> destinationList = new ArrayList<File>();
-		for (Entry<File, File> it : renameLog) {
-			destinationList.add(it.getValue());
-		}
+		return new ArrayList<File>(renameLog.values());
+	}
 
-		return destinationList;
+	private static File nextAvailableIndexedName(File file) {
+		File parent = file.getParentFile();
+		String name = getName(file);
+		String ext = getExtension(file);
+		return IntStream.range(1, 100).mapToObj(i -> new File(parent, name + '.' + i + '.' + ext)).filter(f -> !f.exists()).findFirst().get();
 	}
 
 	@Override
@@ -692,7 +673,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		final SubtitleNaming naming = getSubtitleNaming(format);
 
 		// when rewriting subtitles to target format an encoding must be defined, default to UTF-8
-		final Charset outputEncoding = (csn != null) ? Charset.forName(csn) : (output != null) ? Charset.forName("UTF-8") : null;
+		final Charset outputEncoding = csn != null ? Charset.forName(csn) : output != null ? UTF_8 : null;
 		final SubtitleFormat outputFormat = (output != null) ? getSubtitleFormatByName(output) : null;
 
 		// ignore anything that is not a video
@@ -707,7 +688,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		// parallel download
 		List<File> subtitleFiles = new ArrayList<File>();
 
-		CLILogger.finest(String.format("Get [%s] subtitles for %d files", language.getName(), remainingVideos.size()));
+		log.finest(format("Get [%s] subtitles for %d files", language.getName(), remainingVideos.size()));
 		if (remainingVideos.isEmpty()) {
 			throw new CmdlineException("No video files: " + files);
 		}
@@ -719,13 +700,13 @@ public class CmdlineOperations implements CmdlineInterface {
 			}
 
 			try {
-				CLILogger.fine("Looking up subtitles by hash via " + service.getName());
-				Map<File, SubtitleDescriptor> subtitles = lookupSubtitleByHash(service, language, remainingVideos);
-				Map<File, File> downloads = downloadSubtitleBatch(service.getName(), subtitles, outputFormat, outputEncoding, naming);
+				log.fine("Looking up subtitles by hash via " + service.getName());
+				Map<File, List<SubtitleDescriptor>> options = lookupSubtitlesByHash(service, remainingVideos, language.getName(), false, strict);
+				Map<File, File> downloads = downloadSubtitleBatch(service.getName(), options, outputFormat, outputEncoding, naming);
 				remainingVideos.removeAll(downloads.keySet());
 				subtitleFiles.addAll(downloads.values());
 			} catch (Exception e) {
-				CLILogger.warning("Lookup by hash failed: " + e.getMessage());
+				log.warning("Lookup by hash failed: " + e.getMessage());
 			}
 		}
 
@@ -735,25 +716,21 @@ public class CmdlineOperations implements CmdlineInterface {
 			}
 
 			try {
-				CLILogger.fine(format("Looking up subtitles by name via %s", service.getName()));
-				Map<File, SubtitleDescriptor> subtitles = new TreeMap<File, SubtitleDescriptor>();
-				for (Entry<File, List<SubtitleDescriptor>> it : findSubtitleMatches(service, remainingVideos, language.getName(), query, false, strict).entrySet()) {
-					if (it.getValue().size() > 0) {
-						subtitles.put(it.getKey(), it.getValue().get(0));
-					}
-				}
-				Map<File, File> downloads = downloadSubtitleBatch(service.getName(), subtitles, outputFormat, outputEncoding, naming);
+				log.fine(format("Looking up subtitles by name via %s", service.getName()));
+				Map<File, List<SubtitleDescriptor>> options = findSubtitlesByName(service, remainingVideos, language.getName(), query, false, strict);
+				Map<File, File> downloads = downloadSubtitleBatch(service.getName(), options, outputFormat, outputEncoding, naming);
 				remainingVideos.removeAll(downloads.keySet());
 				subtitleFiles.addAll(downloads.values());
 			} catch (Exception e) {
-				CLILogger.warning(format("Search by name failed: %s", e.getMessage()));
+				log.warning(format("Search by name failed: %s", e.getMessage()));
 			}
 		}
 
 		// no subtitles for remaining video files
 		for (File it : remainingVideos) {
-			CLILogger.warning("No matching subtitles found: " + it);
+			log.warning("No matching subtitles found: " + it);
 		}
+
 		return subtitleFiles;
 	}
 
@@ -780,7 +757,7 @@ public class CmdlineOperations implements CmdlineInterface {
 			private final String languageCode = Language.getStandardLanguageCode(getLanguage(languageName).getName());
 
 			public boolean matchesLanguageCode(File f) {
-				Locale languageSuffix = MediaDetection.releaseInfo.getLanguageSuffix(FileUtilities.getName(f));
+				Locale languageSuffix = MediaDetection.releaseInfo.getSubtitleLanguageTag(FileUtilities.getName(f));
 				Language language = Language.getLanguage(languageSuffix);
 				if (language != null) {
 					return language.getISO3().equalsIgnoreCase(languageCode);
@@ -814,7 +791,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		});
 
 		if (videoFiles.isEmpty()) {
-			CLILogger.info("No missing subtitles");
+			log.info("No missing subtitles");
 			return emptyList();
 		}
 
@@ -830,24 +807,27 @@ public class CmdlineOperations implements CmdlineInterface {
 		}
 	}
 
-	private Map<File, File> downloadSubtitleBatch(String service, Map<File, SubtitleDescriptor> subtitles, SubtitleFormat outputFormat, Charset outputEncoding, SubtitleNaming naming) {
-		Map<File, File> downloads = new HashMap<File, File>();
+	private Map<File, File> downloadSubtitleBatch(String service, Map<File, List<SubtitleDescriptor>> subtitles, SubtitleFormat outputFormat, Charset outputEncoding, SubtitleNaming naming) {
+		Map<File, File> downloads = new LinkedHashMap<File, File>();
 
 		// fetch subtitle
-		for (Entry<File, SubtitleDescriptor> it : subtitles.entrySet()) {
-			try {
-				downloads.put(it.getKey(), downloadSubtitle(it.getValue(), it.getKey(), outputFormat, outputEncoding, naming));
-			} catch (Exception e) {
-				CLILogger.warning(format("Failed to download %s: %s", it.getValue().getPath(), e.getMessage()));
+		subtitles.forEach((movie, options) -> {
+			if (options.size() > 0) {
+				SubtitleDescriptor subtitle = options.get(0);
+				try {
+					downloads.put(movie, downloadSubtitle(subtitle, movie, outputFormat, outputEncoding, naming));
+				} catch (Exception e) {
+					log.warning(format("Failed to download %s: %s", subtitle.getPath(), e.getMessage()));
+				}
 			}
-		}
+		});
 
 		return downloads;
 	}
 
 	private File downloadSubtitle(SubtitleDescriptor descriptor, File movieFile, SubtitleFormat outputFormat, Charset outputEncoding, SubtitleNaming naming) throws Exception {
 		// fetch subtitle archive
-		CLILogger.config(format("Fetching [%s]", descriptor.getPath()));
+		log.config(format("Fetching [%s]", descriptor.getPath()));
 		MemoryFile subtitleFile = fetchSubtitle(descriptor);
 
 		// subtitle filename is based on movie filename
@@ -859,94 +839,50 @@ public class CmdlineOperations implements CmdlineInterface {
 				ext = outputFormat.getFilter().extension(); // adjust extension of the output file
 			}
 
-			CLILogger.finest(format("Export [%s] as: %s / %s", subtitleFile.getName(), outputFormat, outputEncoding.displayName(Locale.ROOT)));
+			log.finest(format("Export [%s] as: %s / %s", subtitleFile.getName(), outputFormat, outputEncoding.displayName(Locale.ROOT)));
 			data = exportSubtitles(subtitleFile, outputFormat, 0, outputEncoding);
 		}
 
 		File destination = new File(movieFile.getParentFile(), naming.format(movieFile, descriptor, ext));
-		CLILogger.info(format("Writing [%s] to [%s]", subtitleFile.getName(), destination.getName()));
+		log.info(format("Writing [%s] to [%s]", subtitleFile.getName(), destination.getName()));
 
 		writeFile(data, destination);
 		return destination;
 	}
 
-	private Map<File, SubtitleDescriptor> lookupSubtitleByHash(VideoHashSubtitleService service, Language language, Collection<File> videoFiles) throws Exception {
-		Map<File, SubtitleDescriptor> subtitleByVideo = new TreeMap<File, SubtitleDescriptor>();
-
-		for (Entry<File, List<SubtitleDescriptor>> it : service.getSubtitleList(videoFiles.toArray(new File[0]), language.getName()).entrySet()) {
-			// guess best hash match (default order is open bad due to invalid hash links)
-			SubtitleDescriptor bestMatch = getBestMatch(it.getKey(), it.getValue(), false);
-
-			if (bestMatch != null) {
-				CLILogger.finest(format("Matched [%s] to [%s] via hash", it.getKey().getName(), bestMatch.getName()));
-				subtitleByVideo.put(it.getKey(), bestMatch);
-			}
-		}
-
-		return subtitleByVideo;
-	}
-
-	private <T> List<T> applyExpressionFilter(Collection<T> input, ExpressionFilter filter) throws Exception {
+	private <T> List<T> applyExpressionFilter(List<T> input, ExpressionFilter filter) throws Exception {
 		if (filter == null) {
 			return new ArrayList<T>(input);
 		}
 
-		CLILogger.fine(String.format("Apply Filter: {%s}", filter.getExpression()));
-		Map<File, Object> context = new EntryList<File, Object>(null, input);
+		log.fine(format("Apply Filter: {%s}", filter.getExpression()));
+		Map<File, T> context = new EntryList<File, T>(null, input);
 		List<T> output = new ArrayList<T>(input.size());
 		for (T it : input) {
 			if (filter.matches(new MediaBindingBean(it, null, context))) {
-				CLILogger.finest(String.format("Include [%s]", it));
+				log.finest(format("Include [%s]", it));
 				output.add(it);
 			}
 		}
 		return output;
 	}
 
-	public List<SearchResult> findProbableMatches(final String query, Collection<? extends SearchResult> searchResults, boolean strict) {
-		if (query == null) {
-			return new ArrayList<SearchResult>(searchResults);
-		}
-
-		// auto-select most probable search result
-		List<SearchResult> probableMatches = new ArrayList<SearchResult>();
-
-		// use name similarity metric
-		SimilarityMetric metric = new NameSimilarityMetric();
-
-		// find probable matches using name similarity > 0.8 (or > 0.6 in non-strict mode)
-		for (SearchResult result : searchResults) {
-			float f = metric.getSimilarity(query, result.getName());
-			if (f >= (strict && searchResults.size() > 1 ? 0.8 : 0.6) || ((f >= 0.5 || !strict) && (result.getName().toLowerCase().startsWith(query.toLowerCase())))) {
-				if (!probableMatches.contains(result)) {
-					probableMatches.add(result);
-				}
-			}
-		}
-
-		// sort results by similarity to query
-		sort(probableMatches, new SimilarityComparator(query));
-
-		return probableMatches;
-	}
-
-	@SuppressWarnings("unchecked")
-	public List<SearchResult> selectSearchResult(String query, Collection<? extends SearchResult> searchResults, boolean strict) throws Exception {
-		List<SearchResult> probableMatches = findProbableMatches(query, searchResults, strict);
+	private List<SearchResult> selectSearchResult(String query, Collection<? extends SearchResult> options, boolean alias, boolean strict) throws Exception {
+		List<SearchResult> probableMatches = getProbableMatches(query, options, alias, strict);
 
 		if (probableMatches.isEmpty() || (strict && probableMatches.size() != 1)) {
 			// allow single search results to just pass through in non-strict mode even if match confidence is low
-			if (searchResults.size() == 1 && !strict) {
-				return new ArrayList<SearchResult>(searchResults);
+			if (options.size() == 1 && !strict) {
+				return new ArrayList<SearchResult>(options);
 			}
 
 			if (strict) {
-				throw new CmdlineException("Multiple options: Force auto-select requires non-strict matching: " + searchResults);
+				throw new CmdlineException("Multiple options: Force auto-select requires non-strict matching: " + options);
 			}
 
 			// just pick the best 5 matches
 			if (query != null) {
-				probableMatches = (List<SearchResult>) sortBySimilarity(searchResults, singleton(query), getSeriesMatchMetric(), false);
+				probableMatches = new ArrayList<SearchResult>(sortBySimilarity(options, singleton(query), getSeriesMatchMetric()));
 			}
 		}
 
@@ -1022,7 +958,7 @@ public class CmdlineOperations implements CmdlineInterface {
 			throw new CmdlineException("No files: " + files);
 		}
 
-		CLILogger.info(format("Compute %s hash for %s files [%s]", hashType, files.size(), outputFile));
+		log.info(format("Compute %s hash for %s files [%s]", hashType, files.size(), outputFile));
 		compute(root.getPath(), files, outputFile, hashType, csn);
 
 		return outputFile;
@@ -1037,7 +973,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		}
 
 		// add all file names from verification file
-		CLILogger.fine(format("Checking [%s]", verificationFile.getName()));
+		log.fine(format("Checking [%s]", verificationFile.getName()));
 		VerificationFileReader parser = new VerificationFileReader(createTextReader(verificationFile), type.getFormat());
 		boolean status = true;
 
@@ -1048,14 +984,14 @@ public class CmdlineOperations implements CmdlineInterface {
 
 					File file = new File(root, it.getKey().getPath()).getAbsoluteFile();
 					String current = computeHash(new File(root, it.getKey().getPath()), type);
-					CLILogger.info(format("%s %s", current, file));
+					log.info(format("%s %s", current, file));
 
 					if (current.compareToIgnoreCase(it.getValue()) != 0) {
-						throw new IOException(format("Corrupted file found: %s [hash mismatch: %s vs %s]", it.getKey(), current, it.getValue()));
+						throw new IOException(String.format("Corrupted file found: %s [hash mismatch: %s vs %s]", it.getKey(), current, it.getValue()));
 					}
 				} catch (IOException e) {
 					status = false;
-					CLILogger.warning(e.getMessage());
+					log.warning(e.getMessage());
 				}
 			}
 		} finally {
@@ -1076,7 +1012,7 @@ public class CmdlineOperations implements CmdlineInterface {
 
 				String relativePath = normalizePathSeparators(it.getPath().replace(root, "")).substring(1);
 				String hash = computeHash(it, hashType);
-				CLILogger.info(format("%s %s", hash, relativePath));
+				log.info(format("%s %s", hash, relativePath));
 
 				out.write(relativePath, hash);
 			}
@@ -1101,7 +1037,7 @@ public class CmdlineOperations implements CmdlineInterface {
 		Locale locale = getLanguage(languageName).getLocale();
 
 		// fetch episode data
-		SearchResult hit = selectSearchResult(query, service.search(query, locale), false).get(0);
+		SearchResult hit = selectSearchResult(query, service.search(query, locale), false, false).get(0);
 		List<Episode> episodes = service.getEpisodeList(hit, sortOrder, locale);
 
 		// apply filter
@@ -1117,22 +1053,47 @@ public class CmdlineOperations implements CmdlineInterface {
 
 	@Override
 	public List<String> getMediaInfo(Collection<File> files, String format, String filter) throws Exception {
-		if (filter != null && filter.length() > 0) {
-			ExpressionFileFilter includes = new ExpressionFileFilter(new ExpressionFilter(filter), false);
-			files = filter(files, includes);
+		ExpressionFormat formatter = new ExpressionFormat(format != null && format.length() > 0 ? format : "{fn} [{resolution} {vc} {channels} {ac} {minutes+'m'}]");
+		FileFilter fileFilter = filter == null || filter.isEmpty() ? f -> true : new ExpressionFileFilter(new ExpressionFilter(filter), false);
 
-			if (files.isEmpty()) {
-				throw new CmdlineException("No files: " + files);
-			}
-		}
-
-		ExpressionFormat formatter = new ExpressionFormat(format != null && format.length() > 0 ? format : "{fn} [{resolution} {af} {vc} {ac}]");
 		List<String> output = new ArrayList<String>();
-		for (File file : files) {
-			String line = formatter.format(new MediaBindingBean(readMetaInfo(file), file, null));
+		for (File file : filter(files, fileFilter)) {
+			String line = formatter.format(new MediaBindingBean(xattr.getMetaInfo(file), file, null));
 			output.add(line);
 		}
 		return output;
+	}
+
+	@Override
+	public List<File> revert(Collection<File> files, String filter, boolean test) throws Exception {
+		if (files.isEmpty()) {
+			throw new CmdlineException("Expecting at least one input path");
+		}
+
+		FileFilter fileFilter = filter == null || filter.isEmpty() ? f -> true : new ExpressionFileFilter(new ExpressionFilter(filter), false);
+		Set<File> whitelist = new HashSet<File>(files);
+		Map<File, File> history = HistorySpooler.getInstance().getCompleteHistory().getRenameMap();
+
+		return history.entrySet().stream().filter(it -> {
+			File original = it.getKey();
+			File current = it.getValue();
+			return Stream.of(current, original).flatMap(f -> listPath(f).stream()).anyMatch(whitelist::contains) && current.exists() && fileFilter.accept(current);
+		}).map(it -> {
+			File original = it.getKey();
+			File current = it.getValue();
+
+			log.info(format("Revert [%s] to [%s]", current, original));
+			if (test) {
+				return original;
+			}
+
+			try {
+				return StandardRenameAction.revert(current, original);
+			} catch (Exception e) {
+				log.warning(format("Failed to revert file: %s", e.getMessage()));
+				return null;
+			}
+		}).filter(Objects::nonNull).collect(toList());
 	}
 
 	@Override
@@ -1150,8 +1111,9 @@ public class CmdlineOperations implements CmdlineInterface {
 				if (!outputFolder.isAbsolute()) {
 					outputFolder = new File(file.getParentFile(), outputFolder.getPath());
 				}
+				outputFolder = outputFolder.getCanonicalFile(); // normalize weird paths
 
-				CLILogger.info(String.format("Read archive [%s] and extract to [%s]", file.getName(), outputFolder));
+				log.info(format("Read archive [%s] and extract to [%s]", file.getName(), outputFolder));
 				final FileMapper outputMapper = new FileMapper(outputFolder);
 
 				final List<FileInfo> outputMapping = new ArrayList<FileInfo>();
@@ -1183,7 +1145,7 @@ public class CmdlineOperations implements CmdlineInterface {
 
 				if (!skip || conflictAction == ConflictAction.OVERRIDE) {
 					if (filter == null || forceExtractAll) {
-						CLILogger.finest("Extracting files " + outputMapping);
+						log.finest("Extracting files " + outputMapping);
 
 						// extract all files
 						archive.extract(outputMapper.getOutputDir());
@@ -1192,7 +1154,7 @@ public class CmdlineOperations implements CmdlineInterface {
 							extractedFiles.add(it.toFile());
 						}
 					} else {
-						CLILogger.finest("Extracting files " + selection);
+						log.finest("Extracting files " + selection);
 
 						// extract files selected by the given filter
 						archive.extract(outputMapper.getOutputDir(), new FileFilter() {
@@ -1208,7 +1170,7 @@ public class CmdlineOperations implements CmdlineInterface {
 						}
 					}
 				} else {
-					CLILogger.finest("Skipped extracting files " + selection);
+					log.finest("Skipped extracting files " + selection);
 				}
 			} finally {
 				archive.close();
@@ -1217,4 +1179,5 @@ public class CmdlineOperations implements CmdlineInterface {
 
 		return extractedFiles;
 	}
+
 }

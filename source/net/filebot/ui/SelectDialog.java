@@ -1,5 +1,6 @@
 package net.filebot.ui;
 
+import static java.awt.Cursor.*;
 import static net.filebot.util.ui.SwingUI.*;
 
 import java.awt.Component;
@@ -7,12 +8,13 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.io.File;
 import java.util.Collection;
+import java.util.prefs.Preferences;
 
-import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -24,18 +26,22 @@ import javax.swing.SwingUtilities;
 
 import net.filebot.ResourceManager;
 import net.filebot.util.ui.DefaultFancyListCellRenderer;
-import net.filebot.util.ui.SwingUI;
+import net.filebot.web.SearchResult;
 import net.miginfocom.swing.MigLayout;
 
 public class SelectDialog<T> extends JDialog {
 
-	private JLabel headerLabel = new JLabel();
+	private JLabel messageLabel = new JLabel();
+	private JCheckBox autoRepeatCheckBox = new JCheckBox();
 
-	private JList list;
-
-	private Action selectedAction = null;
+	private JList<T> list;
+	private String command = null;
 
 	public SelectDialog(Component parent, Collection<? extends T> options) {
+		this(parent, options, false, false, null);
+	}
+
+	public SelectDialog(Component parent, Collection<? extends T> options, boolean autoRepeatEnabled, boolean autoRepeatSelected, JComponent header) {
 		super(getWindow(parent), "Select", ModalityType.DOCUMENT_MODAL);
 
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -51,7 +57,9 @@ public class SelectDialog<T> extends JDialog {
 
 			@Override
 			public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-				return super.getListCellRendererComponent(list, convertValueToString(value), index, isSelected, cellHasFocus);
+				super.getListCellRendererComponent(list, convertValueToString(value), index, isSelected, cellHasFocus);
+				configureValue(this, value);
+				return this;
 			}
 		};
 
@@ -61,41 +69,75 @@ public class SelectDialog<T> extends JDialog {
 		list.addMouseListener(mouseListener);
 
 		JComponent c = (JComponent) getContentPane();
+		c.setLayout(new MigLayout("insets 1.5mm 1.5mm 2.7mm 1.5mm, nogrid, fill", "", header == null ? "[pref!][fill][pref!]" : "[pref!][pref!][fill][pref!]"));
 
-		c.setLayout(new MigLayout("insets 1.5mm 1.5mm 2.7mm 1.5mm, nogrid, fill", "", "[pref!][fill][pref!]"));
-
-		c.add(headerLabel, "wmin 150px, wrap");
+		if (header != null) {
+			c.add(header, "wmin 150px, growx, wrap");
+		}
+		c.add(messageLabel, "wmin 150px, growx, wrap");
 		c.add(new JScrollPane(list), "wmin 150px, hmin 150px, grow, wrap 2mm");
 
 		c.add(new JButton(selectAction), "align center, id select");
 		c.add(new JButton(cancelAction), "gap unrel, id cancel");
 
+		// add repeat button
+		if (autoRepeatEnabled) {
+			autoRepeatCheckBox.setSelected(autoRepeatSelected);
+			autoRepeatCheckBox.setCursor(getPredefinedCursor(HAND_CURSOR));
+			autoRepeatCheckBox.setIcon(ResourceManager.getIcon("button.repeat"));
+			autoRepeatCheckBox.setSelectedIcon(ResourceManager.getIcon("button.repeat.selected"));
+			c.add(autoRepeatCheckBox, "pos 1al select.y n select.y2");
+		}
+
 		// set default size and location
 		setMinimumSize(new Dimension(220, 240));
-		setSize(new Dimension(240, 260));
 
 		// Shortcut Enter
-		SwingUI.installAction(list, KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), selectAction);
+		installAction(list, KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), selectAction);
 	}
 
 	protected String convertValueToString(Object value) {
 		return value.toString();
 	}
 
-	public JLabel getHeaderLabel() {
-		return headerLabel;
+	protected void configureValue(JComponent render, Object value) {
+		if (value instanceof SearchResult) {
+			render.setToolTipText(getTooltipText((SearchResult) value));
+		} else if (value instanceof File) {
+			render.setToolTipText(((File) value).getAbsolutePath());
+		} else {
+			render.setToolTipText(null);
+		}
 	}
 
-	public Action getSelectedAction() {
-		return selectedAction;
+	protected String getTooltipText(SearchResult item) {
+		StringBuilder html = new StringBuilder(64);
+		html.append("<html><b>").append(escapeHTML(item.toString())).append("</b><br>");
+		String[] names = item.getAliasNames();
+		if (names.length > 0) {
+			html.append("<br>AKA:<br>");
+			for (String n : names) {
+				html.append("• ").append(escapeHTML(n)).append("<br>");
+			}
+		}
+		html.append("<br>ID: <br>• ").append(Integer.toString(item.getId())).append("</html>");
+		return html.toString();
 	}
 
-	@SuppressWarnings("unchecked")
+	public JLabel getMessageLabel() {
+		return messageLabel;
+	}
+
+	public JCheckBox getAutoRepeatCheckBox() {
+		return autoRepeatCheckBox;
+	}
+
+	public String getSelectedAction() {
+		return command;
+	}
+
 	public T getSelectedValue() {
-		if (selectedAction != selectAction)
-			return null;
-
-		return (T) list.getSelectedValue();
+		return SELECT.equals(command) ? list.getSelectedValue() : null;
 	}
 
 	public void close() {
@@ -111,32 +153,38 @@ public class SelectDialog<T> extends JDialog {
 		return cancelAction;
 	}
 
-	private final Action selectAction = new AbstractAction("Select", ResourceManager.getIcon("dialog.continue")) {
+	public static final String SELECT = "Select";
+	public static final String CANCEL = "Cancel";
 
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			selectedAction = this;
-			close();
+	private final Action selectAction = newAction(SELECT, ResourceManager.getIcon("dialog.continue"), evt -> {
+		command = SELECT;
+		close();
+	});
+
+	private final Action cancelAction = newAction(CANCEL, ResourceManager.getIcon("dialog.cancel"), evt -> {
+		command = CANCEL;
+		close();
+	});
+
+	private final MouseAdapter mouseListener = mouseClicked(evt -> {
+		if (SwingUtilities.isLeftMouseButton(evt) && (evt.getClickCount() == 2)) {
+			selectAction.actionPerformed(new ActionEvent(evt.getSource(), ActionEvent.ACTION_PERFORMED, SELECT));
 		}
-	};
+	});
 
-	private final Action cancelAction = new AbstractAction("Cancel", ResourceManager.getIcon("dialog.cancel")) {
+	private static final String KEY_REPEAT = "dialog.select.repeat";
+	private static final String KEY_WIDTH = "dialog.select.width";
+	private static final String KEY_HEIGHT = "dialog.select.height";
 
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			selectedAction = this;
-			close();
-		}
-	};
+	public void saveState(Preferences prefs) {
+		prefs.putBoolean(KEY_REPEAT, autoRepeatCheckBox.isSelected());
+		prefs.putInt(KEY_WIDTH, getWidth());
+		prefs.putInt(KEY_HEIGHT, getHeight());
+	}
 
-	private final MouseAdapter mouseListener = new MouseAdapter() {
-
-		@Override
-		public void mouseClicked(MouseEvent e) {
-			if (SwingUtilities.isLeftMouseButton(e) && (e.getClickCount() == 2)) {
-				selectAction.actionPerformed(null);
-			}
-		}
-	};
+	public void restoreState(Preferences prefs) {
+		autoRepeatCheckBox.setSelected(prefs.getBoolean(KEY_REPEAT, autoRepeatCheckBox.isSelected()));
+		setSize(prefs.getInt(KEY_WIDTH, getWidth()), prefs.getInt(KEY_HEIGHT, getHeight()));
+	}
 
 }

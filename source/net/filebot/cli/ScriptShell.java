@@ -1,8 +1,7 @@
 package net.filebot.cli;
 
-import groovy.lang.GroovyClassLoader;
+import static net.filebot.util.RegularExpressions.*;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.ResourceBundle;
 
@@ -15,6 +14,8 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.codehaus.groovy.jsr223.GroovyScriptEngineImpl;
 import org.codehaus.groovy.runtime.StackTraceUtils;
+
+import groovy.lang.GroovyClassLoader;
 
 public class ScriptShell {
 
@@ -48,8 +49,8 @@ public class ScriptShell {
 
 		// default imports
 		ImportCustomizer imports = new ImportCustomizer();
-		imports.addStarImports(bundle.getString("starImport").split(", "));
-		imports.addStaticStars(bundle.getString("starStaticImport").split(", "));
+		imports.addStarImports(COMMA.split(bundle.getString("starImport")));
+		imports.addStaticStars(COMMA.split(bundle.getString("starStaticImport")));
 		config.addCompilationCustomizers(imports);
 
 		GroovyClassLoader classLoader = new GroovyClassLoader(Thread.currentThread().getContextClassLoader(), config);
@@ -67,19 +68,8 @@ public class ScriptShell {
 		}
 	}
 
-	public static interface ScriptProvider {
-
-		public URI getScriptLocation(String input) throws Exception;
-
-		public String fetchScript(URI uri) throws Exception;
-	}
-
-	public Object runScript(String input, Bindings bindings) throws Throwable {
-		return runScript(scriptProvider.getScriptLocation(input), bindings);
-	}
-
-	public Object runScript(URI resource, Bindings bindings) throws Throwable {
-		return evaluate(scriptProvider.fetchScript(resource), bindings);
+	public Object runScript(String name, Bindings bindings) throws Throwable {
+		return evaluate(scriptProvider.getScript(name), bindings);
 	}
 
 }

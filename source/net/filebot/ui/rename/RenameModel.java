@@ -20,15 +20,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import javax.script.ScriptException;
 import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
 
-import net.filebot.similarity.Match;
-import net.filebot.util.FileUtilities;
-import net.filebot.util.ui.SwingUI;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.TransformedList;
 import ca.odell.glazedlists.event.ListEvent;
+import net.filebot.similarity.Match;
+import net.filebot.util.ui.SwingUI;
 
 public class RenameModel extends MatchModel<Object, File> {
 
@@ -79,34 +79,33 @@ public class RenameModel extends MatchModel<Object, File> {
 		for (int i = 0; i < names.size(); i++) {
 			if (hasComplement(i)) {
 				// make sure we're dealing with regular File objects form here on out
-				File originalFile = new File(files().get(i).getPath());
+				File source = new File(files().get(i).getPath());
 
-				FormattedFuture formattedFuture = names.get(i);
-				StringBuilder nameBuilder = new StringBuilder();
+				FormattedFuture task = names.get(i);
+				StringBuilder destination = new StringBuilder();
 
 				// append formatted name, throw exception if not ready
 				try {
-					nameBuilder.append(formattedFuture.get(0, TimeUnit.SECONDS));
+					destination.append(task.get(0, TimeUnit.SECONDS));
 				} catch (ExecutionException e) {
-					throw new IllegalStateException(String.format("\"%s\" could not be formatted: %s.", formattedFuture.preview(), e.getCause().getMessage()));
+					throw new IllegalStateException(String.format("\"%s\" could not be formatted: %s.", task.preview(), e.getCause().getMessage()));
 				} catch (TimeoutException e) {
-					throw new IllegalStateException(String.format("\"%s\" has not been formatted yet.", formattedFuture.preview()));
+					throw new IllegalStateException(String.format("\"%s\" has not been formatted yet.", task.preview()));
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);
 				}
 
 				// append extension, if desired
 				if (preserveExtension) {
-					String extension = FileUtilities.getExtension(originalFile);
-
+					String extension = getExtension(source);
 					if (extension != null) {
-						nameBuilder.append('.').append(extension.toLowerCase());
+						destination.append('.').append(extension.toLowerCase());
 					}
 				}
 
 				// insert mapping
-				if (map.put(originalFile, nameBuilder.toString()) != null) {
-					throw new IllegalStateException(String.format("Duplicate file entry: \"%s\"", originalFile.getName()));
+				if (map.put(source, destination.toString()) != null) {
+					throw new IllegalStateException(String.format("Duplicate file: \"%s\"", source.getName()));
 				}
 			}
 		}
@@ -341,8 +340,12 @@ public class RenameModel extends MatchModel<Object, File> {
 			if (isDone()) {
 				try {
 					return get(0, TimeUnit.SECONDS);
-				} catch (Exception e) {
-					return String.format("[%s] %s", e instanceof ExecutionException ? e.getCause().getMessage() : e, preview());
+				} catch (Throwable e) {
+					// find the original exception
+					while (e instanceof ExecutionException || e instanceof ScriptException) {
+						e = e.getCause();
+					}
+					return String.format("[%s: %s] %s", e.getClass().getSimpleName(), e.getMessage(), preview());
 				}
 			}
 

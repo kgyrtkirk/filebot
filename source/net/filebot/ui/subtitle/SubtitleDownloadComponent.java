@@ -1,9 +1,10 @@
 package net.filebot.ui.subtitle;
 
+import static java.nio.charset.StandardCharsets.*;
+import static net.filebot.Logging.*;
 import static net.filebot.MediaTypes.*;
 import static net.filebot.UserFiles.*;
 import static net.filebot.subtitle.SubtitleUtilities.*;
-import static net.filebot.ui.NotificationLogging.*;
 import static net.filebot.util.FileUtilities.*;
 import static net.filebot.util.ui.SwingUI.*;
 
@@ -58,8 +59,8 @@ import ca.odell.glazedlists.ObservableElementList;
 import ca.odell.glazedlists.SortedList;
 import ca.odell.glazedlists.TextFilterator;
 import ca.odell.glazedlists.matchers.MatcherEditor;
-import ca.odell.glazedlists.swing.EventListModel;
-import ca.odell.glazedlists.swing.EventSelectionModel;
+import ca.odell.glazedlists.swing.DefaultEventListModel;
+import ca.odell.glazedlists.swing.DefaultEventSelectionModel;
 import ca.odell.glazedlists.swing.TextComponentMatcherEditor;
 
 class SubtitleDownloadComponent extends JComponent {
@@ -78,7 +79,7 @@ class SubtitleDownloadComponent extends JComponent {
 		packageList.setCellRenderer(renderer);
 
 		// better selection behaviour
-		EventSelectionModel<SubtitlePackage> packageSelection = new EventSelectionModel<SubtitlePackage>(packages);
+		DefaultEventSelectionModel<SubtitlePackage> packageSelection = new DefaultEventSelectionModel<SubtitlePackage>(packages);
 		packageSelection.setSelectionMode(ListSelection.MULTIPLE_INTERVAL_SELECTION_DEFENSIVE);
 		packageList.setSelectionModel(packageSelection);
 
@@ -104,7 +105,7 @@ class SubtitleDownloadComponent extends JComponent {
 		};
 
 		// better selection behaviour
-		EventSelectionModel<MemoryFile> fileSelection = new EventSelectionModel<MemoryFile>(files);
+		DefaultEventSelectionModel<MemoryFile> fileSelection = new DefaultEventSelectionModel<MemoryFile>(files);
 		fileSelection.setSelectionMode(ListSelection.MULTIPLE_INTERVAL_SELECTION_DEFENSIVE);
 		fileList.setSelectionModel(fileSelection);
 
@@ -134,7 +135,7 @@ class SubtitleDownloadComponent extends JComponent {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				fetch(packageList.getSelectedValues());
+				fetch(packageList.getSelectedValuesList().toArray());
 			}
 		});
 
@@ -143,7 +144,7 @@ class SubtitleDownloadComponent extends JComponent {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				open(fileList.getSelectedValues());
+				open(fileList.getSelectedValuesList().toArray());
 			}
 		});
 	}
@@ -169,7 +170,7 @@ class SubtitleDownloadComponent extends JComponent {
 		source = new ObservableElementList<SubtitlePackage>(source, GlazedLists.beanConnector(SubtitlePackage.class));
 
 		// as list model
-		return new EventListModel<SubtitlePackage>(source);
+		return new DefaultEventListModel<SubtitlePackage>(source);
 	}
 
 	protected ListModel createFileListModel() {
@@ -186,7 +187,7 @@ class SubtitleDownloadComponent extends JComponent {
 		});
 
 		// as list model
-		return new EventListModel<MemoryFile>(source);
+		return new DefaultEventListModel<MemoryFile>(source);
 	}
 
 	public void reset() {
@@ -233,7 +234,7 @@ class SubtitleDownloadComponent extends JComponent {
 					} catch (CancellationException e) {
 						// ignore cancellation
 					} catch (Exception e) {
-						UILogger.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
+						log.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
 
 						// reset download
 						subtitle.reset();
@@ -260,7 +261,7 @@ class SubtitleDownloadComponent extends JComponent {
 				}
 			}
 		} catch (Exception e) {
-			UILogger.log(Level.WARNING, e.getMessage(), e);
+			log.log(Level.WARNING, e.getMessage(), e);
 		}
 	}
 
@@ -283,7 +284,7 @@ class SubtitleDownloadComponent extends JComponent {
 				}
 			}
 		} catch (Exception e) {
-			UILogger.log(Level.WARNING, e.getMessage(), e);
+			log.log(Level.WARNING, e.getMessage(), e);
 		}
 	}
 
@@ -294,7 +295,7 @@ class SubtitleDownloadComponent extends JComponent {
 			// default values
 			SubtitleFormat selectedFormat = SubtitleFormat.SubRip;
 			long selectedTimingOffset = 0;
-			Charset selectedEncoding = Charset.forName("UTF-8");
+			Charset selectedEncoding = UTF_8;
 
 			// just use default values when we can't use a JFC with accessory component (also Swing OSX LaF doesn't seem to support JFileChooser::setAccessory)
 			if (Settings.isMacApp()) {
@@ -325,7 +326,7 @@ class SubtitleDownloadComponent extends JComponent {
 				}
 			}
 		} catch (Exception e) {
-			UILogger.log(Level.WARNING, e.getMessage(), e);
+			log.log(Level.WARNING, e.getMessage(), e);
 		}
 	}
 
@@ -344,8 +345,7 @@ class SubtitleDownloadComponent extends JComponent {
 			// fetch on double click
 			if (SwingUtilities.isLeftMouseButton(e) && (e.getClickCount() == 2)) {
 				JList list = (JList) e.getSource();
-
-				fetch(list.getSelectedValues());
+				fetch(list.getSelectedValuesList().toArray());
 			}
 		}
 
@@ -370,7 +370,7 @@ class SubtitleDownloadComponent extends JComponent {
 					list.setSelectedIndex(index);
 				}
 
-				final Object[] selection = list.getSelectedValues();
+				final Object[] selection = list.getSelectedValuesList().toArray();
 
 				if (selection.length > 0) {
 					JPopupMenu contextMenu = new JPopupMenu();
@@ -414,7 +414,7 @@ class SubtitleDownloadComponent extends JComponent {
 				JList list = (JList) e.getSource();
 
 				// open selection
-				open(list.getSelectedValues());
+				open(list.getSelectedValuesList().toArray());
 			}
 		}
 
@@ -439,7 +439,7 @@ class SubtitleDownloadComponent extends JComponent {
 					list.setSelectedIndex(index);
 				}
 
-				final Object[] selection = list.getSelectedValues();
+				final Object[] selection = list.getSelectedValuesList().toArray();
 
 				if (selection.length > 0) {
 					JPopupMenu contextMenu = new JPopupMenu();

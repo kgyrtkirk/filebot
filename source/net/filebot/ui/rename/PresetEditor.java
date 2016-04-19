@@ -2,7 +2,8 @@ package net.filebot.ui.rename;
 
 import static java.awt.Font.*;
 import static javax.swing.BorderFactory.*;
-import static net.filebot.ui.NotificationLogging.*;
+import static net.filebot.Logging.*;
+import static net.filebot.similarity.Normalization.*;
 import static net.filebot.util.ui.SwingUI.*;
 
 import java.awt.Component;
@@ -33,6 +34,11 @@ import javax.swing.ListCellRenderer;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
+
 import net.filebot.Language;
 import net.filebot.RenameAction;
 import net.filebot.ResourceManager;
@@ -49,11 +55,6 @@ import net.filebot.web.EpisodeListProvider;
 import net.filebot.web.MovieIdentificationService;
 import net.filebot.web.SortOrder;
 import net.miginfocom.swing.MigLayout;
-
-import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
-import org.fife.ui.rtextarea.RTextScrollPane;
 
 public class PresetEditor extends JDialog {
 
@@ -154,7 +155,7 @@ public class PresetEditor extends JDialog {
 		boolean input = selectRadio.isSelected();
 
 		inputPanel.setVisible(input);
-		sortOrderCombo.setEnabled(ds instanceof EpisodeListProvider && ((EpisodeListProvider) ds).hasSeasonSupport());
+		sortOrderCombo.setEnabled(ds instanceof EpisodeListProvider);
 		languageCombo.setEnabled(ds instanceof EpisodeListProvider || ds instanceof MovieIdentificationService);
 		matchModeCombo.setEnabled(ds instanceof EpisodeListProvider || ds instanceof MovieIdentificationService);
 	}
@@ -205,9 +206,10 @@ public class PresetEditor extends JDialog {
 
 	private RSyntaxTextArea createEditor() {
 		final RSyntaxTextArea editor = new RSyntaxTextArea(new RSyntaxDocument(SyntaxConstants.SYNTAX_STYLE_GROOVY) {
+
 			@Override
 			public void insertString(int offs, String str, AttributeSet a) throws BadLocationException {
-				super.insertString(offs, str.replaceAll("\\s", " "), a); // FORCE SINGLE LINE
+				super.insertString(offs, replaceSpace(str, " "), a); // FORCE SINGLE LINE
 			}
 		}, null, 1, 80);
 
@@ -247,12 +249,12 @@ public class PresetEditor extends JDialog {
 				providers.addElement(it);
 			}
 		}
-		providers.addElement(PlainFileMatcher.INSTANCE);
+		providers.addElement(PlainFileMatcher.getInstance());
 
 		JComboBox<Datasource> combo = new JComboBox<Datasource>(providers);
 		combo.setRenderer(new ListCellRenderer<Object>() {
 
-			private final ListCellRenderer<Object> parent = (ListCellRenderer<Object>) combo.getRenderer();
+			private final ListCellRenderer<Object> parent = (ListCellRenderer) combo.getRenderer();
 
 			@Override
 			public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -289,7 +291,7 @@ public class PresetEditor extends JDialog {
 		JComboBox<Language> combo = new JComboBox<Language>(languages);
 		combo.setRenderer(new ListCellRenderer<Language>() {
 
-			private final ListCellRenderer<Language> parent = (ListCellRenderer<Language>) combo.getRenderer();
+			private final ListCellRenderer<Language> parent = (ListCellRenderer) combo.getRenderer();
 
 			@Override
 			public Component getListCellRendererComponent(JList<? extends Language> list, Language value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -318,7 +320,7 @@ public class PresetEditor extends JDialog {
 		JComboBox<RenameAction> combo = new JComboBox<RenameAction>(actions);
 		combo.setRenderer(new ListCellRenderer<RenameAction>() {
 
-			private final ListCellRenderer<RenameAction> parent = (ListCellRenderer<RenameAction>) combo.getRenderer();
+			private final ListCellRenderer<RenameAction> parent = (ListCellRenderer) combo.getRenderer();
 
 			@Override
 			public Component getListCellRendererComponent(JList<? extends RenameAction> list, RenameAction value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -409,7 +411,7 @@ public class PresetEditor extends JDialog {
 				JComponent source = (JComponent) evt.getSource();
 				popup.show(source, -3, source.getHeight() + 4);
 			} catch (Exception e) {
-				UILogger.log(Level.WARNING, "Invalid preset settings: " + e.getMessage(), e);
+				log.log(Level.WARNING, "Invalid preset settings: " + e.getMessage(), e);
 			}
 		}
 	};
@@ -425,7 +427,7 @@ public class PresetEditor extends JDialog {
 					setVisible(false);
 				}
 			} catch (Exception e) {
-				UILogger.log(Level.WARNING, "Invalid preset settings: " + e.getMessage(), e);
+				log.log(Level.WARNING, "Invalid preset settings: " + e.getMessage(), e);
 			}
 		}
 	};

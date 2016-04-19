@@ -1,16 +1,14 @@
-
 package net.filebot.similarity;
-
 
 import static org.junit.Assert.*;
 
-import org.junit.Test;
+import java.util.Locale;
 
+import org.junit.Test;
 
 public class DateMetricTest {
 
-	private static DateMetric metric = new DateMetric();
-
+	DateMetric metric = new DateMetric(new DateMatcher(DateMatcher.DEFAULT_SANITY, Locale.ENGLISH));
 
 	@Test
 	public void getSimilarity() {

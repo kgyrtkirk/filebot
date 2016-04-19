@@ -1,5 +1,9 @@
 package net.filebot.web;
 
+import static java.nio.charset.StandardCharsets.*;
+import static net.filebot.Logging.*;
+import static net.filebot.util.JsonUtilities.*;
+import static net.filebot.util.RegularExpressions.*;
 import static net.filebot.web.WebRequest.*;
 
 import java.io.File;
@@ -8,7 +12,6 @@ import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
 import java.lang.reflect.Field;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -17,19 +20,16 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import javax.swing.Icon;
 
 import net.filebot.Cache;
+import net.filebot.CacheType;
 import net.filebot.ResourceManager;
-
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 
 public class AcoustIDClient implements MusicIdentificationService {
 
@@ -52,7 +52,7 @@ public class AcoustIDClient implements MusicIdentificationService {
 	}
 
 	public Cache getCache() {
-		return Cache.getCache("web-datasource-lv3");
+		return Cache.getCache(getName(), CacheType.Monthly);
 	}
 
 	@Override
@@ -77,150 +77,107 @@ public class AcoustIDClient implements MusicIdentificationService {
 		return results;
 	}
 
-	public String lookup(int duration, String fingerprint) throws IOException, InterruptedException {
+	public String lookup(int duration, String fingerprint) throws Exception {
 		Map<String, String> postParam = new LinkedHashMap<String, String>();
 		postParam.put("duration", String.valueOf(duration));
 		postParam.put("fingerprint", fingerprint);
 
-		String cacheKey = postParam.toString();
-		Cache cache = getCache();
-		String response = cache.get(cacheKey, String.class);
-		if (response != null) {
-			return response;
-		}
-
-		// respect rate limit
-		REQUEST_LIMIT.acquirePermit();
-
+		// e.g.
 		// http://api.acoustid.org/v2/lookup?client=8XaBELgH&meta=recordings+releasegroups+compress&duration=641&fingerprint=AQABz0qUkZK4oOfhL-CPc4e5C_wW2H2QH9uDL4cvoT8UNQ-eHtsE8cceeFJx-LiiHT-aPzhxoc-Opj_eI5d2hOFyMJRzfDk-QSsu7fBxqZDMHcfxPfDIoPWxv9C1o3yg44d_3Df2GJaUQeeR-cb2HfaPNsdxHj2PJnpwPMN3aPcEMzd-_MeB_Ej4D_CLP8ghHjkJv_jh_UDuQ8xnILwunPg6hF2R8HgzvLhxHVYP_ziJX0eKPnIE1UePMByDJyg7wz_6yELsB8n4oDmDa0Gv40hf6D3CE3_wH6HFaxCPUD9-hNeF5MfWEP3SCGym4-SxnXiGs0mRjEXD6fgl4LmKWrSChzzC33ge9PB3otyJMk-IVC6R8MTNwD9qKQ_CC8kPv4THzEGZS8GPI3x0iGVUxC1hRSizC5VzoamYDi-uR7iKPhGSI82PkiWeB_eHijvsaIWfBCWH5AjjCfVxZ1TQ3CvCTclGnEMfHbnZFA8pjD6KXwd__Cn-Y8e_I9cq6CR-4S9KLXqQcsxxoWh3eMxiHI6TIzyPv0M43YHz4yte-Cv-4D16Hv9F9C9SPUdyGtZRHV-OHEeeGD--BKcjVLOK_NCDXMfx44dzHEiOZ0Z44Rf6DH5R3uiPj4d_PKolJNyRJzyu4_CTD2WOvzjKH9GPb4cUP1Av9EuQd8fGCFee4JlRHi18xQh96NLxkCgfWFKOH6WGeoe4I3za4c5hTscTPEZTES1x8kE-9MQPjT8a8gh5fPgQZtqCFj9MDvp6fDx6NCd07bjx7MLR9AhtnFnQ70GjOcV0opmm4zpY3SOa7HiwdTtyHa6NC4e-HN-OfC5-OP_gLe2QDxfUCz_0w9l65HiPAz9-IaGOUA7-4MZ5CWFOlIfe4yUa6AiZGxf6w0fFxsjTOdC6Itbh4mGD63iPH9-RFy909XAMj7mC5_BvlDyO6kGTZKJxHUd4NDwuZUffw_5RMsde5CWkJAgXnDReNEaP6DTOQ65yaD88HoeX8fge-DSeHo9Qa8cTHc80I-_RoHxx_UHeBxrJw62Q34Kd7MEfpCcu6BLeB1ePw6OO4sOF_sHhmB504WWDZiEu8sKPpkcfCT9xfej0o0lr4T5yNJeOvjmu40w-TDmqHXmYgfFhFy_M7tD1o0cO_B2ms2j-ACEEQgQgAIwzTgAGmBIKIImNQAABwgQATAlhDGCCEIGIIM4BaBgwQBogEBIOESEIA8ARI5xAhxEFmAGAMCKAURKQQpQzRAAkCCBQEAKkQYIYIQQxCixCDADCABMAE0gpJIgyxhEDiCKCCIGAEIgJIQByAhFgGACCACMRQEyBAoxQiHiCBCFOECQFAIgAABR2QAgFjCDMA0AUMIoAIMChQghChASGEGeYEAIAIhgBSErnJPPEGWYAMgw05AhiiGHiBBBGGSCQcQgwRYJwhDDhgCSCSSEIQYwILoyAjAIigBFEUQK8gAYAQ5BCAAjkjCCAEEMZAUQAZQCjCCkpCgFMCCiIcVIAZZgilAQAiSHQECOcQAQIc4QClAHAjDDGkAGAMUoBgyhihgEChFCAAWEIEYwIJYwViAAlHCBIGEIEAEIQAoBwwgwiEBAEEEOoEwBY4wRwxAhBgAcKAESIQAwwIowRFhoBhAE
-		URL url = new URL("http://api.acoustid.org/v2/lookup?client=" + apikey + "&meta=recordings+releases+releasegroups+tracks+compress");
 
-		// enable compression for request and response
-		Map<String, String> requestParam = new HashMap<String, String>();
-		requestParam.put("Content-Encoding", "gzip");
-		requestParam.put("Accept-Encoding", "gzip");
+		return (String) getCache().computeIfAbsent(postParam.toString(), it -> {
+			REQUEST_LIMIT.acquirePermit();
 
-		// submit
-		response = Charset.forName("UTF-8").decode(post(url, postParam, requestParam)).toString();
+			URL url = new URL("http://api.acoustid.org/v2/lookup?client=" + apikey + "&meta=recordings+releases+releasegroups+tracks+compress");
+			Map<String, String> requestParam = new HashMap<String, String>();
+			requestParam.put("Content-Encoding", "gzip");
+			requestParam.put("Accept-Encoding", "gzip");
 
-		// DEBUG
-		// System.out.println(response);
-
-		cache.put(cacheKey, response);
-		return response;
-	}
-
-	private static Object[] array(Object node, String key) {
-		Object value = ((Map<?, ?>) node).get(key);
-		return value == null ? null : ((JsonObject<?, ?>) value).getArray();
-	}
-
-	private static Map<?, ?> firstMap(Object node, String key) {
-		Object[] values = array(node, key);
-		return values == null || values.length == 0 ? null : (Map<?, ?>) values[0];
-	}
-
-	private static Integer integer(Object node, String key) {
-		Object value = ((Map<?, ?>) node).get(key);
-		return value == null ? null : new Integer(value.toString());
-	}
-
-	private static String string(Object node, String key) {
-		Object value = ((Map<?, ?>) node).get(key);
-		return value == null ? null : value.toString();
+			return UTF_8.decode(post(url, postParam, requestParam)).toString();
+		});
 	}
 
 	public AudioTrack parseResult(String json, final int targetDuration) throws IOException {
-		Map<?, ?> data = JsonReader.jsonToMaps(json);
+		Object data = readJson(json);
 
-		if (!data.get("status").equals("ok")) {
-			throw new IOException("acoustid responded with error: " + data.get("status"));
+		String status = getString(data, "status");
+		if (!"ok".equals(status)) {
+			throw new IOException(String.format("%s responded with error: %s", getName(), status));
 		}
 
-		try {
-			for (Object result : array(data, "results")) {
+		for (Object result : getArray(data, "results")) {
+			// pick most likely matching recording
+			return streamJsonObjects(result, "recordings").sorted((r1, r2) -> {
+				Integer i1 = getInteger(r1, "duration");
+				Integer i2 = getInteger(r2, "duration");
+				return Double.compare(i1 == null ? Double.NaN : Math.abs(i1 - targetDuration), i2 == null ? Double.NaN : Math.abs(i2 - targetDuration));
+			}).map((Map<?, ?> recording) -> {
 				try {
-					// pick most likely matching recording
-					return Stream.of(array(result, "recordings")).sorted((Object o1, Object o2) -> {
-						Integer i1 = integer(o1, "duration");
-						Integer i2 = integer(o2, "duration");
-						return Double.compare(i1 == null ? Double.NaN : Math.abs(i1 - targetDuration), i2 == null ? Double.NaN : Math.abs(i2 - targetDuration));
-					}).map((Object o) -> {
-						Map<?, ?> recording = (Map<?, ?>) o;
+					Map<?, ?> releaseGroup = getFirstMap(recording, "releasegroups");
+					String artist = getString(getFirstMap(recording, "artists"), "name");
+					String title = getString(recording, "title");
+
+					if (artist == null || title == null || releaseGroup.isEmpty())
+						return null;
+
+					AudioTrack audioTrack = new AudioTrack(artist, title, null, getIdentifier());
+					audioTrack.mbid = getString(result, "id");
+
+					String type = getString(releaseGroup, "type");
+					Object[] secondaryTypes = getArray(releaseGroup, "secondarytypes");
+					Object[] releases = getArray(releaseGroup, "releases");
+
+					if (releases.length == 0 || secondaryTypes.length > 0 || (!"Album".equals(type))) {
+						return audioTrack; // default to simple music info if album data is undesirable
+					}
+
+					return streamJsonObjects(releases).map(release -> {
+						AudioTrack thisRelease = audioTrack.clone();
+
 						try {
-							Map<?, ?> releaseGroup = firstMap(recording, "releasegroups");
-							if (releaseGroup == null) {
-								return null;
-							}
-
-							String artist = (String) firstMap(recording, "artists").get("name");
-							String title = (String) recording.get("title");
-
-							AudioTrack audioTrack = new AudioTrack(artist, title, null);
-							audioTrack.mbid = string(result, "id");
-
-							String type = string(releaseGroup, "type");
-							Object[] secondaryTypes = array(releaseGroup, "secondarytypes");
-							Object[] releases = array(releaseGroup, "releases");
-
-							if (releases == null || secondaryTypes != null || (!"Album".equals(type))) {
-								return audioTrack; // default to simple music info if album data is undesirable
-							}
-
-							for (Object it : releases) {
-								AudioTrack thisRelease = audioTrack.clone();
-								Map<?, ?> release = (Map<?, ?>) it;
-								Map<?, ?> date = (Map<?, ?>) release.get("date");
-								try {
-									thisRelease.albumReleaseDate = new SimpleDate(integer(date, "year"), integer(date, "month"), integer(date, "day"));
-								} catch (Exception e) {
-									thisRelease.albumReleaseDate = null;
-								}
-
-								if (thisRelease.albumReleaseDate == null || thisRelease.albumReleaseDate.getTimeStamp() >= (audioTrack.albumReleaseDate == null ? Long.MAX_VALUE : audioTrack.albumReleaseDate.getTimeStamp())) {
-									continue;
-								}
-
-								Map<?, ?> medium = firstMap(release, "mediums");
-								thisRelease.mediumIndex = integer(medium, "position");
-								thisRelease.mediumCount = integer(release, "medium_count");
-
-								Map<?, ?> track = firstMap(medium, "tracks");
-								thisRelease.trackIndex = integer(track, "position");
-								thisRelease.trackCount = integer(medium, "track_count");
-
-								try {
-									thisRelease.album = release.get("title").toString();
-								} catch (Exception e) {
-									thisRelease.album = (String) releaseGroup.get("title");
-								}
-								try {
-									thisRelease.albumArtist = (String) firstMap(releaseGroup, "artists").get("name");
-								} catch (Exception e) {
-									thisRelease.albumArtist = null;
-								}
-								thisRelease.trackTitle = (String) track.get("title");
-
-								if (!"Various Artists".equalsIgnoreCase(thisRelease.albumArtist) && (thisRelease.album == null || !thisRelease.album.contains("Greatest Hits"))) {
-									// full info audio track
-									return thisRelease;
-								}
-							}
-
-							// default to simple music info if extended info is not available
-							return audioTrack;
+							Map<?, ?> date = getMap(release, "date");
+							thisRelease.albumReleaseDate = new SimpleDate(getInteger(date, "year"), getInteger(date, "month"), getInteger(date, "day"));
 						} catch (Exception e) {
-							Logger.getLogger(AcoustIDClient.class.getName()).log(Level.WARNING, e.toString(), e);
+							thisRelease.albumReleaseDate = null;
+						}
+
+						if (thisRelease.albumReleaseDate == null || thisRelease.albumReleaseDate.getTimeStamp() >= (audioTrack.albumReleaseDate == null ? Long.MAX_VALUE : audioTrack.albumReleaseDate.getTimeStamp())) {
 							return null;
 						}
-					}).filter(o -> o != null).sorted(new MostFieldsNotNull()).findFirst().get();
+
+						Map<?, ?> medium = getFirstMap(release, "mediums");
+						thisRelease.mediumIndex = getInteger(medium, "position");
+						thisRelease.mediumCount = getInteger(release, "medium_count");
+
+						Map<?, ?> track = getFirstMap(medium, "tracks");
+						thisRelease.trackIndex = getInteger(track, "position");
+						thisRelease.trackCount = getInteger(medium, "track_count");
+
+						try {
+							thisRelease.album = getString(release, "title");
+						} catch (Exception e) {
+							thisRelease.album = getString(releaseGroup, "title");
+						}
+						try {
+							thisRelease.albumArtist = getString(getFirstMap(releaseGroup, "artists"), "name");
+						} catch (Exception e) {
+							thisRelease.albumArtist = null;
+						}
+						thisRelease.trackTitle = getString(track, "title");
+
+						if (!"Various Artists".equalsIgnoreCase(thisRelease.albumArtist) && (thisRelease.album == null || !thisRelease.album.contains("Greatest Hits"))) {
+							// full info audio track
+							return thisRelease;
+						}
+						return null;
+					}).filter(Objects::nonNull).findFirst().orElse(audioTrack); // default to simple music info if extended info is not available
 				} catch (Exception e) {
-					// ignore
+					debug.log(Level.WARNING, e.getMessage(), e);
+					return null;
 				}
-			}
-		} catch (Exception e) {
-			// ignore
+			}).filter(Objects::nonNull).sorted(new MostFieldsNotNull()).findFirst().get();
 		}
+
 		return null;
 	}
 
@@ -233,7 +190,7 @@ public class AcoustIDClient implements MusicIdentificationService {
 		List<String> command = new ArrayList<String>();
 		command.add(getChromaprintCommand());
 		for (File f : files) {
-			command.add(f.toString());
+			command.add(f.getPath());
 		}
 
 		Process process = null;
@@ -243,13 +200,12 @@ public class AcoustIDClient implements MusicIdentificationService {
 			throw new IOException("Failed to exec fpcalc: " + e.getMessage());
 		}
 
-		Scanner scanner = new Scanner(new InputStreamReader(process.getInputStream(), "UTF-8"));
+		Scanner scanner = new Scanner(new InputStreamReader(process.getInputStream(), UTF_8));
 		LinkedList<Map<String, String>> results = new LinkedList<Map<String, String>>();
 
 		try {
 			while (scanner.hasNextLine()) {
-				String[] value = scanner.nextLine().split("=", 2);
-
+				String[] value = EQUALS.split(scanner.nextLine(), 2);
 				if (value.length != 2)
 					continue;
 
@@ -285,7 +241,7 @@ public class AcoustIDClient implements MusicIdentificationService {
 					}
 				}
 			} catch (Exception e) {
-				Logger.getLogger(AcoustIDClient.class.getName()).log(Level.WARNING, e.toString(), e);
+				debug.log(Level.WARNING, e.getMessage(), e);
 			}
 			return n;
 		}

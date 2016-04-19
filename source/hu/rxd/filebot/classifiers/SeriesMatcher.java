@@ -19,7 +19,7 @@ public class SeriesMatcher implements ISectionVisitor {
 	public void visit(ISection node) throws Exception {
 		
 		Queue<SearchKey>	searchKeys=new PriorityQueue<>();
-		SeriesNameMatcher seriesNameMatcher = new SeriesNameMatcher(Locale.getDefault(), false);
+		SeriesNameMatcher seriesNameMatcher = new SeriesNameMatcher(false);
 
 		String sn = seriesNameMatcher.matchByEpisodeIdentifier(node.getName());
 		if(sn!=null)

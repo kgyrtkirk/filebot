@@ -1,8 +1,8 @@
 package net.filebot.ui.subtitle;
 
+import static net.filebot.Logging.*;
 import static net.filebot.Settings.*;
 import static net.filebot.ui.LanguageComboBoxModel.*;
-import static net.filebot.ui.NotificationLogging.*;
 import static net.filebot.util.FileUtilities.*;
 import static net.filebot.util.ui.SwingUI.*;
 
@@ -12,16 +12,20 @@ import java.awt.Dialog.ModalityType;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.geom.Path2D;
+import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -36,6 +40,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.border.TitledBorder;
 
+import com.google.common.eventbus.Subscribe;
+
 import net.filebot.Language;
 import net.filebot.ResourceManager;
 import net.filebot.Settings;
@@ -44,6 +50,8 @@ import net.filebot.media.MediaDetection;
 import net.filebot.ui.AbstractSearchPanel;
 import net.filebot.ui.LanguageComboBox;
 import net.filebot.ui.SelectDialog;
+import net.filebot.ui.subtitle.SubtitleDropTarget.DropAction;
+import net.filebot.ui.transfer.FileTransferable;
 import net.filebot.util.ui.LabelProvider;
 import net.filebot.util.ui.LinkButton;
 import net.filebot.util.ui.SimpleLabelProvider;
@@ -60,7 +68,7 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 	private LanguageComboBox languageComboBox = new LanguageComboBox(ALL_LANGUAGES, getSettings());
 
 	public SubtitlePanel() {
-		historyPanel.setColumnHeader(0, "Show / Movie");
+		historyPanel.setColumnHeader(0, "Search");
 		historyPanel.setColumnHeader(1, "Number of Subtitles");
 
 		// add after text field
@@ -70,6 +78,16 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 		// add at the top right corner
 		add(uploadDropTarget, "width 1.45cm!, height 1.2cm!, pos n 0% 100%-1.8cm n", 0);
 		add(downloadDropTarget, "width 1.45cm!, height 1.2cm!, pos n 0% 100%-0.15cm n", 0);
+	}
+
+	@Subscribe
+	public void handle(Transferable transferable) throws Exception {
+		SubtitleDropTarget target = downloadDropTarget;
+		List<File> files = FileTransferable.getFilesFromTransferable(transferable);
+
+		if (files != null && files.size() > 0 && target.getDropAction(files) != DropAction.Cancel) {
+			target.handleDrop(files);
+		}
 	}
 
 	private final SubtitleDropTarget uploadDropTarget = new SubtitleDropTarget.Upload() {
@@ -180,11 +198,9 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 	@Override
 	protected SubtitleRequestProcessor createRequestProcessor() {
 		SubtitleProvider provider = searchTextField.getSelectButton().getSelectedValue();
-		String text = searchTextField.getText().trim();
-		Language language = languageComboBox.getModel().getSelectedItem();
 
 		if (provider instanceof OpenSubtitlesClient && ((OpenSubtitlesClient) provider).isAnonymous() && !Settings.isAppStore()) {
-			UILogger.info(String.format("%s: Please enter your login details first.", ((OpenSubtitlesClient) provider).getName()));
+			log.info(String.format("%s: Please enter your login details first.", ((OpenSubtitlesClient) provider).getName()));
 
 			// automatically open login dialog
 			SwingUtilities.invokeLater(() -> setUserAction.actionPerformed(new ActionEvent(searchTextField, 0, "login")));
@@ -192,17 +208,54 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 			return null;
 		}
 
-		return new SubtitleRequestProcessor(new SubtitleRequest(provider, text, language));
+		// parse query
+		String query = searchTextField.getText();
+		int season = seasonFilter.match(query);
+		query = seasonFilter.remove(query).trim();
+		int episode = episodeFilter.match(query);
+		query = episodeFilter.remove(query).trim();
+
+		Language language = languageComboBox.getModel().getSelectedItem();
+		return new SubtitleRequestProcessor(new SubtitleRequest(provider, query, season, episode, language));
+	}
+
+	private final QueryFilter<Integer> seasonFilter = new QueryFilter<Integer>("season", s -> s == null ? -1 : Integer.parseInt(s));
+	private final QueryFilter<Integer> episodeFilter = new QueryFilter<Integer>("episode", s -> s == null ? -1 : Integer.parseInt(s));
+
+	protected static class QueryFilter<T> {
+
+		private final Pattern pattern;
+		private final Function<String, T> parser;
+
+		public QueryFilter(String key, Function<String, T> parser) {
+			this.pattern = Pattern.compile("(?:" + key + "):(\\w+)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+			this.parser = parser;
+		}
+
+		public T match(String s) {
+			Matcher m = pattern.matcher(s);
+			if (m.find()) {
+				return parser.apply(m.group(m.groupCount()));
+			}
+			return parser.apply(null);
+		}
+
+		public String remove(String s) {
+			return pattern.matcher(s).replaceAll("");
+		}
 	}
 
 	protected static class SubtitleRequest extends Request {
 
 		private final SubtitleProvider provider;
 		private final Language language;
+		private final int season;
+		private final int episode;
 
-		public SubtitleRequest(SubtitleProvider provider, String searchText, Language language) {
+		public SubtitleRequest(SubtitleProvider provider, String searchText, int season, int episode, Language language) {
 			super(searchText);
-
+			this.season = season;
+			this.episode = episode;
 			this.provider = provider;
 			this.language = language;
 		}
@@ -215,6 +268,9 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 			return language == ALL_LANGUAGES ? null : language.getName();
 		}
 
+		public int[][] getEpisodeFilter() {
+			return season >= 0 && episode >= 0 ? new int[][] { new int[] { season, episode } } : season >= 0 ? new int[][] { new int[] { season, -1 } } : null;
+		}
 	}
 
 	protected static class SubtitleRequestProcessor extends RequestProcessor<SubtitleRequest, SubtitlePackage> {
@@ -237,7 +293,7 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 		public Collection<SubtitlePackage> fetch() throws Exception {
 			List<SubtitlePackage> packages = new ArrayList<SubtitlePackage>();
 
-			for (SubtitleDescriptor subtitle : request.getProvider().getSubtitleList(getSearchResult(), request.getLanguageName())) {
+			for (SubtitleDescriptor subtitle : request.getProvider().getSubtitleList(getSearchResult(), request.getEpisodeFilter(), request.getLanguageName())) {
 				packages.add(new SubtitlePackage(request.getProvider(), subtitle));
 			}
 
@@ -273,7 +329,7 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 		@Override
 		protected void configureSelectDialog(SelectDialog<SearchResult> selectDialog) {
 			super.configureSelectDialog(selectDialog);
-			selectDialog.getHeaderLabel().setText("Select a Show / Movie:");
+			selectDialog.getMessageLabel().setText("Select a Show / Movie:");
 		}
 
 	}
@@ -331,19 +387,19 @@ public class SubtitlePanel extends AbstractSearchPanel<SubtitleProvider, Subtitl
 								try {
 									// check download quota for the current user
 									Map<?, ?> limits = (Map<?, ?>) osdb.getServerInfo().get("download_limits");
-									UILogger.log(Level.INFO, String.format("Your daily download quota is at %s of %s.", limits.get("client_24h_download_count"), limits.get("client_24h_download_limit")));
+									log.log(Level.INFO, String.format("Your daily download quota is at %s of %s.", limits.get("client_24h_download_count"), limits.get("client_24h_download_limit")));
 
 									// logout from test session
 									osdb.logout();
 								} catch (Exception e) {
-									Logger.getLogger(SubtitlePanel.class.getName()).log(Level.WARNING, e.toString());
+									debug.warning(e.getMessage());
 								}
 							});
 						} else if (osdbUser.getText().isEmpty()) {
 							WebServices.setLogin(WebServices.LOGIN_OPENSUBTITLES, null, null); // delete login details
 						}
 					} catch (Exception e) {
-						UILogger.log(Level.WARNING, "OpenSubtitles: " + e.getMessage());
+						log.log(Level.WARNING, "OpenSubtitles: " + e.getMessage());
 						approved = false;
 					}
 

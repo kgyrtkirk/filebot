@@ -1,10 +1,13 @@
 package net.filebot.web;
 
+import static net.filebot.Logging.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.util.EnumMap;
 import java.util.Map;
@@ -23,7 +26,7 @@ import net.filebot.util.FileUtilities;
 public class OpenSubtitlesSubtitleDescriptor implements SubtitleDescriptor, Serializable {
 
 	public static enum Property {
-		IDSubtitle, IDSubtitleFile, IDSubMovieFile, IDMovie, IDMovieImdb, SubFileName, SubFormat, SubHash, SubSize, MovieHash, MovieByteSize, MovieName, MovieNameEng, MovieYear, MovieReleaseName, MovieTimeMS, MovieFPS, MovieImdbRating, MovieKind, SeriesSeason, SeriesEpisode, SeriesIMDBParent, SubLanguageID, ISO639, LanguageName, UserID, UserRank, UserNickName, SubAddDate, SubAuthorComment, SubFeatured, SubComments, SubDownloadsCnt, SubHearingImpaired, SubRating, SubHD, SubBad, SubActualCD, SubSumCD, MatchedBy, QueryNumber, SubtitlesLink, SubDownloadLink, ZipDownloadLink;
+		IDSubtitle, IDSubtitleFile, IDSubMovieFile, IDMovie, IDMovieImdb, SubFileName, SubLastTS, SubFormat, SubEncoding, SubHash, SubSize, MovieHash, MovieByteSize, MovieName, MovieNameEng, MovieYear, MovieReleaseName, MovieTimeMS, MovieFPS, MovieImdbRating, MovieKind, SeriesSeason, SeriesEpisode, SeriesIMDBParent, SubLanguageID, ISO639, LanguageName, UserID, UserRank, UserNickName, SubAddDate, SubAuthorComment, SubFeatured, SubComments, SubDownloadsCnt, SubHearingImpaired, SubRating, SubHD, SubBad, SubActualCD, SubSumCD, MatchedBy, QueryNumber, SubtitlesLink, SubDownloadLink, ZipDownloadLink;
 
 		public static <V> EnumMap<Property, V> asEnumMap(Map<String, V> stringMap) {
 			EnumMap<Property, V> enumMap = new EnumMap<Property, V>(Property.class);
@@ -112,27 +115,41 @@ public class OpenSubtitlesSubtitleDescriptor implements SubtitleDescriptor, Seri
 		return Integer.parseInt(getProperty(Property.SubSumCD));
 	}
 
+	private static int DOWNLOAD_QUOTA = 1000;
+
+	public static synchronized void checkDownloadQuota() throws IllegalStateException {
+		if (DOWNLOAD_QUOTA <= 0) {
+			throw new IllegalStateException("Download-Quota has been exceeded");
+		}
+	}
+
+	private static synchronized void setAndCheckDownloadQuota(int quota) throws IllegalStateException {
+		DOWNLOAD_QUOTA = quota;
+		checkDownloadQuota();
+	}
+
 	@Override
 	public ByteBuffer fetch() throws Exception {
-		URL resource = new URL(getProperty(Property.SubDownloadLink));
-		InputStream stream = resource.openStream();
+		checkDownloadQuota();
 
-		try {
-			ByteBufferOutputStream buffer = new ByteBufferOutputStream(getLength());
+		URLConnection c = new URL(getProperty(Property.SubDownloadLink)).openConnection();
+		try (InputStream in = c.getInputStream()) {
+			// check download quota
+			String quota = c.getHeaderField("Download-Quota");
+			if (quota != null) {
+				setAndCheckDownloadQuota(Integer.parseInt(quota));
 
-			// extract gzipped subtitle on-the-fly
-			try {
-				stream = new GZIPInputStream(stream);
-			} catch (ZipException e) {
-				throw new IOException(String.format("%s: anti-leech limit has been reached", e.getMessage()));
+				debug.finest(format("Download-Quota: %d", DOWNLOAD_QUOTA));
 			}
 
-			// fully download
-			buffer.transferFully(stream);
-
+			// read and extract subtitle data
+			ByteBufferOutputStream buffer = new ByteBufferOutputStream(getLength());
+			try {
+				buffer.transferFully(new GZIPInputStream(in));
+			} catch (ZipException e) {
+				throw new IOException("Download-Quota has been exceeded: " + e.getMessage());
+			}
 			return buffer.getByteBuffer();
-		} finally {
-			stream.close();
 		}
 	}
 

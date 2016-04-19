@@ -84,7 +84,7 @@ public class MovieIdentifactor implements ISectionVisitor {
 		
 	}
 	private boolean doSearch(ISection node, TMDbClient db, Locale language, String movieName)
-			throws IOException, ScriptException {
+			throws Exception, ScriptException {
 		movieName=movieName.replaceAll("[-. ]+", " ");
 		final int	movieYear=getYear(node);
 		List<Movie> results = db.searchMovie(movieName, movieYear, language,true);

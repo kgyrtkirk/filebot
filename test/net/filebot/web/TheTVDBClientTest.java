@@ -3,22 +3,20 @@ package net.filebot.web;
 import static org.junit.Assert.*;
 
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
-import net.filebot.web.TheTVDBClient.BannerDescriptor;
-import net.filebot.web.TheTVDBClient.MirrorType;
-import net.sf.ehcache.CacheManager;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
+
+import net.filebot.web.TheTVDBClient.MirrorType;
 
 public class TheTVDBClientTest {
 
-	private TheTVDBClient thetvdb = new TheTVDBClient("BA864DEE427E384A");
+	TheTVDBClient thetvdb = new TheTVDBClient("BA864DEE427E384A");
+
+	SearchResult buffy = new SearchResult(70327, "Buffy the Vampire Slayer");
+	SearchResult wonderfalls = new SearchResult(78845, "Wonderfalls");
+	SearchResult firefly = new SearchResult(78874, "Firefly");
 
 	@Test
 	public void search() throws Exception {
@@ -27,10 +25,10 @@ public class TheTVDBClientTest {
 
 		assertEquals(2, results.size());
 
-		TheTVDBSearchResult first = (TheTVDBSearchResult) results.get(0);
+		SearchResult first = results.get(0);
 
 		assertEquals("Babylon 5", first.getName());
-		assertEquals(70726, first.getSeriesId());
+		assertEquals(70726, first.getId());
 	}
 
 	@Test
@@ -39,15 +37,15 @@ public class TheTVDBClientTest {
 
 		assertEquals(2, results.size());
 
-		TheTVDBSearchResult first = (TheTVDBSearchResult) results.get(0);
+		SearchResult first = results.get(0);
 
 		assertEquals("Buffy the Vampire Slayer", first.getName());
-		assertEquals(70327, first.getSeriesId());
+		assertEquals(70327, first.getId());
 	}
 
 	@Test
 	public void getEpisodeListAll() throws Exception {
-		List<Episode> list = thetvdb.getEpisodeList(new TheTVDBSearchResult("Buffy the Vampire Slayer", 70327), SortOrder.Airdate, Locale.ENGLISH);
+		List<Episode> list = thetvdb.getEpisodeList(buffy, SortOrder.Airdate, Locale.ENGLISH);
 
 		assertTrue(list.size() >= 144);
 
@@ -74,7 +72,7 @@ public class TheTVDBClientTest {
 
 	@Test
 	public void getEpisodeListSingleSeason() throws Exception {
-		List<Episode> list = thetvdb.getEpisodeList(new TheTVDBSearchResult("Wonderfalls", 78845), SortOrder.Airdate, Locale.ENGLISH);
+		List<Episode> list = thetvdb.getEpisodeList(wonderfalls, SortOrder.Airdate, Locale.ENGLISH);
 
 		Episode first = list.get(0);
 
@@ -89,7 +87,7 @@ public class TheTVDBClientTest {
 
 	@Test
 	public void getEpisodeListNumbering() throws Exception {
-		List<Episode> list = thetvdb.getEpisodeList(new TheTVDBSearchResult("Firefly", 78874), SortOrder.DVD, Locale.ENGLISH);
+		List<Episode> list = thetvdb.getEpisodeList(firefly, SortOrder.DVD, Locale.ENGLISH);
 
 		Episode first = list.get(0);
 		assertEquals("Firefly", first.getSeriesName());
@@ -101,89 +99,58 @@ public class TheTVDBClientTest {
 		assertEquals("2002-12-20", first.getAirdate().toString());
 	}
 
-	@Test
 	public void getEpisodeListLink() {
-		assertEquals("http://www.thetvdb.com/?tab=seasonall&id=78874", thetvdb.getEpisodeListLink(new TheTVDBSearchResult("Firefly", 78874)).toString());
-	}
-
-	@Test
-	public void getMirror() throws Exception {
-		assertNotNull(thetvdb.getMirror(MirrorType.XML));
-		assertNotNull(thetvdb.getMirror(MirrorType.BANNER));
-		assertNotNull(thetvdb.getMirror(MirrorType.ZIP));
+		assertEquals("http://www.thetvdb.com/?tab=seasonall&id=78874", thetvdb.getEpisodeListLink(firefly).toString());
 	}
 
 	@Test
 	public void resolveTypeMask() {
 		// no flags set
-		assertEquals(EnumSet.noneOf(MirrorType.class), MirrorType.fromTypeMask(0));
-
-		// xml and zip flags set
-		assertEquals(EnumSet.of(MirrorType.ZIP, MirrorType.XML, MirrorType.SEARCH), MirrorType.fromTypeMask(5));
+		assertEquals(MirrorType.newSet(), MirrorType.fromTypeMask(0));
 
 		// all flags set
-		assertEquals(EnumSet.allOf(MirrorType.class), MirrorType.fromTypeMask(7));
+		assertEquals(EnumSet.of(MirrorType.SEARCH, MirrorType.XML, MirrorType.BANNER), MirrorType.fromTypeMask(7));
 	}
 
 	@Test
 	public void lookupByID() throws Exception {
-		TheTVDBSearchResult series = thetvdb.lookupByID(78874, Locale.ENGLISH);
+		SearchResult series = thetvdb.lookupByID(78874, Locale.ENGLISH);
 		assertEquals("Firefly", series.getName());
-		assertEquals(78874, series.getSeriesId());
+		assertEquals(78874, series.getId());
 	}
 
 	@Test
 	public void lookupByIMDbID() throws Exception {
-		TheTVDBSearchResult series = thetvdb.lookupByIMDbID(303461, Locale.ENGLISH);
+		SearchResult series = thetvdb.lookupByIMDbID(303461, Locale.ENGLISH);
 		assertEquals("Firefly", series.getName());
-		assertEquals(78874, series.getSeriesId());
+		assertEquals(78874, series.getId());
 	}
 
 	@Test
 	public void getSeriesInfo() throws Exception {
-		TheTVDBSeriesInfo it = (TheTVDBSeriesInfo) thetvdb.getSeriesInfo(new TheTVDBSearchResult(null, 80348), Locale.ENGLISH);
+		TheTVDBSeriesInfo it = (TheTVDBSeriesInfo) thetvdb.getSeriesInfo(80348, Locale.ENGLISH);
 
 		assertEquals(80348, it.getId(), 0);
 		assertEquals("TV-PG", it.getContentRating());
 		assertEquals("2007-09-24", it.getFirstAired().toString());
 		assertEquals("Action", it.getGenres().get(0));
 		assertEquals("tt0934814", it.getImdbId());
-		assertEquals("English", it.getLanguage());
-		assertEquals(310, it.getOverview().length());
-		assertEquals("60", it.getRuntime());
+		assertEquals("en", it.getLanguage());
+		assertEquals(987, it.getOverview().length());
+		assertEquals("45", it.getRuntime().toString());
 		assertEquals("Chuck", it.getName());
 	}
 
 	@Test
 	public void getBanner() throws Exception {
-		Map<String, String> filter = new HashMap<String, String>();
-		filter.put("BannerType", "season");
-		filter.put("BannerType2", "seasonwide");
-		filter.put("Season", "7");
-		filter.put("Language", "en");
+		Artwork banner = thetvdb.getArtwork(buffy.getId(), "season", Locale.ROOT).stream().filter(it -> {
+			return it.getTags().contains("season") && it.getTags().contains("seasonwide") && it.getTags().contains("7") && it.getLanguage().equals("en");
+		}).findFirst().get();
 
-		BannerDescriptor banner = thetvdb.getBanner(new TheTVDBSearchResult("Buffy the Vampire Slayer", 70327), filter);
-
-		assertEquals(857660, banner.getId(), 0);
-		assertEquals("season", banner.getBannerType());
-		assertEquals("seasonwide", banner.getBannerType2());
+		assertEquals("season", banner.getTags().get(0));
+		assertEquals("seasonwide", banner.getTags().get(1));
 		assertEquals("http://thetvdb.com/banners/seasonswide/70327-7.jpg", banner.getUrl().toString());
 		assertEquals(99712, WebRequest.fetch(banner.getUrl()).remaining(), 0);
-	}
-
-	@Test
-	public void getBannerList() throws Exception {
-		List<BannerDescriptor> banners = thetvdb.getBannerList(new TheTVDBSearchResult("Buffy the Vampire Slayer", 70327));
-
-		assertEquals("fanart", banners.get(0).getBannerType());
-		assertEquals("1280x720", banners.get(0).getBannerType2());
-		assertEquals(486993, WebRequest.fetch(banners.get(0).getUrl()).remaining(), 0);
-	}
-
-	@BeforeClass
-	@AfterClass
-	public static void clearCache() {
-		CacheManager.getInstance().clearAll();
 	}
 
 }

@@ -1,27 +1,25 @@
 package net.filebot.web;
 
-import static net.filebot.util.StringUtilities.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.similarity.Normalization.*;
 
 import java.text.FieldPosition;
 import java.text.Format;
 import java.text.ParseException;
 import java.text.ParsePosition;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.Collection;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class EpisodeFormat extends Format {
 
-	public static final EpisodeFormat SeasonEpisode = new EpisodeFormat(true, false);
-
-	private final boolean includeAirdate;
-	private final boolean includeSpecial;
-
-	public EpisodeFormat(boolean includeSpecial, boolean includeAirdate) {
-		this.includeSpecial = includeSpecial;
-		this.includeAirdate = includeAirdate;
-	}
+	public static final EpisodeFormat SeasonEpisode = new EpisodeFormat();
 
 	@Override
 	public StringBuffer format(Object obj, StringBuffer sb, FieldPosition pos) {
@@ -44,125 +42,88 @@ public class EpisodeFormat extends Format {
 
 			if (episode.getEpisode() != null) {
 				sb.append(String.format("%02d", episode.getEpisode()));
-			} else if (includeSpecial && episode.getSpecial() != null) {
+			} else if (episode.getSpecial() != null) {
 				sb.append("Special " + episode.getSpecial());
 			}
 		} else {
 			// episode, but no season
 			if (episode.getEpisode() != null) {
 				sb.append(" - ").append(episodeNumber);
-			} else if (includeSpecial && episode.getSpecial() != null) {
+			} else if (episode.getSpecial() != null) {
 				sb.append(" - ").append("Special " + episode.getSpecial());
 			}
 		}
-
 		sb.append(" - ").append(episode.getTitle());
-
-		if (includeAirdate && episode.getAirdate() != null) {
-			sb.append(" [").append(episode.getAirdate().format("yyyy-MM-dd")).append("]");
-		}
-
 		return sb;
+	}
+
+	public String formatMultiEpisode(Collection<Episode> episodes) {
+		Function<Episode, String> seriesName = it -> it.getSeriesName();
+		Function<Episode, String> episodeNumber = it -> formatSxE(it);
+		Function<Episode, String> episodeTitle = it -> removeTrailingBrackets(it.getTitle());
+
+		return Stream.of(seriesName, episodeNumber, episodeTitle).map(f -> {
+			return episodes.stream().map(f::apply).distinct().collect(joining(" & "));
+		}).collect(joining(" - "));
 	}
 
 	public String formatSxE(Episode episode) {
 		if (episode instanceof MultiEpisode) {
-			return formatMultiSxE(((MultiEpisode) episode).getEpisodes());
+			return formatMultiRangeSxE(((MultiEpisode) episode).getEpisodes());
 		}
 
 		StringBuilder sb = new StringBuilder();
-
 		if (episode.getSeason() != null || episode.getSpecial() != null) {
 			sb.append(episode.getSpecial() == null ? episode.getSeason() : 0).append('x');
 		}
-
 		if (episode.getEpisode() != null || episode.getSpecial() != null) {
 			sb.append(String.format("%02d", episode.getSpecial() == null ? episode.getEpisode() : episode.getSpecial()));
 		}
-
 		return sb.toString();
 	}
 
 	public String formatS00E00(Episode episode) {
 		if (episode instanceof MultiEpisode) {
-			return formatMultiS00E00(((MultiEpisode) episode).getEpisodes());
+			return formatMultiRangeS00E00(((MultiEpisode) episode).getEpisodes());
 		}
 
 		StringBuilder sb = new StringBuilder();
-
 		if (episode.getSeason() != null || episode.getSpecial() != null) {
 			sb.append(String.format("S%02d", episode.getSpecial() == null ? episode.getSeason() : 0));
 		}
-
 		if (episode.getEpisode() != null || episode.getSpecial() != null) {
 			sb.append(String.format("E%02d", episode.getSpecial() == null ? episode.getEpisode() : episode.getSpecial()));
 		}
-
 		return sb.toString();
 	}
 
-	public String formatMultiEpisode(Iterable<Episode> episodes) {
-		Set<String> name = new LinkedHashSet<String>();
-		Set<String> sxe = new LinkedHashSet<String>();
-		Set<String> title = new LinkedHashSet<String>();
-		for (Episode it : episodes) {
-			name.add(it.getSeriesName());
-			sxe.add(formatSxE(it));
-			title.add(it.getTitle().replaceAll("[(]([^)]*)[)]$", "").trim());
-		}
-		return String.format("%s - %s - %s", join(name, " & "), join(" & ", sxe), join(" & ", title));
+	public String formatMultiTitle(Collection<Episode> episodes) {
+		return episodes.stream().map(it -> removeTrailingBrackets(it.getTitle())).distinct().collect(joining(" & "));
 	}
 
-	public String formatMultiSxE(Iterable<Episode> episodes) {
-		StringBuilder sb = new StringBuilder();
-		Integer ps = null;
-		for (Episode it : episodes) {
-			if (it.getSeason() != null && !it.getSeason().equals(ps)) {
-				if (sb.length() > 0) {
-					sb.append(' ');
-				}
-				sb.append(it.getSeason()).append('x');
-				if (it.getSpecial() == null) {
-					sb.append(String.format("%02d", it.getEpisode()));
-				} else {
-					sb.append("Special ").append(it.getSpecial());
-				}
-			} else {
-				if (sb.length() > 0) {
-					sb.append('-');
-				}
-				if (it.getSpecial() == null) {
-					sb.append(String.format("%02d", it.getEpisode()));
-				} else {
-					sb.append(it.getSpecial());
-				}
-			}
-			ps = it.getSeason();
-		}
-
-		return sb.toString();
+	public String formatMultiRangeSxE(Iterable<Episode> episodes) {
+		return formatMultiRangeNumbers(episodes, "%01dx", "%02d");
 	}
 
-	public String formatMultiS00E00(Iterable<Episode> episodes) {
-		StringBuilder sb = new StringBuilder();
-		Integer ps = null;
+	public String formatMultiRangeS00E00(Iterable<Episode> episodes) {
+		return formatMultiRangeNumbers(episodes, "S%02d", "E%02d");
+	}
+
+	public String formatMultiRangeNumbers(Iterable<Episode> episodes, String seasonFormat, String episodeFormat) {
+		return getSeasonEpisodeNumbers(episodes).entrySet().stream().map(it -> {
+			String s = it.getKey() >= 0 ? String.format(seasonFormat, it.getKey()) : "";
+			return Stream.of(it.getValue().first(), it.getValue().last()).distinct().map(i -> String.format(episodeFormat, i)).collect(joining("-", s, ""));
+		}).collect(joining(" - "));
+	}
+
+	private SortedMap<Integer, SortedSet<Integer>> getSeasonEpisodeNumbers(Iterable<Episode> episodes) {
+		SortedMap<Integer, SortedSet<Integer>> n = new TreeMap<Integer, SortedSet<Integer>>();
 		for (Episode it : episodes) {
-			if (sb.length() > 0) {
-				sb.append("-");
-			}
-
-			Integer s = it.getSpecial() == null ? it.getSeason() : 0;
-			Integer e = it.getEpisode() != null ? it.getEpisode() : it.getSpecial();
-
-			if (s != null && !s.equals(ps)) {
-				sb.append(String.format("S%02d", s)).append(String.format("E%02d", e));
-			} else {
-				sb.append(String.format("E%02d", e));
-			}
-			ps = s;
+			Integer s = it.getSeason() == null || it.getSpecial() != null ? it.getSpecial() == null ? -1 : 0 : it.getSeason();
+			Integer e = it.getEpisode() == null ? it.getSpecial() == null ? -1 : it.getSpecial() : it.getEpisode();
+			n.computeIfAbsent(s, key -> new TreeSet<Integer>()).add(e);
 		}
-
-		return sb.toString();
+		return n;
 	}
 
 	private final Pattern sxePattern = Pattern.compile("- (?:(\\d{1,2})x)?(Special )?(\\d{1,3}) -");
@@ -180,7 +141,7 @@ public class EpisodeFormat extends Format {
 		Matcher m;
 
 		if ((m = airdatePattern.matcher(source)).find()) {
-			airdate = SimpleDate.parse(m.group(1), "yyyy-MM-dd");
+			airdate = SimpleDate.parse(m.group(1));
 			source.replace(m.start(), m.end(), ""); // remove matched part from text
 		}
 

@@ -3,15 +3,15 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 		<meta name="keywords" content="rename tv shows, rename movies, download subtitles, check sfv files" />
-		
+
 		<title>FileBot - The ultimate TV and Movie Renamer / Subtitle Downloader</title>
 		<meta name="description" content="FileBot is the ultimate tool for renaming your movies, tv shows or anime and downloading subtitles. It's smart, streamlined for simplicity and just works. FileBot supports Windows, Linux and Mac, plus there's a full-featured command-line interface for all sorts of automation." />
 		<meta name="author" content="Reinhard Pointner" />
-		
+
 		<meta itemprop="name" content="FileBot - The ultimate TV and Movie Renamer / Subtitle Downloader" />
 		<meta itemprop="description" content="FileBot is the ultimate tool for renaming your movies, tv shows or anime and downloading subtitles. It's smart, streamlined for simplicity and just works. FileBot supports Windows, Linux and Mac, plus there's a full-featured command-line interface for all sorts of automation." />
 		<meta itemprop="image" content="http://www.filebot.net/icon.png" />
-		
+
 		<meta property="og:title" content="FileBot" />
 		<meta property="og:type" content="product" />
 		<meta property="og:url" content="http://www.filebot.net/" />
@@ -19,26 +19,26 @@
 		<meta property="og:site_name" content="FileBot TV and Movie Renamer" />
 		<meta property="fb:admins" content="1320039434" />
 		<meta property="fb:page_id" content="102742293101063" />
-		
+
 		<link rel="stylesheet" href="base.css" type="text/css" />
 		<link rel="icon" href="favicon.png" />
-		
+
 		<!-- Fonts -->
 		<link href='https://fonts.googleapis.com/css?family=Dawning+of+a+New+Day' rel='stylesheet' type='text/css' />
-		
+
 		<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
-		
+
 		<!-- google +1 -->
 		<script type="text/javascript">
 		  window.___gcfg = {lang: 'en-GB'};
-		
+
 		  (function() {
 		    var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
 		    po.src = 'https://apis.google.com/js/plusone.js';
 		    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
 		  })();
 		</script>
-		
+
 		<!-- twitter -->
 		<script>window.twttr = (function(d, s, id) {
 		  var js, fjs = d.getElementsByTagName(s)[0],
@@ -48,12 +48,12 @@
 		  js.id = id;
 		  js.src = "https://platform.twitter.com/widgets.js";
 		  fjs.parentNode.insertBefore(js, fjs);
-		 
+
 		  t._e = [];
 		  t.ready = function(f) {
 		    t._e.push(f);
 		  };
-		 
+
 		  return t;
 		}(document, "script", "twitter-wjs"));</script>
 	</head>
@@ -67,13 +67,13 @@
 		  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.3";
 		  fjs.parentNode.insertBefore(js, fjs);
 		}(document, 'script', 'facebook-jssdk'));</script>
-		
+
 		<div class="page">
 			<div class="navigation">
 				<div>
 				<ul>
-					<li><a href="https://www.filebot.net/forums/">Forums</a></li>
-					<li><a href="https://www.filebot.net/forums/viewtopic.php?f=3&amp;t=7#p7">FAQ</a></li>
+					<li><a href="http://www.filebot.net/forums/">Forums</a></li>
+					<li><a href="http://www.filebot.net/forums/viewtopic.php?f=3&amp;t=7#p7">FAQ</a></li>
 					<li><a href="#download">Download</a></li>
 				</ul>
 				</div>
@@ -83,11 +83,11 @@
 				<div class="twitter">
 					<a class="twitter-share-button" href="https://twitter.com/share" data-url="http://www.filebot.net/" data-via="filebot_renamer" data-text="FileBot - The ultimate TV and Movie Renamer" data-lang="en"></a>
 				</div>
-				
+
 				<div class="facebook">
 					<div data-width="80" class="fb-like" data-href="https://www.facebook.com/filebot" data-layout="button_count" data-action="like" data-show-faces="false" data-share="false"></div>
 				</div>
-				
+
 				<div class="plusone">
 					<g:plusone href="http://www.filebot.net/"></g:plusone>
 				</div>
@@ -97,7 +97,7 @@
 				<a href="http://www.filebot.net"><img class="logo" alt="logo" src="images/filebot.logo.svg" width="64" height="64" /></a>
 				<h1>
 					FileBot
-					<a href="https://www.filebot.net/forums/viewforum.php?f=7" class="source" target="_blank">v@{version}</a>
+					<a href="http://www.filebot.net/forums/viewforum.php?f=7" class="source" target="_blank">v@{version}</a>
 					<span class="description">The ultimate tv renamer / subtitle downloader / sfv validator</span>
 				</h1>
 			</div>
@@ -122,7 +122,7 @@
 					<script type="text/javascript">
 						$(document).ready(function () {
 							if (navigator.userAgent.indexOf('Ubuntu') >= 0) {
-								$("#ubuntu").show();
+								$(".ubuntuappstore").show();
 							}
 						});
 					</script>
@@ -132,12 +132,12 @@
 						</a>
 					</div>
 				</div>
-				
-                <div id="macosx" class="section deployment macosx" style="display:none">
+
+				<div id="macosx" class="section deployment macosx macappstore" style="display:none">
 					<script type="text/javascript">
 						$(document).ready(function () {
 							if (navigator.userAgent.indexOf('Macintosh') >= 0) {
-								$("#macosx").show();
+								$(".macappstore").show();
 							}
 						});
 					</script>
@@ -145,7 +145,7 @@
 						<a href="https://itunes.apple.com/us/app/filebot/id905384638?mt=12&amp;uo=6&amp;at=1l3vupy&amp;ct=filebot1" target="itunes_store" style="display:inline-block;overflow:hidden;background:url(http://linkmaker.itunes.apple.com/images/badges/en-us/badge_macappstore-lrg.svg) no-repeat;width:165px;height:40px;"></a>
 					</div>
 				</div>
-				
+
 				<a id="review" class="review message box" style="display:none" href="reviews.php" target="_blank">
 				<div class="thumbs up">
 					<img src="images/thumbs_up.png" />
@@ -172,7 +172,7 @@
 					<p class="text quote"></p>
 				</div>
 				</a>
-				
+
 				<div class="section first tutorial">
 					<img class="icon" src="images/starthere.png" alt="start" width="48" height="48" />
 					<h2>Getting Started</h2>
@@ -192,7 +192,7 @@
 					</ol>
 					<p><strong>Use FileBot from the command-line!</strong> There is a simple <acronym title="command-line interface"><a href="cli.html">CLI</a></acronym> for core tasks like renaming media files and fetching subtitles 
 					as well as checking or creating SFV files. On top of that you can use our <a href="script.html">scripting engine</a> to define more complex 
-					automated processing. There's already <a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=5#p5">shared scripts</a> for
+					automated processing. There's already <a href="http://www.filebot.net/forums/viewtopic.php?f=4&amp;t=5#p5">shared scripts</a> for
 					various tasks that you can just run right away or further customize to your needs.</p>
 					<ul>
 						<li>Watch media folders and organize new files automatically</li>
@@ -203,15 +203,14 @@
 						<li>Update your XBMC or Plex library</li>
 						... and more!
 					</ul>
-					<p>Setting up a <strong>fully automated media center</strong> – extract archives, organize tv shows and movies, download subtitles, fetch artwork and metadata, update XBMC – with FileBot it's <a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p1561">that</a> easy!</p>
+					<p>Setting up a <strong>fully automated media center</strong> – extract archives, organize tv shows and movies, download subtitles, fetch artwork and metadata, update XBMC – with FileBot it's <a href="http://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p1561">that</a> easy!</p>
 					<ul style="list-style-type:  square; border: thin dotted lavender; background: #FDFDFF">
-						<li><a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p1561" target="_blank">µTorrent Integration for Windows</a></li>
-						<li><a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p3380" target="_blank">Transmission Integration for Mac</a></li>
-						<li><a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p3382" target="_blank">Deluge Integration for Linux</a></li>
-						<li><a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p5316" target="_blank">rTorrent Integration for any Linux server</a></li>
-						<li><a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215" target="_blank">Console tool for arbitrary use on any platform</a></li>
+						<li><a href="http://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p1561" target="_blank">µTorrent on Windows</a></li>
+						<li><a href="http://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p9774" target="_blank">qBittorrent on Mac OS X</a></li>
+						<li><a href="http://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p5316" target="_blank">rTorrent on any Linux server</a></li>
+						<li><a href="http://www.filebot.net/forums/viewtopic.php?f=4&amp;t=215#p1561" target="_blank">Console tool on all platforms</a></li>
 					</ul>
-					<p>If you have any questions or problems just to check the <a href="https://www.filebot.net/forums/viewtopic.php?f=3&amp;t=7">FAQ</a> or search the <a href="https://www.filebot.net/forums/">forums</a>.</p>
+					<p>If you have any questions or problems just to check the <a href="http://www.filebot.net/forums/viewtopic.php?f=3&amp;t=7">FAQ</a> or search the <a href="http://www.filebot.net/forums/">forums</a>.</p>
 
 					<div class="video">
 						<iframe src="http://app.filebot.net/getting-started/index.html" frameborder="0" allowfullscreen="true"></iframe>
@@ -225,7 +224,7 @@
 					<ul class="list">
 						<li>A simple user-interface tuned for drag-n-drop <small class="comment">(no need to bother with file dialogs)</small></li>
 						<li>Platform-independent and straight-forward application deployment</li>
-						<li>Powerful and full-featured <a class="important" href="cli.html">cmdline interface</a> and <a class="important" href="script.html">scripting interface</a> for any kind of <a href="https://www.filebot.net/forums/viewtopic.php?f=4&amp;t=5">automation</a></li>
+						<li>Powerful and full-featured <a class="important" href="cli.html">cmdline interface</a> and <a class="important" href="script.html">scripting interface</a> for any kind of <a href="http://www.filebot.net/forums/viewtopic.php?f=4&amp;t=5">automation</a></li>
 					</ul>
 					<ul class="list next" id="rename">
 						<li>
@@ -292,6 +291,7 @@
 					<ul class="list">
 						<li class="macosx">Available on the <a href="https://itunes.apple.com/us/app/filebot/id905384638?mt=12&amp;uo=6&amp;at=1l3vupy&amp;ct=filebot2" target="itunes_store">Mac App Store</a></li>
 						<!-- <li class="ubuntu">Available on the <a target="_blank" href="https://apps.ubuntu.com/cat/applications/filebot/">Ubuntu Software Center</a></li> -->
+						<li class="macappstore" style="display:none">FileBot Subtitles for Mac OS X: <a target="_blank" href="http://www.filebot.net/forums/viewtopic.php?f=12&amp;t=3350">FileBot_Subtitles_Installer.pkg</a> <small class="comment">for everyone who purchased FileBot on the Mac App Store</small></li>
 						<li>Windows installer: <a target="_blank" href="https://app.filebot.net/download.php?type=nsis&amp;version=@{version}">FileBot_@{version}-setup.exe</a></li>
 						<li>Debian packages: <a target="_blank" href="https://app.filebot.net/download.php?type=deb&amp;arch=i386&amp;version=@{version}">filebot_@{version}_i386.deb</a> or <a target="_blank" href="https://app.filebot.net/download.php?type=deb&amp;arch=amd64&amp;version=@{version}">filebot_@{version}_amd64.deb</a></li>
 						<li>Embedded Linux package: <a target="_blank" href="https://app.filebot.net/download.php?type=ipkg&amp;arch=noarch&amp;version=@{version}">filebot_@{version}_noarch.ipk</a></li>
@@ -302,8 +302,8 @@
 						</li>
 						<li>Windows package is available <a target="_blank" href="http://chocolatey.org/packages/filebot/">via Chocolatey</a></li>
 						<li>OS X package is available <a target="_blank" href="http://caskroom.io/">via Homebrew Cask</a> <small class="comment">for the command-line tools</small></li>
-						<li>Synology NAS package is available <a target="_blank" href="https://www.filebot.net/forums/viewtopic.php?f=3&amp;t=1802">via Package Center</a></li>
-						<li>All files and other versions are available on <a target="_blank" href="https://sourceforge.net/projects/filebot/files/filebot/">SourceForge.net</a></li>
+						<li>Synology NAS package is available <a target="_blank" href="http://www.filebot.net/forums/viewtopic.php?f=3&amp;t=1802">via Package Center</a></li>
+						<li>All files and other versions are available on <a target="_blank" href="https://sourceforge.net/projects/filebot/files/filebot/FileBot_@{version}/">SourceForge.net</a></li>
 					</ul>
 				</div>
 
@@ -313,15 +313,17 @@
 					<h2>Contact</h2>
 					<p>
 						The project is continuously seeking for improvements, so anykind of <a target="_blank" href="https://sourceforge.net/projects/filebot/reviews/?sort=usefulness#review-form">feedback</a> is more than welcome 
-						and if there's any questions or problems just start posting in the <a target="_blank" href="https://www.filebot.net/forums/">forums</a> or check the <a target="_blank" href="https://www.filebot.net/forums/viewtopic.php?f=3&amp;t=7"><acronym title="frequently asked questions">FAQ</acronym></a>.
+						and if there's any questions or problems just start posting in the <a target="_blank" href="http://www.filebot.net/forums/">forums</a> or check the <a target="_blank" href="http://www.filebot.net/forums/viewtopic.php?f=3&amp;t=7"><acronym title="frequently asked questions">FAQ</acronym></a>.
 						We're social as well. Follow us on <a target="_blank" href="https://twitter.com/#!/filebot_renamer">twitter</a> and become a fan on <a target="_blank" href="https://www.facebook.com/filebot">facebook</a>.
 					</p>
 				</div>
 			</div>
 			<div class="metrics">
+				<a href="https://sourceforge.net/projects/filebot/files/filebot/" target="_blank" rel="nofollow"><img src="https://img.shields.io/sourceforge/dm/filebot.svg"></a>
+				<a href="https://sourceforge.net/projects/filebot/files/filebot/" target="_blank" rel="nofollow"><img src="https://img.shields.io/sourceforge/dt/filebot.svg"></a>
 			</div>
 			<div class="footer">
-				<p>Hosted on <a href="http://sourceforge.net/projects/filebot/">sourceforge.net</a> | Creative Commons License: Attribution-NonCommercial-ShareAlike © 2015</p>
+				<p>Hosted on <a href="http://sourceforge.net/projects/filebot/">sourceforge.net</a> | Creative Commons License: Attribution-NonCommercial-ShareAlike © @{tstamp.year}</p>
 				<div id="bitcoinate">
 					<script src="http://coinwidget.com/widget/coin.js"></script>
 					<script>
@@ -343,11 +345,11 @@
 					</script>
 				</div>
 				<div id="donate">
-					<a target="_blank" href="https://app.filebot.net/donate.php"><img src="images/paypal.donate.png" width="150" /></a>
+					<a target="_blank" href="https://app.filebot.net/donate.php"><img src="images/support.donate.png" /></a>
 				</div>
 			</div>
 		</div>
-		
+
 		<!-- FIX SCROLLING ISSUES CAUSED BY DYNAMICALLY CHANGES TO THE CONTENT BY JQUERY -->
 		<script type="text/javascript">
 			$(document).ready(function () {

@@ -2,53 +2,50 @@ package net.filebot.web;
 
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.CachedResource.*;
+import static net.filebot.Logging.*;
+import static net.filebot.similarity.Normalization.*;
+import static net.filebot.util.JsonUtilities.*;
+import static net.filebot.util.StringUtilities.*;
 import static net.filebot.web.WebRequest.*;
 
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Scanner;
+import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import javax.swing.Icon;
 
+import net.filebot.Cache;
+import net.filebot.CacheType;
+import net.filebot.CachedResource.Fetch;
 import net.filebot.Language;
 import net.filebot.ResourceManager;
 import net.filebot.web.TMDbClient.MovieInfo.MovieProperty;
 import net.filebot.web.TMDbClient.Person.PersonProperty;
 
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
-
-public class TMDbClient implements MovieIdentificationService {
+public class TMDbClient implements MovieIdentificationService, ArtworkProvider {
 
 	private static final String host = "api.themoviedb.org";
 	private static final String version = "3";
 
-	private static final FloodLimit SEARCH_LIMIT = new FloodLimit(10, 10, TimeUnit.SECONDS);
-	private static final FloodLimit REQUEST_LIMIT = new FloodLimit(20, 10, TimeUnit.SECONDS);
+	protected static final FloodLimit SEARCH_LIMIT = new FloodLimit(10, 10, TimeUnit.SECONDS);
+	protected static final FloodLimit REQUEST_LIMIT = new FloodLimit(20, 10, TimeUnit.SECONDS);
 
 	private final String apikey;
 
@@ -66,96 +63,86 @@ public class TMDbClient implements MovieIdentificationService {
 		return ResourceManager.getIcon("search.themoviedb");
 	}
 
+	protected Matcher getNameYearMatcher(String query) {
+		return Pattern.compile("(.+)\\b[(]?((?:19|20)\\d{2})[)]?$").matcher(query.trim());
+	}
+
 	@Override
-	public List<Movie> searchMovie(String query, Locale locale) throws IOException {
+	public List<Movie> searchMovie(String query, Locale locale) throws Exception {
 		// query by name with year filter if possible
-		Matcher nameYear = Pattern.compile("(.+)\\b\\(?(19\\d{2}|20\\d{2})\\)?$").matcher(query.trim());
+		Matcher nameYear = getNameYearMatcher(query);
 		if (nameYear.matches()) {
 			return searchMovie(nameYear.group(1).trim(), Integer.parseInt(nameYear.group(2)), locale, false);
 		} else {
-			return searchMovie(query, -1, locale, false);
+			return searchMovie(query.trim(), -1, locale, false);
 		}
 	}
 
-	public List<Movie> searchMovie(String movieName, int movieYear, Locale locale, boolean extendedInfo) throws IOException {
+	public List<Movie> searchMovie(String movieName, int movieYear, Locale locale, boolean extendedInfo) throws Exception {
 		// ignore queries that are too short to yield good results
 		if (movieName.length() < 3 && !(movieName.length() >= 1 && movieYear > 0)) {
 			return emptyList();
 		}
 
-		Map<String, Object> param = new LinkedHashMap<String, Object>(2);
-		param.put("query", movieName);
+		Map<String, Object> query = new LinkedHashMap<String, Object>(2);
+		query.put("query", movieName);
 		if (movieYear > 0) {
-			param.put("year", movieYear);
+			query.put("year", movieYear);
 		}
+		Object response = request("search/movie", query, locale, SEARCH_LIMIT);
 
-		JSONObject response = request("search/movie", param, locale, SEARCH_LIMIT);
-		List<Movie> result = new ArrayList<Movie>();
-
-		for (JSONObject it : jsonList(response.get("results"))) {
-			if (it == null) {
-				continue;
+		// e.g. {"id":16320,"title":"冲出宁静号","release_date":"2005-09-30","original_title":"Serenity"}
+		return streamJsonObjects(response, "results").map(it -> {
+			int id = -1, year = -1;
+			try {
+				id = getDecimal(it, "id").intValue();
+				year = matchInteger(getString(it, "release_date")); // release date is often missing
+			} catch (Exception e) {
+				debug.fine(format("Missing data: release_date => %s", it));
+				return null;
 			}
 
-			// e.g.
-			// {"id":16320,"title":"冲出宁静号","release_date":"2005-09-30","original_title":"Serenity"}
-			int id = -1, year = -1;
-			String title = (String) it.get("title");
-			String originalTitle = (String) it.get("original_title");
-			if (title == null || title.isEmpty()) {
+			String title = getString(it, "title");
+			String originalTitle = getString(it, "original_title");
+			if (title == null) {
 				title = originalTitle;
 			}
 
+			String[] alternativeTitles = getAlternativeTitles("movie/" + id, "titles", title, originalTitle, extendedInfo);
+
+			return new Movie(title, alternativeTitles, year, -1, id, locale);
+		}).filter(Objects::nonNull).collect(toList());
+	}
+
+	protected String[] getAlternativeTitles(String path, String key, String title, String originalTitle, boolean extendedInfo) {
+		Set<String> alternativeTitles = new LinkedHashSet<String>();
+		if (originalTitle != null) {
+			alternativeTitles.add(originalTitle);
+		}
+
+		if (extendedInfo) {
 			try {
-				id = Float.valueOf(it.get("id").toString()).intValue();
-				try {
-					String release = (String) it.get("release_date");
-					year = new Scanner(release).useDelimiter("\\D+").nextInt();
-				} catch (Exception e) {
-					throw new IllegalArgumentException("Missing data: release date");
-				}
-
-				Set<String> alternativeTitles = new LinkedHashSet<String>();
-				if (originalTitle != null) {
-					alternativeTitles.add(originalTitle);
-				}
-
-				if (extendedInfo) {
-					try {
-						Set<String> internationalTitles = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-						JSONObject titles = request("movie/" + id + "/alternative_titles", null, null, REQUEST_LIMIT);
-						for (JSONObject node : jsonList(titles.get("titles"))) {
-							String t = (String) node.get("title");
-							if (t != null && t.length() >= 3) {
-								internationalTitles.add(t);
-							}
-						}
-						alternativeTitles.addAll(internationalTitles);
-					} catch (Exception e) {
-						Logger.getLogger(TMDbClient.class.getName()).log(Level.WARNING, String.format("Unable to retrieve alternative titles [%s]: %s", title, e.getMessage()));
-					}
-				}
-
-				// make sure main title is not in the set of alternative titles
-				alternativeTitles.remove(title);
-
-				result.add(new Movie(title, alternativeTitles.toArray(new String[0]), year, -1, id, locale));
+				Object response = request(path + "/alternative_titles", emptyMap(), Locale.ENGLISH, REQUEST_LIMIT);
+				streamJsonObjects(response, key).map(n -> {
+					return getString(n, "title");
+				}).filter(Objects::nonNull).filter(n -> n.length() >= 2).forEach(alternativeTitles::add);
 			} catch (Exception e) {
-				// only print 'missing release date' warnings for matching movie titles
-				if (movieName.equalsIgnoreCase(title) || movieName.equalsIgnoreCase(originalTitle)) {
-					Logger.getLogger(TMDbClient.class.getName()).log(Level.WARNING, String.format("Ignore movie metadata: %s [%d]: %s", title, id, e.getMessage()));
-				}
+				debug.warning(format("Failed to fetch alternative titles for %s => %s", path, e));
 			}
 		}
-		return result;
+
+		// make sure main title is not in the set of alternative titles
+		alternativeTitles.remove(title);
+
+		return alternativeTitles.toArray(new String[0]);
 	}
 
 	public URI getMoviePageLink(int tmdbid) {
-		return URI.create("http://www.themoviedb.org/movie/" + tmdbid);
+		return URI.create("https://www.themoviedb.org/movie/" + tmdbid);
 	}
 
 	@Override
-	public Movie getMovieDescriptor(Movie id, Locale locale) throws IOException {
+	public Movie getMovieDescriptor(Movie id, Locale locale) throws Exception {
 		if (id.getTmdbId() > 0 || id.getImdbId() > 0) {
 			MovieInfo info = getMovieInfo(id, locale, false);
 			if (info != null) {
@@ -170,12 +157,7 @@ public class TMDbClient implements MovieIdentificationService {
 		return null;
 	}
 
-	@Override
-	public Map<File, Movie> getMovieDescriptors(Collection<File> movieFiles, Locale locale) throws Exception {
-		throw new UnsupportedOperationException();
-	}
-
-	public MovieInfo getMovieInfo(Movie movie, Locale locale, boolean extendedInfo) throws IOException {
+	public MovieInfo getMovieInfo(Movie movie, Locale locale, boolean extendedInfo) throws Exception {
 		try {
 			if (movie.getTmdbId() > 0) {
 				return getMovieInfo(String.valueOf(movie.getTmdbId()), locale, extendedInfo);
@@ -183,238 +165,177 @@ public class TMDbClient implements MovieIdentificationService {
 				return getMovieInfo(String.format("tt%07d", movie.getImdbId()), locale, extendedInfo);
 			}
 		} catch (FileNotFoundException | NullPointerException e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, String.format("Movie data not found: %s [%d / %d]", movie, movie.getTmdbId(), movie.getImdbId()));
+			debug.log(Level.WARNING, String.format("Movie data not found: %s [%d / %d]", movie, movie.getTmdbId(), movie.getImdbId()));
 		}
 		return null;
 	}
 
-	public MovieInfo getMovieInfo(String id, Locale locale, boolean extendedInfo) throws IOException {
-		JSONObject response = request("movie/" + id, extendedInfo ? singletonMap("append_to_response", "alternative_titles,releases,casts,trailers") : null, locale, REQUEST_LIMIT);
+	public MovieInfo getMovieInfo(String id, Locale locale, boolean extendedInfo) throws Exception {
+		Object response = request("movie/" + id, extendedInfo ? singletonMap("append_to_response", "alternative_titles,releases,casts,trailers") : emptyMap(), locale, REQUEST_LIMIT);
 
-		Map<MovieProperty, String> fields = new EnumMap<MovieProperty, String>(MovieProperty.class);
-		for (MovieProperty key : MovieProperty.values()) {
-			Object value = response.get(key.name());
-			if (value != null) {
-				fields.put(key, value.toString());
-			}
-		}
+		Map<MovieProperty, String> fields = getEnumMap(response, MovieProperty.class);
 
 		try {
-			JSONObject collection = (JSONObject) response.get("belongs_to_collection");
-			fields.put(MovieProperty.collection, (String) collection.get("name"));
+			Map<?, ?> collection = getMap(response, "belongs_to_collection");
+			fields.put(MovieProperty.collection, getString(collection, "name"));
 		} catch (Exception e) {
-			// movie doesn't belong to any collection
+			// movie does not belong to any collection
+			debug.warning(format("Bad data: belongs_to_collection => %s", response));
 		}
 
 		List<String> genres = new ArrayList<String>();
 		try {
-			for (JSONObject it : jsonList(response.get("genres"))) {
-				String name = (String) it.get("name");
-				if (name != null && name.length() > 0) {
-					genres.add(name);
-				}
-			}
+			streamJsonObjects(response, "genres").map(it -> getString(it, "name")).filter(Objects::nonNull).forEach(genres::add);
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal genres data: " + response);
+			debug.warning(format("Bad data: genres => %s", response));
 		}
 
 		List<String> spokenLanguages = new ArrayList<String>();
 		try {
-			for (JSONObject it : jsonList(response.get("spoken_languages"))) {
-				spokenLanguages.add((String) it.get("iso_639_1"));
-			}
+			streamJsonObjects(response, "spoken_languages").map(it -> getString(it, "iso_639_1")).filter(Objects::nonNull).forEach(spokenLanguages::add);
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal spoken_languages data: " + response);
+			debug.warning(format("Bad data: spoken_languages => %s", response));
 		}
 
 		List<String> productionCountries = new ArrayList<String>();
 		try {
-			for (JSONObject it : jsonList(response.get("production_countries"))) {
-				productionCountries.add((String) it.get("iso_3166_1"));
-			}
+			streamJsonObjects(response, "production_countries").map(it -> getString(it, "iso_3166_1")).filter(Objects::nonNull).forEach(productionCountries::add);
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal production_countries data: " + response);
+			debug.warning(format("Bad data: production_countries => %s", response));
 		}
 
 		List<String> productionCompanies = new ArrayList<String>();
 		try {
-			for (JSONObject it : jsonList(response.get("production_companies"))) {
-				productionCompanies.add((String) it.get("name"));
-			}
+			streamJsonObjects(response, "production_companies").map(it -> getString(it, "name")).filter(Objects::nonNull).forEach(productionCompanies::add);
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal production_companies data: " + response);
+			debug.warning(format("Bad data: production_companies => %s", response));
 		}
 
 		List<String> alternativeTitles = new ArrayList<String>();
 		try {
-			JSONObject titles = (JSONObject) response.get("alternative_titles");
-			if (titles != null) {
-				for (JSONObject it : jsonList(titles.get("titles"))) {
-					alternativeTitles.add((String) it.get("title"));
-				}
-			}
+			streamJsonObjects(getMap(response, "alternative_titles"), "titles").map(it -> getString(it, "title")).filter(Objects::nonNull).forEach(alternativeTitles::add);
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal alternative_titles data: " + response);
+			debug.warning(format("Bad data: alternative_titles => %s", response));
 		}
 
-		Map<String, String> certifications = new HashMap<String, String>();
+		Map<String, String> certifications = new LinkedHashMap<String, String>();
 		try {
 			String countryCode = locale.getCountry().isEmpty() ? "US" : locale.getCountry();
-			JSONObject releases = (JSONObject) response.get("releases");
-			if (releases != null) {
-				for (JSONObject it : jsonList(releases.get("countries"))) {
-					String certificationCountry = (String) it.get("iso_3166_1");
-					String certification = (String) it.get("certification");
-					if (certification != null && certificationCountry != null && certification.length() > 0 && certificationCountry.length() > 0) {
-						// add country specific certification code
-						if (countryCode.equals(certificationCountry)) {
-							fields.put(MovieProperty.certification, certification);
-						}
-						// collect all certification codes just in case
-						certifications.put(certificationCountry, certification);
+
+			streamJsonObjects(getMap(response, "releases"), "countries").forEach(it -> {
+				String certificationCountry = getString(it, "iso_3166_1");
+				String certification = getString(it, "certification");
+
+				if (certification != null && certificationCountry != null) {
+					// add country specific certification code
+					if (countryCode.equals(certificationCountry)) {
+						fields.put(MovieProperty.certification, certification);
 					}
+
+					// collect all certification codes just in case
+					certifications.put(certificationCountry, certification);
 				}
-			}
+			});
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal releases data: " + response);
+			debug.warning(format("Bad data: certification => %s", response));
 		}
 
 		List<Person> cast = new ArrayList<Person>();
 		try {
-			JSONObject castResponse = (JSONObject) response.get("casts");
-			if (castResponse != null) {
-				for (String section : new String[] { "cast", "crew" }) {
-					for (JSONObject it : jsonList(castResponse.get(section))) {
-						Map<PersonProperty, String> person = new EnumMap<PersonProperty, String>(PersonProperty.class);
-						for (PersonProperty key : PersonProperty.values()) {
-							Object value = it.get(key.name());
-							if (value != null) {
-								person.put(key, value.toString());
-							}
-						}
-						cast.add(new Person(person));
-					}
-				}
-			}
+			Stream.of("cast", "crew").flatMap(section -> streamJsonObjects(getMap(response, "casts"), section)).map(it -> {
+				return getEnumMap(it, PersonProperty.class);
+			}).map(Person::new).forEach(cast::add);
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal casts data: " + response);
+			debug.warning(format("Bad data: casts => %s", response));
 		}
 
 		List<Trailer> trailers = new ArrayList<Trailer>();
 		try {
-			JSONObject trailerResponse = (JSONObject) response.get("trailers");
-			if (trailerResponse != null) {
-				for (String section : new String[] { "quicktime", "youtube" }) {
-					for (JSONObject it : jsonList(trailerResponse.get(section))) {
-						Map<String, String> sources = new LinkedHashMap<String, String>();
-						if (it.containsKey("sources")) {
-							for (JSONObject s : jsonList(it.get("sources"))) {
-								sources.put(s.get("size").toString(), s.get("source").toString());
-							}
-						} else {
-							sources.put(it.get("size").toString(), it.get("source").toString());
+			Stream.of("quicktime", "youtube").forEach(section -> {
+				streamJsonObjects(getMap(response, "trailers"), section).map(it -> {
+					Map<String, String> sources = new LinkedHashMap<String, String>();
+					Stream.concat(Stream.of(it), streamJsonObjects(it, "sources")).forEach(source -> {
+						String size = getString(source, "size");
+						if (size != null) {
+							sources.put(size, getString(source, "source"));
 						}
-						trailers.add(new Trailer(section, it.get("name").toString(), sources));
-					}
-				}
-			}
+					});
+					return new Trailer(section, getString(it, "name"), sources);
+				}).forEach(trailers::add);
+			});
 		} catch (Exception e) {
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, "Illegal trailers data: " + response);
+			debug.warning(format("Bad data: trailers => %s", response));
 		}
 
 		return new MovieInfo(fields, alternativeTitles, genres, certifications, spokenLanguages, productionCountries, productionCompanies, cast, trailers);
 	}
 
-	public List<Artwork> getArtwork(String id) throws IOException {
-		// http://api.themoviedb.org/3/movie/11/images
-		JSONObject config = request("configuration", null, null, REQUEST_LIMIT);
-		String baseUrl = (String) ((JSONObject) config.get("images")).get("base_url");
+	@Override
+	public List<Artwork> getArtwork(int id, String category, Locale locale) throws Exception {
+		Object config = request("configuration", emptyMap(), Locale.ROOT, REQUEST_LIMIT);
+		URL baseUrl = new URL(getString(getMap(config, "images"), "secure_base_url"));
 
-		JSONObject images = request("movie/" + id + "/images", null, null, REQUEST_LIMIT);
-		List<Artwork> artwork = new ArrayList<Artwork>();
+		Object images = request("movie/" + id + "/images", emptyMap(), Locale.ROOT, REQUEST_LIMIT);
 
-		for (String section : new String[] { "backdrops", "posters" }) {
-			for (JSONObject it : jsonList(images.get(section))) {
-				try {
-					String url = baseUrl + "original" + (String) it.get("file_path");
-					int width = Float.valueOf(it.get("width").toString()).intValue();
-					int height = Float.valueOf(it.get("height").toString()).intValue();
-					String lang = (String) it.get("iso_639_1");
-					artwork.add(new Artwork(section, new URL(url), width, height, lang));
-				} catch (Exception e) {
-					Logger.getLogger(getClass().getName()).log(Level.WARNING, "Invalid artwork: " + it, e);
-				}
+		return streamJsonObjects(images, category).map(it -> {
+			try {
+				String path = "original" + getString(it, "file_path");
+				String width = getString(it, "width");
+				String height = getString(it, "height");
+				Locale language = getStringValue(it, "iso_639_1", Locale::new);
+
+				return new Artwork(this, Stream.of(category, String.join("x", width, height)), new URL(baseUrl, path), language, null);
+			} catch (Exception e) {
+				debug.log(Level.WARNING, e, e::getMessage);
+				return null;
 			}
-		}
-
-		return artwork;
+		}).filter(Objects::nonNull).collect(toList());
 	}
 
-	public JSONObject request(String resource, Map<String, Object> parameters, Locale locale, final FloodLimit limit) throws IOException {
+	protected Object request(String resource, Map<String, Object> parameters, Locale locale, final FloodLimit limit) throws Exception {
 		// default parameters
-		LinkedHashMap<String, Object> data = new LinkedHashMap<String, Object>();
-		if (parameters != null) {
-			data.putAll(parameters);
+		String key = parameters.isEmpty() ? resource : resource + '?' + encodeParameters(parameters, true);
+		String cacheName = locale.getLanguage().isEmpty() ? getName() : getName() + "_" + locale;
+
+		Cache etagStorage = Cache.getCache(cacheName + "_etag", CacheType.Monthly);
+		Cache cache = Cache.getCache(cacheName, CacheType.Monthly);
+
+		Fetch fetchIfNoneMatch = fetchIfNoneMatch(url -> cache.get(key) == null ? null : etagStorage.get(key), (url, etag) -> etagStorage.put(key, etag));
+		Object json = cache.json(key, s -> getResource(s, locale)).fetch(withPermit(fetchIfNoneMatch, r -> limit.acquirePermit())).expire(Cache.ONE_WEEK).get();
+
+		if (asMap(json).isEmpty()) {
+			throw new FileNotFoundException(String.format("Resource is empty: %s => %s", json, getResource(key, locale)));
 		}
-
-		if (locale != null && locale.getLanguage().length() > 0) {
-			String code = locale.getLanguage();
-
-			// require 2-letter language code
-			if (code.length() != 2) {
-				Language lang = Language.getLanguage(locale);
-				if (lang != null) {
-					code = lang.getISO2();
-				}
-			}
-			data.put("language", code);
-		}
-		data.put("api_key", apikey);
-
-		URL url = new URL("http", host, "/" + version + "/" + resource + "?" + encodeParameters(data, true));
-
-		CachedResource<String> json = new ETagCachedResource<String>(url.toString(), String.class) {
-
-			@Override
-			public String process(ByteBuffer data) throws Exception {
-				return Charset.forName("UTF-8").decode(data).toString();
-			}
-
-			@Override
-			protected ByteBuffer fetchData(URL url, long lastModified) throws IOException {
-				try {
-					if (limit != null) {
-						limit.acquirePermit();
-					}
-					return super.fetchData(url, lastModified);
-				} catch (FileNotFoundException e) {
-					return ByteBuffer.allocate(0);
-				} catch (InterruptedException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		};
-
-		JSONObject object = (JSONObject) JSONValue.parse(json.get());
-		if (object == null || object.isEmpty()) {
-			throw new FileNotFoundException("Resource not found: " + url);
-		}
-		return object;
+		return json;
 	}
 
-	protected List<JSONObject> jsonList(final Object array) {
-		return new AbstractList<JSONObject>() {
+	protected URL getResource(String path, Locale locale) throws Exception {
+		StringBuilder file = new StringBuilder();
+		file.append('/').append(version);
+		file.append('/').append(path);
+		file.append(path.lastIndexOf('?') < 0 ? '?' : '&');
 
-			@Override
-			public JSONObject get(int index) {
-				return (JSONObject) ((JSONArray) array).get(index);
-			}
+		if (locale.getLanguage().length() > 0) {
+			file.append("language=").append(getLanguageCode(locale)).append('&');
+		}
+		file.append("api_key=").append(apikey);
 
-			@Override
-			public int size() {
-				return ((JSONArray) array).size();
-			}
-		};
+		return new URL("https", host, file.toString());
+	}
+
+	protected String getLanguageCode(Locale locale) {
+		// require 2-letter language code
+		String language = locale.getLanguage();
+		if (language.length() == 2) {
+			return language;
+		}
+
+		Language lang = Language.getLanguage(locale);
+		if (lang != null) {
+			return lang.getISO2();
+		}
+
+		throw new IllegalArgumentException("Illegal language code: " + language);
 	}
 
 	public static class MovieInfo implements Serializable {
@@ -443,7 +364,7 @@ public class TMDbClient implements MovieIdentificationService {
 			this.fields = new EnumMap<MovieProperty, String>(fields);
 			this.alternativeTitles = alternativeTitles.toArray(new String[0]);
 			this.genres = genres.toArray(new String[0]);
-			this.certifications = new HashMap<String, String>(certifications);
+			this.certifications = new LinkedHashMap<String, String>(certifications);
 			this.spokenLanguages = spokenLanguages.toArray(new String[0]);
 			this.productionCountries = productionCountries.toArray(new String[0]);
 			this.productionCompanies = productionCompanies.toArray(new String[0]);
@@ -558,7 +479,7 @@ public class TMDbClient implements MovieIdentificationService {
 		public SimpleDate getReleased() {
 			// e.g. 2005-09-30
 			try {
-				return SimpleDate.parse(get(MovieProperty.release_date), "yyyy-MM-dd");
+				return SimpleDate.parse(get(MovieProperty.release_date));
 			} catch (Exception e) {
 				return null;
 			}
@@ -659,7 +580,7 @@ public class TMDbClient implements MovieIdentificationService {
 	public static class Person implements Serializable {
 
 		public static enum PersonProperty {
-			name, character, job
+			name, character, job, department
 		}
 
 		protected Map<PersonProperty, String> fields;
@@ -680,11 +601,12 @@ public class TMDbClient implements MovieIdentificationService {
 		}
 
 		public String get(Object key) {
-			return fields.get(PersonProperty.valueOf(key.toString()));
+			return get(PersonProperty.valueOf(key.toString()));
 		}
 
 		public String get(PersonProperty key) {
-			return fields.get(key);
+			// replace null with empty string and normalize spaces
+			return replaceSpace(Objects.toString(fields.get(key), ""), " ").trim();
 		}
 
 		public String getName() {
@@ -699,8 +621,12 @@ public class TMDbClient implements MovieIdentificationService {
 			return get(PersonProperty.job);
 		}
 
+		public String getDepartment() {
+			return get(PersonProperty.department);
+		}
+
 		public boolean isActor() {
-			return getJob() == null;
+			return fields.containsKey(PersonProperty.character);
 		}
 
 		public boolean isDirector() {
@@ -714,50 +640,6 @@ public class TMDbClient implements MovieIdentificationService {
 		@Override
 		public String toString() {
 			return fields.toString();
-		}
-	}
-
-	public static class Artwork {
-
-		private String category;
-		private String language;
-
-		private int width;
-		private int height;
-
-		private URL url;
-
-		public Artwork(String category, URL url, int width, int height, String language) {
-			this.category = category;
-			this.url = url;
-			this.width = width;
-			this.height = height;
-			this.language = language;
-		}
-
-		public String getCategory() {
-			return category;
-		}
-
-		public String getLanguage() {
-			return language;
-		}
-
-		public int getWidth() {
-			return width;
-		}
-
-		public int getHeight() {
-			return height;
-		}
-
-		public URL getUrl() {
-			return url;
-		}
-
-		@Override
-		public String toString() {
-			return String.format("{category: %s, width: %s, height: %s, language: %s, url: %s}", category, width, height, language, url);
 		}
 	}
 

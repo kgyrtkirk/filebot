@@ -20,13 +20,13 @@ import net.filebot.util.ui.DefaultFancyListCellRenderer;
 import net.filebot.util.ui.SwingUI;
 import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;
-import ca.odell.glazedlists.swing.EventListModel;
+import ca.odell.glazedlists.swing.DefaultEventListModel;
 
 public class FileBotList<E> extends JComponent {
 
 	protected EventList<E> model = new BasicEventList<E>();
 
-	protected JList list = new JList(new EventListModel<E>(model));
+	protected JList<E> list = new JList<E>(new DefaultEventListModel<E>(model));
 
 	protected JScrollPane listScrollPane = new JScrollPane(list);
 
@@ -55,10 +55,10 @@ public class FileBotList<E> extends JComponent {
 
 	public void setModel(EventList<E> model) {
 		this.model = model;
-		list.setModel(new EventListModel<E>(model));
+		list.setModel(new DefaultEventListModel(model));
 	}
 
-	public JList getListComponent() {
+	public JList<E> getListComponent() {
 		return list;
 	}
 
@@ -110,15 +110,16 @@ public class FileBotList<E> extends JComponent {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			int index = list.getSelectedIndex();
-			Object values[] = list.getSelectedValues();
 
-			for (Object value : values)
+			for (Object value : list.getSelectedValuesList()) {
 				getModel().remove(value);
+			}
 
 			int maxIndex = list.getModel().getSize() - 1;
 
-			if (index > maxIndex)
+			if (index > maxIndex) {
 				index = maxIndex;
+			}
 
 			list.setSelectedIndex(index);
 		}

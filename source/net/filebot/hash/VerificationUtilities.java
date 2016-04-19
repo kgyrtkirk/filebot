@@ -103,9 +103,10 @@ public final class VerificationUtilities {
 		return hash.digest();
 	}
 
-	/**
-	 * Dummy constructor to prevent instantiation.
-	 */
+	public static String crc32(File file) throws IOException, InterruptedException {
+		return computeHash(file, HashType.SFV);
+	}
+
 	private VerificationUtilities() {
 		throw new UnsupportedOperationException();
 	}

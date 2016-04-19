@@ -5,6 +5,7 @@ import static javax.swing.JOptionPane.*;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Graphics2D;
@@ -13,13 +14,16 @@ import java.awt.Point;
 import java.awt.Window;
 import java.awt.dnd.DnDConstants;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
@@ -33,6 +37,7 @@ import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.event.MouseInputListener;
 import javax.swing.plaf.basic.BasicTableUI;
@@ -46,6 +51,18 @@ public final class SwingUI {
 	public static void checkEventDispatchThread() {
 		if (!SwingUtilities.isEventDispatchThread()) {
 			throw new IllegalStateException("Method must be accessed from the Swing Event Dispatch Thread, but was called on Thread \"" + Thread.currentThread().getName() + "\"");
+		}
+	}
+
+	public static void runOnEventDispatchThread(Runnable r) {
+		if (SwingUtilities.isEventDispatchThread()) {
+			r.run();
+		} else {
+			try {
+				SwingUtilities.invokeAndWait(r);
+			} catch (InvocationTargetException | InterruptedException e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 
@@ -77,6 +94,10 @@ public final class SwingUI {
 
 	public static String toHex(Color c) {
 		return c == null ? "inherit" : String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
+	}
+
+	public static boolean isShiftOrAltDown(InputEvent evt) {
+		return checkModifiers(evt.getModifiers(), ActionEvent.SHIFT_MASK) || checkModifiers(evt.getModifiers(), ActionEvent.ALT_MASK);
 	}
 
 	public static boolean isShiftOrAltDown(ActionEvent evt) {
@@ -129,24 +150,18 @@ public final class SwingUI {
 		component.getDocument().addUndoableEditListener(undoSupport);
 
 		// install undo action
-		installAction(component, KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_MASK), new AbstractAction("Undo") {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (undoSupport.canUndo())
-					undoSupport.undo();
+		installAction(component, KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_MASK), newAction("Undo", evt -> {
+			if (undoSupport.canUndo()) {
+				undoSupport.undo();
 			}
-		});
+		}));
 
 		// install redo action
-		installAction(component, KeyStroke.getKeyStroke(KeyEvent.VK_Y, KeyEvent.CTRL_MASK), new AbstractAction("Redo") {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (undoSupport.canRedo())
-					undoSupport.redo();
+		installAction(component, KeyStroke.getKeyStroke(KeyEvent.VK_Y, KeyEvent.CTRL_MASK), newAction("Redo", evt -> {
+			if (undoSupport.canRedo()) {
+				undoSupport.redo();
 			}
-		});
+		}));
 
 		return undoSupport;
 	}
@@ -155,7 +170,7 @@ public final class SwingUI {
 		return (frame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0;
 	}
 
-	public static List<String> showMultiValueInputDialog(final Object message, final String initialValue, final String title, final Component parent) throws InvocationTargetException, InterruptedException {
+	public static List<String> showMultiValueInputDialog(final Object message, final String initialValue, final String title, final Component parent) {
 		String input = showInputDialog(message, initialValue, title, parent);
 		if (input == null || input.isEmpty()) {
 			return emptyList();
@@ -181,24 +196,15 @@ public final class SwingUI {
 		return singletonList(input);
 	}
 
-	public static String showInputDialog(final Object message, final String initialValue, final String title, final Component parent) throws InvocationTargetException, InterruptedException {
+	public static String showInputDialog(final Object message, final String initialValue, final String title, final Component parent) {
 		final StringBuilder buffer = new StringBuilder();
 
-		Runnable runnable = new Runnable() {
-
-			@Override
-			public void run() {
-				Object value = JOptionPane.showInputDialog(parent, message, title, PLAIN_MESSAGE, null, null, initialValue);
-				if (value != null) {
-					buffer.append(value.toString().trim());
-				}
+		runOnEventDispatchThread(() -> {
+			Object value = JOptionPane.showInputDialog(parent, message, title, PLAIN_MESSAGE, null, null, initialValue);
+			if (value != null) {
+				buffer.append(value.toString().trim());
 			}
-		};
-		if (SwingUtilities.isEventDispatchThread()) {
-			runnable.run();
-		} else {
-			SwingUtilities.invokeAndWait(runnable);
-		}
+		});
 
 		return buffer.length() == 0 ? null : buffer.toString();
 	}
@@ -252,18 +258,121 @@ public final class SwingUI {
 	}
 
 	public static Timer invokeLater(int delay, final Runnable runnable) {
-		Timer timer = new Timer(delay, new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				runnable.run();
-			}
+		Timer timer = new Timer(delay, (evt) -> {
+			runnable.run();
 		});
 
 		timer.setRepeats(false);
 		timer.start();
 
 		return timer;
+	}
+
+	public static void withWaitCursor(Object source, BackgroundRunnable runnable) throws Exception {
+		Window window = getWindow(source);
+		try {
+			window.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+			runnable.run();
+		} finally {
+			window.setCursor(Cursor.getDefaultCursor());
+		}
+	}
+
+	public static MouseAdapter mouseClicked(Consumer<MouseEvent> handler) {
+		return new MouseAdapter() {
+
+			@Override
+			public void mouseClicked(MouseEvent evt) {
+				handler.accept(evt);
+			}
+		};
+	}
+
+	public static JButton newButton(String name, Icon icon, Consumer<ActionEvent> action) {
+		return new JButton(new LambdaAction(name, icon, action));
+	}
+
+	public static Action newAction(String name, Consumer<ActionEvent> action) {
+		return new LambdaAction(name, null, action);
+	}
+
+	public static Action newAction(String name, Icon icon, Consumer<ActionEvent> action) {
+		return new LambdaAction(name, icon, action);
+	}
+
+	private static class LambdaAction extends AbstractAction {
+
+		private Consumer<ActionEvent> action;
+
+		public LambdaAction(String name, Icon icon, Consumer<ActionEvent> action) {
+			super(name, icon);
+			this.action = action;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			action.accept(e);
+		}
+	}
+
+	public static SwingWorker<Void, Void> newSwingWorker(BackgroundRunnable doInBackground) {
+		return new SwingRunnable(doInBackground);
+	}
+
+	public static <T> SwingWorker<T, Void> newSwingWorker(BackgroundSupplier<T> doInBackground, Consumer<T> done, Consumer<Exception> error) {
+		return new SwingLambda<T, Void>(doInBackground, done, error);
+	}
+
+	private static class SwingRunnable extends SwingWorker<Void, Void> {
+
+		private BackgroundRunnable doInBackground;
+
+		public SwingRunnable(BackgroundRunnable doInBackground) {
+			this.doInBackground = doInBackground;
+		}
+
+		@Override
+		protected Void doInBackground() throws Exception {
+			doInBackground.run();
+			return null;
+		}
+	}
+
+	@FunctionalInterface
+	public static interface BackgroundRunnable {
+		void run() throws Exception;
+	}
+
+	@FunctionalInterface
+	public static interface BackgroundSupplier<T> {
+		T get() throws Exception;
+	}
+
+	private static class SwingLambda<T, V> extends SwingWorker<T, V> {
+
+		private BackgroundSupplier<T> doInBackground;
+		private Consumer<T> done;
+		private Consumer<Exception> error;
+
+		public SwingLambda(BackgroundSupplier<T> doInBackground, Consumer<T> done, Consumer<Exception> error) {
+			this.doInBackground = doInBackground;
+			this.done = done;
+			this.error = error;
+		}
+
+		@Override
+		protected T doInBackground() throws Exception {
+			return doInBackground.get();
+		}
+
+		@Override
+		protected void done() {
+			try {
+				done.accept(get());
+			} catch (InterruptedException | ExecutionException e) {
+				error.accept(e);
+			}
+		}
 	}
 
 	/**

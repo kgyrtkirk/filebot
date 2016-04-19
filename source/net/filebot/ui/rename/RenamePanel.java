@@ -4,8 +4,8 @@ import static java.awt.event.KeyEvent.*;
 import static javax.swing.JOptionPane.*;
 import static javax.swing.KeyStroke.*;
 import static javax.swing.SwingUtilities.*;
+import static net.filebot.Logging.*;
 import static net.filebot.Settings.*;
-import static net.filebot.ui.NotificationLogging.*;
 import static net.filebot.util.ExceptionUtilities.*;
 import static net.filebot.util.ui.LoadingOverlayPane.*;
 import static net.filebot.util.ui.SwingUI.*;
@@ -14,12 +14,10 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Insets;
 import java.awt.Window;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -29,7 +27,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -48,6 +45,13 @@ import javax.swing.SwingWorker;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.JsonWriter;
+import com.google.common.eventbus.Subscribe;
+
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.ListSelection;
+import ca.odell.glazedlists.swing.DefaultEventSelectionModel;
 import net.filebot.History;
 import net.filebot.HistorySpooler;
 import net.filebot.Language;
@@ -58,11 +62,12 @@ import net.filebot.UserFiles;
 import net.filebot.WebServices;
 import net.filebot.format.MediaBindingBean;
 import net.filebot.mac.MacAppUtilities;
-import net.filebot.media.MediaDetection;
 import net.filebot.similarity.Match;
 import net.filebot.ui.rename.FormatDialog.Mode;
 import net.filebot.ui.rename.RenameModel.FormattedFuture;
 import net.filebot.ui.transfer.BackgroundFileTransferablePolicy;
+import net.filebot.ui.transfer.TransferablePolicy;
+import net.filebot.ui.transfer.TransferablePolicy.TransferAction;
 import net.filebot.util.PreferencesMap.PreferencesEntry;
 import net.filebot.util.ui.ActionPopup;
 import net.filebot.util.ui.LoadingOverlayPane;
@@ -78,12 +83,6 @@ import net.filebot.web.MovieIdentificationService;
 import net.filebot.web.MusicIdentificationService;
 import net.filebot.web.SortOrder;
 import net.miginfocom.swing.MigLayout;
-import ca.odell.glazedlists.EventList;
-import ca.odell.glazedlists.ListSelection;
-import ca.odell.glazedlists.swing.EventSelectionModel;
-
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.JsonWriter;
 
 public class RenamePanel extends JComponent {
 
@@ -105,7 +104,7 @@ public class RenamePanel extends JComponent {
 	private static final PreferencesEntry<String> persistentMusicFormat = Settings.forPackage(RenamePanel.class).entry("rename.format.music");
 	private static final PreferencesEntry<String> persistentFileFormat = Settings.forPackage(RenamePanel.class).entry("rename.format.file");
 
-	private static final PreferencesEntry<String> persistentLastFormatState = Settings.forPackage(RenamePanel.class).entry("rename.last.format.state");
+	private static final PreferencesEntry<String> persistentLastFormatState = Settings.forPackage(RenamePanel.class).entry("rename.last.format.state").defaultValue(Mode.Episode.name());
 	private static final PreferencesEntry<String> persistentPreferredMatchMode = Settings.forPackage(RenamePanel.class).entry("rename.match.mode").defaultValue(MATCH_MODE_OPPORTUNISTIC);
 	private static final PreferencesEntry<String> persistentPreferredLanguage = Settings.forPackage(RenamePanel.class).entry("rename.language").defaultValue("en");
 	private static final PreferencesEntry<String> persistentPreferredEpisodeOrder = Settings.forPackage(RenamePanel.class).entry("rename.episode.order").defaultValue("Airdate");
@@ -153,12 +152,12 @@ public class RenamePanel extends JComponent {
 			renameModel.useFormatter(FileInfo.class, new FileNameFormatter(renameModel.preserveExtension()));
 		}
 
-		RenameListCellRenderer cellrenderer = new RenameListCellRenderer(renameModel);
+		RenameListCellRenderer cellrenderer = new RenameListCellRenderer(renameModel, ApplicationFolder.UserHome.getCanonicalFile());
 
 		namesList.getListComponent().setCellRenderer(cellrenderer);
 		filesList.getListComponent().setCellRenderer(cellrenderer);
 
-		EventSelectionModel<Match<Object, File>> selectionModel = new EventSelectionModel<Match<Object, File>>(renameModel.matches());
+		DefaultEventSelectionModel<Match<Object, File>> selectionModel = new DefaultEventSelectionModel<Match<Object, File>>(renameModel.matches());
 		selectionModel.setSelectionMode(ListSelection.SINGLE_SELECTION);
 
 		// use the same selection model for both lists to synchronize selection
@@ -169,41 +168,37 @@ public class RenamePanel extends JComponent {
 		new ScrollPaneSynchronizer(namesList, filesList);
 
 		// delete items from both lists
-		Action removeAction = new AbstractAction("Exclude Selected Items", ResourceManager.getIcon("dialog.cancel")) {
+		Action removeAction = newAction("Exclude Selected Items", ResourceManager.getIcon("dialog.cancel"), evt -> {
+			RenameList list = null;
+			boolean deleteCell;
 
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				RenameList list = null;
-				boolean deleteCell;
+			if (evt.getSource() instanceof JButton) {
+				list = filesList;
+				deleteCell = isShiftOrAltDown(evt);
+			} else {
+				list = ((RenameList) evt.getSource());
+				deleteCell = isShiftOrAltDown(evt);
+			}
 
-				if (e.getSource() instanceof JButton) {
-					list = filesList;
-					deleteCell = isShiftOrAltDown(e);
+			int index = list.getListComponent().getSelectedIndex();
+			if (index >= 0) {
+				if (deleteCell) {
+					EventList eventList = list.getModel();
+					if (index < eventList.size()) {
+						list.getModel().remove(index);
+					}
 				} else {
-					list = ((RenameList) e.getSource());
-					deleteCell = isShiftOrAltDown(e);
+					renameModel.matches().remove(index);
 				}
-
-				int index = list.getListComponent().getSelectedIndex();
+				int maxIndex = list.getModel().size() - 1;
+				if (index > maxIndex) {
+					index = maxIndex;
+				}
 				if (index >= 0) {
-					if (deleteCell) {
-						EventList eventList = list.getModel();
-						if (index < eventList.size()) {
-							list.getModel().remove(index);
-						}
-					} else {
-						renameModel.matches().remove(index);
-					}
-					int maxIndex = list.getModel().size() - 1;
-					if (index > maxIndex) {
-						index = maxIndex;
-					}
-					if (index >= 0) {
-						list.getListComponent().setSelectedIndex(index);
-					}
+					list.getListComponent().setSelectedIndex(index);
 				}
 			}
-		};
+		});
 		namesList.setRemoveAction(removeAction);
 		filesList.setRemoveAction(removeAction);
 
@@ -220,7 +215,7 @@ public class RenamePanel extends JComponent {
 		// create fetch popup
 		ActionPopup fetchPopup = createFetchPopup();
 
-		final Action fetchPopupAction = new ShowPopupAction("Fetch Data", ResourceManager.getIcon("action.fetch"));
+		Action fetchPopupAction = new ShowPopupAction("Fetch Data", ResourceManager.getIcon("action.fetch"));
 		JButton fetchButton = new JButton(fetchPopupAction);
 		filesList.getListComponent().setComponentPopupMenu(fetchPopup);
 		namesList.getListComponent().setComponentPopupMenu(fetchPopup);
@@ -249,14 +244,10 @@ public class RenamePanel extends JComponent {
 		JButton macrosButton = createImageButton(macrosAction);
 		filesList.getButtonPanel().add(macrosButton, "gap 0");
 
-		matchButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// show popup on actionPerformed only when names list is empty
-				if (renameModel.names().isEmpty()) {
-					fetchPopupAction.actionPerformed(e);
-				}
+		// show popup on actionPerformed only when names list is empty
+		matchButton.addActionListener(evt -> {
+			if (renameModel.names().isEmpty()) {
+				fetchPopupAction.actionPerformed(evt);
 			}
 		});
 
@@ -273,7 +264,7 @@ public class RenamePanel extends JComponent {
 							UserFiles.revealFiles(list.getSelectedValuesList());
 						}
 					} catch (Exception e) {
-						Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, e.getMessage());
+						debug.log(Level.WARNING, e.getMessage(), e);
 					} finally {
 						getWindow(evt.getSource()).setCursor(Cursor.getDefaultCursor());
 					}
@@ -282,44 +273,34 @@ public class RenamePanel extends JComponent {
 		});
 
 		// reveal file location on double click
-		namesList.getListComponent().addMouseListener(new MouseAdapter() {
-
-			@Override
-			public void mouseClicked(MouseEvent evt) {
-				if (evt.getClickCount() == 2) {
-					getWindow(evt.getSource()).setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+		namesList.getListComponent().addMouseListener(mouseClicked(evt -> {
+			if (evt.getClickCount() == 2) {
+				JList list = (JList) evt.getSource();
+				if (list.getSelectedIndex() >= 0) {
 					try {
-						JList list = (JList) evt.getSource();
-						if (list.getSelectedIndex() >= 0) {
+						withWaitCursor(list, () -> {
 							Match<Object, File> match = renameModel.getMatch(list.getSelectedIndex());
 							Map<File, Object> context = renameModel.getMatchContext(match);
 
 							MediaBindingBean sample = new MediaBindingBean(match.getValue(), match.getCandidate(), context);
 							showFormatEditor(sample);
-						}
+						});
 					} catch (Exception e) {
-						Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, e.getMessage(), e);
-					} finally {
-						getWindow(evt.getSource()).setCursor(Cursor.getDefaultCursor());
+						debug.log(Level.WARNING, e.getMessage(), e);
 					}
 				}
 			}
-		});
+		}));
 
 		setLayout(new MigLayout("fill, insets dialog, gapx 10px", "[fill][align center, pref!][fill]", "align 33%"));
 		add(new LoadingOverlayPane(filesList, filesList, "37px", "30px"), "grow, sizegroupx list");
 
 		BackgroundFileTransferablePolicy<?> transferablePolicy = (BackgroundFileTransferablePolicy<?>) filesList.getTransferablePolicy();
-		transferablePolicy.addPropertyChangeListener(new PropertyChangeListener() {
-
-			@Override
-			public void propertyChange(PropertyChangeEvent evt) {
-				if (BackgroundFileTransferablePolicy.LOADING_PROPERTY.equals(evt.getPropertyName())) {
-					filesList.firePropertyChange(LoadingOverlayPane.LOADING_PROPERTY, (boolean) evt.getOldValue(), (boolean) evt.getNewValue());
-				}
+		transferablePolicy.addPropertyChangeListener(evt -> {
+			if (BackgroundFileTransferablePolicy.LOADING_PROPERTY.equals(evt.getPropertyName())) {
+				filesList.firePropertyChange(LoadingOverlayPane.LOADING_PROPERTY, (boolean) evt.getOldValue(), (boolean) evt.getNewValue());
 			}
 		});
-		this.putClientProperty("transferablePolicy", transferablePolicy);
 
 		// make buttons larger
 		matchButton.setMargin(new Insets(3, 14, 2, 14));
@@ -337,39 +318,37 @@ public class RenamePanel extends JComponent {
 			public void actionPerformed(ActionEvent evt) {
 				try {
 					if (namesList.getModel().isEmpty()) {
-						try {
-							getWindow(evt.getSource()).setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+						withWaitCursor(evt.getSource(), () -> {
+							// try to read xattr from all files
+							Map<File, Object> xattr = WebServices.XattrMetaData.getMetaData(renameModel.files());
 
-							List<File> files = new ArrayList<File>(renameModel.files());
-							List<Object> objects = new ArrayList<Object>(files.size());
-							List<File> objectsTail = new ArrayList<File>();
-							for (File file : files) {
-								Object metaObject = MediaDetection.readMetaInfo(file);
-								if (metaObject != null) {
-									objects.add(metaObject); // upper list is based on xattr metadata
-								} else {
-									objectsTail.add(file); // lower list is just the fallback file object
-								}
-							}
-							objects.addAll(objectsTail);
+							// upper list is based on xattr metadata
+							List<File> files = new ArrayList<File>(xattr.keySet());
+							List<Object> objects = new ArrayList<Object>(xattr.values());
+
+							// lower list is just the fallback file object
+							renameModel.files().stream().filter(f -> !xattr.containsKey(f)).forEach(f -> {
+								files.add(f);
+								objects.add(f);
+							});
 
 							renameModel.clear();
 							renameModel.addAll(objects, files);
-						} finally {
-							getWindow(evt.getSource()).setCursor(Cursor.getDefaultCursor());
-						}
+						});
 					} else {
 						int index = namesList.getListComponent().getSelectedIndex();
-						File file = (File) filesList.getListComponent().getModel().getElementAt(index);
-						String generatedName = namesList.getListComponent().getModel().getElementAt(index).toString();
+						if (index >= 0) {
+							File file = (File) filesList.getListComponent().getModel().getElementAt(index);
+							String generatedName = namesList.getListComponent().getModel().getElementAt(index).toString();
 
-						String forcedName = showInputDialog("Enter Name:", generatedName, "Enter Name", RenamePanel.this);
-						if (forcedName != null && forcedName.length() > 0) {
-							renameModel.matches().set(index, new Match<Object, File>(forcedName, file));
+							String forcedName = showInputDialog("Enter Name:", generatedName, "Enter Name", RenamePanel.this);
+							if (forcedName != null && forcedName.length() > 0) {
+								renameModel.matches().set(index, new Match<Object, File>(forcedName, file));
+							}
 						}
 					}
 				} catch (Exception e) {
-					Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, e.getMessage());
+					debug.log(Level.WARNING, e.getMessage(), e);
 				}
 			}
 		});
@@ -389,7 +368,7 @@ public class RenamePanel extends JComponent {
 					Preset p = (Preset) JsonReader.jsonToJava(it);
 					actionPopup.add(new ApplyPresetAction(p));
 				} catch (Exception e) {
-					Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, e.toString());
+					debug.log(Level.SEVERE, e.getMessage(), e);
 				}
 			}
 			actionPopup.addSeparator();
@@ -436,7 +415,7 @@ public class RenamePanel extends JComponent {
 						break;
 					}
 				} catch (Exception e) {
-					Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, e.toString());
+					debug.log(Level.WARNING, e.toString());
 				}
 			}
 		});
@@ -445,13 +424,13 @@ public class RenamePanel extends JComponent {
 	}
 
 	protected ActionPopup createFetchPopup() {
-		final ActionPopup actionPopup = new ActionPopup("Fetch & Match Data", ResourceManager.getIcon("action.fetch"));
+		ActionPopup actionPopup = new ActionPopup("Fetch & Match Data", ResourceManager.getIcon("action.fetch"));
 
 		actionPopup.addDescription(new JLabel("Episode Mode:"));
 
 		// create actions for match popup episode list completion
 		for (EpisodeListProvider db : WebServices.getEpisodeListProviders()) {
-			actionPopup.add(new AutoCompleteAction(db.getName(), db.getIcon(), new EpisodeListMatcher(db, db != WebServices.AniDB, db == WebServices.AniDB)));
+			actionPopup.add(new AutoCompleteAction(db.getName(), db.getIcon(), new EpisodeListMatcher(db, db == WebServices.AniDB)));
 		}
 
 		actionPopup.addSeparator();
@@ -459,14 +438,17 @@ public class RenamePanel extends JComponent {
 
 		// create action for movie name completion
 		for (MovieIdentificationService it : WebServices.getMovieIdentificationServices()) {
-			actionPopup.add(new AutoCompleteAction(it.getName(), it.getIcon(), new MovieHashMatcher(it)));
+			actionPopup.add(new AutoCompleteAction(it.getName(), it.getIcon(), new MovieMatcher(it)));
 		}
 
 		actionPopup.addSeparator();
 		actionPopup.addDescription(new JLabel("Music Mode:"));
 		for (MusicIdentificationService it : WebServices.getMusicIdentificationServices()) {
-			actionPopup.add(new AutoCompleteAction(it.getName(), it.getIcon(), new AudioFingerprintMatcher(it)));
+			actionPopup.add(new AutoCompleteAction(it.getName(), it.getIcon(), new MusicMatcher(it)));
 		}
+
+		actionPopup.addDescription(new JLabel("Smart Mode:"));
+		actionPopup.add(new AutoCompleteAction("Autodetect", ResourceManager.getIcon("action.auto"), new AutoDetectMatcher()));
 
 		actionPopup.addSeparator();
 		actionPopup.addDescription(new JLabel("Options:"));
@@ -516,7 +498,7 @@ public class RenamePanel extends JComponent {
 					}
 					orderCombo.setSelectedItem(SortOrder.forName(persistentPreferredEpisodeOrder.getValue()));
 				} catch (Exception e) {
-					Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, e.getMessage(), e);
+					debug.log(Level.WARNING, e.getMessage(), e);
 				}
 
 				JScrollPane spModeCombo = new JScrollPane(modeCombo, JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -583,15 +565,13 @@ public class RenamePanel extends JComponent {
 			} else if (lockOnBinding.getInfoObject() instanceof File) {
 				initMode = Mode.File;
 			} else {
-				// ignore objects that cannot be formatted
-				return;
+				return; // ignore objects that cannot be formatted
 			}
 		} else {
-			// restore previous mode
 			try {
-				initMode = Mode.valueOf(persistentLastFormatState.getValue());
+				initMode = Mode.valueOf(persistentLastFormatState.getValue()); // restore previous mode
 			} catch (Exception e) {
-				Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, e.getMessage());
+				debug.log(Level.WARNING, e.getMessage(), e);
 			}
 		}
 
@@ -625,36 +605,38 @@ public class RenamePanel extends JComponent {
 		}
 	}
 
-	protected final Action clearFilesAction = new AbstractAction("Clear All", ResourceManager.getIcon("action.clear")) {
+	protected final Action clearFilesAction = newAction("Clear All", ResourceManager.getIcon("action.clear"), evt -> {
+		if (isShiftOrAltDown(evt)) {
+			renameModel.files().clear();
+		} else {
+			renameModel.clear();
+		}
+	});
 
-		@Override
-		public void actionPerformed(ActionEvent evt) {
-			if (isShiftOrAltDown(evt)) {
-				renameModel.files().clear();
-			} else {
-				renameModel.clear();
+	protected final Action openHistoryAction = newAction("Open History", ResourceManager.getIcon("action.report"), evt -> {
+		try {
+			History model = HistorySpooler.getInstance().getCompleteHistory();
+
+			HistoryDialog dialog = new HistoryDialog(getWindow(RenamePanel.this));
+			dialog.setLocationRelativeTo(RenamePanel.this);
+			dialog.setModel(model);
+
+			// show and block
+			dialog.setVisible(true);
+		} catch (Exception e) {
+			log.log(Level.WARNING, String.format("%s: %s", getRootCause(e).getClass().getSimpleName(), getRootCauseMessage(e)), e);
+		}
+	});
+
+	@Subscribe
+	public void handle(Transferable transferable) throws Exception {
+		for (TransferablePolicy handler : new TransferablePolicy[] { filesList.getTransferablePolicy(), namesList.getTransferablePolicy() }) {
+			if (handler != null && handler.accept(transferable)) {
+				handler.handleTransferable(transferable, TransferAction.PUT);
+				return;
 			}
 		}
-	};
-
-	protected final Action openHistoryAction = new AbstractAction("Open History", ResourceManager.getIcon("action.report")) {
-
-		@Override
-		public void actionPerformed(ActionEvent evt) {
-			try {
-				History model = HistorySpooler.getInstance().getCompleteHistory();
-
-				HistoryDialog dialog = new HistoryDialog(getWindow(RenamePanel.this));
-				dialog.setLocationRelativeTo(RenamePanel.this);
-				dialog.setModel(model);
-
-				// show and block
-				dialog.setVisible(true);
-			} catch (Exception e) {
-				UILogger.log(Level.WARNING, String.format("%s: %s", getRootCause(e).getClass().getSimpleName(), getRootCauseMessage(e)), e);
-			}
-		}
-	};
+	}
 
 	protected static class ShowPopupAction extends AbstractAction {
 
@@ -754,7 +736,7 @@ public class RenamePanel extends JComponent {
 
 				super.actionPerformed(evt);
 			} catch (Exception e) {
-				UILogger.info(e.getMessage());
+				log.info(e.getMessage());
 			} finally {
 				window.setCursor(Cursor.getDefaultCursor());
 			}
@@ -809,17 +791,12 @@ public class RenamePanel extends JComponent {
 
 		public AutoCompleteAction(String name, Icon icon, AutoCompleteMatcher matcher) {
 			super(name, icon);
-
 			this.matcher = matcher;
 
 			// disable action while episode list matcher is working
-			namesList.addPropertyChangeListener(LOADING_PROPERTY, new PropertyChangeListener() {
-
-				@Override
-				public void propertyChange(PropertyChangeEvent evt) {
-					// disable action while loading is in progress
-					setEnabled(!(Boolean) evt.getNewValue());
-				}
+			namesList.addPropertyChangeListener(LOADING_PROPERTY, evt -> {
+				// disable action while loading is in progress
+				setEnabled(!(Boolean) evt.getNewValue());
 			});
 		}
 
@@ -889,10 +866,8 @@ public class RenamePanel extends JComponent {
 						// add remaining file entries
 						renameModel.files().addAll(remainingFiles);
 					} catch (Exception e) {
-						if (findCause(e, CancellationException.class) != null) {
-							Logger.getLogger(RenamePanel.class.getName()).log(Level.WARNING, getRootCause(e).toString());
-						} else {
-							UILogger.log(Level.WARNING, String.format("%s: %s", getRootCause(e).getClass().getSimpleName(), getRootCauseMessage(e)), e);
+						if (findCause(e, CancellationException.class) == null) {
+							log.log(Level.WARNING, String.format("%s: %s", getRootCause(e).getClass().getSimpleName(), getRootCauseMessage(e)), e);
 						}
 					} finally {
 						// auto-match finished
@@ -903,7 +878,6 @@ public class RenamePanel extends JComponent {
 
 			// auto-match in progress
 			namesList.firePropertyChange(LOADING_PROPERTY, false, true);
-
 			worker.execute();
 		}
 

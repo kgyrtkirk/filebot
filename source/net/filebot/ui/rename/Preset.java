@@ -39,7 +39,7 @@ public class Preset {
 		this.path = path == null ? null : path.getPath();
 		this.includes = includes == null ? null : includes.getExpression();
 		this.format = format == null ? null : format.getExpression();
-		this.database = database == null ? null : database.getName();
+		this.database = database == null ? null : database.getIdentifier();
 		this.sortOrder = sortOrder == null ? null : sortOrder.name();
 		this.matchMode = matchMode == null ? null : matchMode;
 		this.language = language == null ? null : language.getCode();
@@ -92,21 +92,25 @@ public class Preset {
 	}
 
 	public AutoCompleteMatcher getAutoCompleteMatcher() {
-		EpisodeListProvider sdb = WebServices.getEpisodeListProvider(database);
-		if (sdb != null) {
-			return new EpisodeListMatcher(sdb, sdb != WebServices.AniDB, sdb == WebServices.AniDB);
-		}
 		MovieIdentificationService mdb = WebServices.getMovieIdentificationService(database);
 		if (mdb != null) {
-			return new MovieHashMatcher(mdb);
+			return new MovieMatcher(mdb);
 		}
+
+		EpisodeListProvider sdb = WebServices.getEpisodeListProvider(database);
+		if (sdb != null) {
+			return new EpisodeListMatcher(sdb, sdb == WebServices.AniDB);
+		}
+
 		MusicIdentificationService adb = WebServices.getMusicIdentificationService(database);
 		if (adb != null) {
-			return new AudioFingerprintMatcher(adb);
+			return new MusicMatcher(adb);
 		}
-		if (PlainFileMatcher.INSTANCE.getName().equals(database)) {
-			return PlainFileMatcher.INSTANCE;
+
+		if (PlainFileMatcher.getInstance().getIdentifier().equals(database)) {
+			return PlainFileMatcher.getInstance();
 		}
+
 		throw new IllegalStateException(database);
 	}
 
@@ -114,21 +118,26 @@ public class Preset {
 		if (database == null || database.isEmpty()) {
 			return null;
 		}
-		EpisodeListProvider sdb = WebServices.getEpisodeListProvider(database);
-		if (sdb != null) {
-			return sdb;
-		}
+
 		MovieIdentificationService mdb = WebServices.getMovieIdentificationService(database);
 		if (mdb != null) {
 			return mdb;
 		}
+
+		EpisodeListProvider sdb = WebServices.getEpisodeListProvider(database);
+		if (sdb != null) {
+			return sdb;
+		}
+
 		MusicIdentificationService adb = WebServices.getMusicIdentificationService(database);
 		if (adb != null) {
 			return adb;
 		}
-		if (PlainFileMatcher.INSTANCE.getName().equals(database)) {
-			return PlainFileMatcher.INSTANCE;
+
+		if (PlainFileMatcher.getInstance().getIdentifier().equals(database)) {
+			return PlainFileMatcher.getInstance();
 		}
+
 		throw new IllegalStateException(database);
 	}
 

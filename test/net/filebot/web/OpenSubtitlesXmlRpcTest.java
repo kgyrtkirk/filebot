@@ -4,18 +4,20 @@ import static java.util.Collections.*;
 import static net.filebot.Settings.*;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import net.filebot.web.OpenSubtitlesSubtitleDescriptor.Property;
 import net.filebot.web.OpenSubtitlesXmlRpc.Query;
 import net.filebot.web.OpenSubtitlesXmlRpc.SubFile;
 import net.filebot.web.OpenSubtitlesXmlRpc.TryUploadResponse;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 public class OpenSubtitlesXmlRpcTest {
 
@@ -60,7 +62,7 @@ public class OpenSubtitlesXmlRpcTest {
 
 	@Test
 	public void getSubtitleListEnglish() throws Exception {
-		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(361256, "eng");
+		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(singleton(Query.forImdbId(361256, -1, -1, "eng")));
 
 		SubtitleDescriptor sample = list.get(0);
 
@@ -73,12 +75,12 @@ public class OpenSubtitlesXmlRpcTest {
 
 	@Test
 	public void getSubtitleListAllLanguages() throws Exception {
-		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(361256);
+		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(singleton(Query.forImdbId(361256, -1, -1)));
 
 		OpenSubtitlesSubtitleDescriptor sample = list.get(75);
 
-		assertEquals("\"Wonderfalls\" Wound-up Penguin", sample.getProperty(Property.MovieName));
-		assertEquals("German", sample.getProperty(Property.LanguageName));
+		assertEquals("\"Wonderfalls\" Safety Canary", sample.getProperty(Property.MovieName));
+		assertEquals("Czech", sample.getProperty(Property.LanguageName));
 		assertEquals("imdbid", sample.getProperty(Property.MatchedBy));
 
 		// check size
@@ -176,7 +178,7 @@ public class OpenSubtitlesXmlRpcTest {
 
 	@Test
 	public void fetchSubtitle() throws Exception {
-		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(361256, "eng");
+		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(singleton(Query.forImdbId(361256, -1, -1, "eng")));
 
 		// check format
 		assertEquals("srt", list.get(0).getType());
@@ -185,12 +187,13 @@ public class OpenSubtitlesXmlRpcTest {
 		ByteBuffer data = list.get(0).fetch();
 
 		// check size
-		assertEquals(48717, data.remaining(), 0);
+		assertEquals(48726, data.remaining(), 100);
 	}
 
-	// @Test(expected = IOException.class)
+	@Ignore
+	@Test(expected = IOException.class)
 	public void fetchSubtitlesExceedLimit() throws Exception {
-		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(773262, "eng");
+		List<OpenSubtitlesSubtitleDescriptor> list = xmlrpc.searchSubtitles(singleton(Query.forImdbId(773262, -1, -1, "eng")));
 
 		for (int i = 0; true; i++) {
 			System.out.format("Fetch #%d: %s%n", i, list.get(i).fetch());

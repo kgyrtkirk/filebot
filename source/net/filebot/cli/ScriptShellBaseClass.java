@@ -2,12 +2,9 @@ package net.filebot.cli;
 
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
-import static net.filebot.cli.CLILogging.*;
+import static net.filebot.Logging.*;
+import static net.filebot.media.XattrMetaInfo.*;
 import static net.filebot.util.StringUtilities.*;
-import groovy.lang.Closure;
-import groovy.lang.MissingPropertyException;
-import groovy.lang.Script;
-import groovy.xml.MarkupBuilder;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -17,6 +14,7 @@ import java.io.PrintStream;
 import java.io.StringWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -32,6 +30,14 @@ import java.util.logging.Logger;
 import javax.script.Bindings;
 import javax.script.SimpleBindings;
 
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
+
+import com.sun.jna.Platform;
+
+import groovy.lang.Closure;
+import groovy.lang.MissingPropertyException;
+import groovy.lang.Script;
+import groovy.xml.MarkupBuilder;
 import net.filebot.HistorySpooler;
 import net.filebot.RenameAction;
 import net.filebot.StandardRenameAction;
@@ -41,11 +47,6 @@ import net.filebot.media.MediaDetection;
 import net.filebot.similarity.SeasonEpisodeMatcher.SxE;
 import net.filebot.util.FileUtilities;
 import net.filebot.web.Movie;
-
-import org.codehaus.groovy.runtime.StackTraceUtils;
-import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
-
-import com.sun.jna.Platform;
 
 public abstract class ScriptShellBaseClass extends Script {
 
@@ -135,10 +136,18 @@ public abstract class ScriptShellBaseClass extends Script {
 	}
 
 	public void printException(Throwable t, boolean severe) {
+		Level level = severe ? Level.SEVERE : Level.WARNING;
+
+		// print full stacktrace in debug mode
+		if (debug.isLoggable(level)) {
+			debug.log(level, t, t::getMessage);
+			return;
+		}
+
 		if (severe) {
-			CLILogger.log(Level.SEVERE, String.format("%s: %s", t.getClass().getSimpleName(), t.getMessage()), StackTraceUtils.deepSanitize(t));
+			log.log(level, trace(t));
 		} else {
-			CLILogger.log(Level.WARNING, String.format("%s: %s", t.getClass().getSimpleName(), t.getMessage()));
+			log.log(level, t, t::getMessage);
 		}
 	}
 
@@ -184,7 +193,7 @@ public abstract class ScriptShellBaseClass extends Script {
 
 	// define global variable: log
 	public Logger getLog() {
-		return CLILogger;
+		return log;
 	}
 
 	// define global variable: console
@@ -202,19 +211,19 @@ public abstract class ScriptShellBaseClass extends Script {
 	}
 
 	public String detectSeriesName(Object files) throws Exception {
-		return detectSeriesName(files, true, false);
+		return detectSeriesName(files, false);
 	}
 
 	public String detectAnimeName(Object files) throws Exception {
-		return detectSeriesName(files, false, true);
+		return detectSeriesName(files, true);
 	}
 
-	public String detectSeriesName(Object files, boolean useSeriesIndex, boolean useAnimeIndex) throws Exception {
+	public String detectSeriesName(Object files, boolean anime) throws Exception {
 		List<File> input = FileUtilities.asFileList(files);
 		if (input.isEmpty())
 			return null;
 
-		List<String> names = MediaDetection.detectSeriesNames(input, useSeriesIndex, useAnimeIndex, Locale.ENGLISH);
+		List<String> names = MediaDetection.detectSeriesNames(input, anime, Locale.ENGLISH);
 		return names == null || names.isEmpty() ? null : names.get(0);
 	}
 
@@ -225,7 +234,7 @@ public abstract class ScriptShellBaseClass extends Script {
 
 	public Movie detectMovie(File file, boolean strict) {
 		// 1. xattr
-		Object metaObject = MediaDetection.readMetaInfo(file);
+		Object metaObject = xattr.getMetaInfo(file);
 		if (metaObject instanceof Movie) {
 			return (Movie) metaObject;
 		}
@@ -250,7 +259,7 @@ public abstract class ScriptShellBaseClass extends Script {
 		return null;
 	}
 
-	public Movie matchMovie(String name) throws Exception {
+	public Movie matchMovie(String name) {
 		List<Movie> matches = MediaDetection.matchMovieName(singleton(name), true, 0);
 		return matches == null || matches.isEmpty() ? null : matches.get(0);
 	}
@@ -418,7 +427,15 @@ public abstract class ScriptShellBaseClass extends Script {
 		}
 	}
 
-	public String getMediaInfo(Map<String, ?> parameters) throws Exception {
+	public String getMediaInfo(File file, String format) throws Exception {
+		return cli.getMediaInfo(singleton(file), format, null).get(0); // explicitly ignore the --filter option
+	}
+
+	public List<String> getMediaInfo(Collection<?> files, String format) throws Exception {
+		return cli.getMediaInfo(FileUtilities.asFileList(files), format, null); // explicitly ignore the --filter option
+	}
+
+	public Object getMediaInfo(Map<String, ?> parameters) throws Exception {
 		List<File> input = getInputFileList(parameters);
 		if (input == null || input.isEmpty()) {
 			return null;
@@ -427,8 +444,12 @@ public abstract class ScriptShellBaseClass extends Script {
 		Map<Option, Object> option = getDefaultOptions(parameters);
 		synchronized (cli) {
 			try {
-				List<String> lines = cli.getMediaInfo(singleton(input.get(0)), asString(option.get(Option.format)), asString(option.get(Option.filter)));
-				return lines.get(0);
+				List<String> lines = cli.getMediaInfo(input, asString(option.get(Option.format)), asString(option.get(Option.filter)));
+				if (parameters.containsKey("file") && !(parameters.get("file") instanceof Collection)) {
+					return lines.get(0); // HACK for script backwards compatibility
+				} else {
+					return lines;
+				}
 			} catch (Exception e) {
 				printException(e, false);
 				return null;

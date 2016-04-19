@@ -1,21 +1,22 @@
 package net.filebot.similarity;
 
 import static java.util.regex.Pattern.*;
+import static net.filebot.util.RegularExpressions.*;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Normalization {
 
-	private static final Pattern apostrophe = compile("['`´‘’ʻ]+");
-	private static final Pattern punctuation = compile("[\\p{Punct}\\p{Space}]+");
+	public static final Pattern APOSTROPHE = compile("['`´‘’ʻ]+");
+	public static final Pattern PUNCTUATION_OR_SPACE = compile("[\\p{Punct}\\p{Space}]+", UNICODE_CHARACTER_CLASS);
+	public static final Pattern WORD_SEPARATOR_PUNCTUATION = compile("[:?._]");
 
-	private static final Pattern space = compile("\\s+");
-	private static final Pattern spaceLikePunctuation = compile("[:?._]");
+	public static final Pattern TRAILING_PARENTHESIS = compile("(?<!^)[(]([^)]*)[)]$");
+	public static final Pattern TRAILING_PUNCTUATION = compile("[!?.]+$");
+	public static final Pattern EMBEDDED_CHECKSUM = compile("[\\(\\[](\\p{XDigit}{8})[\\]\\)]");
 
 	private static final Pattern[] brackets = new Pattern[] { compile("\\([^\\(]*\\)"), compile("\\[[^\\[]*\\]"), compile("\\{[^\\{]*\\}") };
-	private static final Pattern trailingParentheses = compile("(?<!^)[(]([^)]*)[)]$");
-
-	private static final Pattern checksum = compile("[\\(\\[]\\p{XDigit}{8}[\\]\\)]");
 
 	private static final char[] doubleQuotes = new char[] { '\'', '\u0060', '\u00b4', '\u2018', '\u2019', '\u02bb' };
 	private static final char[] singleQuotes = new char[] { '\"', '\u201c', '\u201d' };
@@ -29,10 +30,14 @@ public class Normalization {
 		return name;
 	}
 
+	public static String trimTrailingPunctuation(String name) {
+		return TRAILING_PUNCTUATION.matcher(name).replaceAll("").trim();
+	}
+
 	public static String normalizePunctuation(String name) {
 		// remove/normalize special characters
-		name = apostrophe.matcher(name).replaceAll("");
-		name = punctuation.matcher(name).replaceAll(" ");
+		name = APOSTROPHE.matcher(name).replaceAll("");
+		name = PUNCTUATION_OR_SPACE.matcher(name).replaceAll(" ");
 		return name.trim();
 	}
 
@@ -41,26 +46,33 @@ public class Normalization {
 		for (Pattern it : brackets) {
 			name = it.matcher(name).replaceAll(" ");
 		}
-
 		return name;
 	}
 
 	public static String normalizeSpace(String name, String replacement) {
-		return replaceSpace(spaceLikePunctuation.matcher(name).replaceAll(" ").trim(), replacement);
+		return replaceSpace(WORD_SEPARATOR_PUNCTUATION.matcher(name).replaceAll(" ").trim(), replacement);
 	}
 
 	public static String replaceSpace(String name, String replacement) {
-		return space.matcher(name).replaceAll(replacement);
+		return SPACE.matcher(name).replaceAll(replacement);
+	}
+
+	public static String getEmbeddedChecksum(String name) {
+		Matcher m = EMBEDDED_CHECKSUM.matcher(name);
+		if (m.find()) {
+			return m.group(1);
+		}
+		return null;
 	}
 
 	public static String removeEmbeddedChecksum(String name) {
 		// match embedded checksum and surrounding brackets
-		return checksum.matcher(name).replaceAll("");
+		return EMBEDDED_CHECKSUM.matcher(name).replaceAll("");
 	}
 
 	public static String removeTrailingBrackets(String name) {
 		// remove trailing braces, e.g. Doctor Who (2005) -> Doctor Who
-		return trailingParentheses.matcher(name).replaceAll("").trim();
+		return TRAILING_PARENTHESIS.matcher(name).replaceAll("").trim();
 	}
 
 	public static String truncateText(String title, int limit) {
@@ -68,7 +80,7 @@ public class Normalization {
 			return title;
 		}
 
-		String[] words = space.split(title);
+		String[] words = SPACE.split(title);
 		StringBuilder s = new StringBuilder();
 
 		for (int i = 0; i < words.length && s.length() + words[i].length() < limit; i++) {

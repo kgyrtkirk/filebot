@@ -236,7 +236,7 @@ public	static class KeyDistance {
 //		List<IndexEntry<SearchResult>> si = MediaDetection.getSeriesIndex();
 		List<String>	searchKeys=new ArrayList<>();
 		
-		SeriesNameMatcher strictSeriesNameMatcher = new SeriesNameMatcher(Locale.getDefault(), false);
+		SeriesNameMatcher strictSeriesNameMatcher = new SeriesNameMatcher(false);
 
 		String s = strictSeriesNameMatcher.matchByEpisodeIdentifier(name);
 		

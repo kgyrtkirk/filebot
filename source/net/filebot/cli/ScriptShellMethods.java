@@ -1,15 +1,16 @@
 package net.filebot.cli;
 
+import static java.nio.charset.StandardCharsets.*;
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static java.util.stream.Collectors.*;
 import static net.filebot.MediaTypes.*;
-import groovy.lang.Closure;
+import static net.filebot.media.XattrMetaInfo.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,26 +18,25 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.JsonWriter;
+
+import groovy.lang.Closure;
+import groovy.lang.Range;
 import net.filebot.MediaTypes;
 import net.filebot.MetaAttributeView;
 import net.filebot.media.MediaDetection;
-import net.filebot.media.MetaAttributes;
 import net.filebot.similarity.NameSimilarityMetric;
 import net.filebot.similarity.Normalization;
 import net.filebot.similarity.SimilarityMetric;
 import net.filebot.util.FastFile;
 import net.filebot.util.FileUtilities;
 import net.filebot.web.WebRequest;
-
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.JsonWriter;
 
 public class ScriptShellMethods {
 
@@ -48,12 +48,24 @@ public class ScriptShellMethods {
 		return new File(self, name);
 	}
 
+	public static String getAt(File self, int index) {
+		return FileUtilities.listPath(self).get(index).getName();
+	}
+
+	public static File getAt(File self, Range<?> range) {
+		return new File(DefaultGroovyMethods.getAt(FileUtilities.listPath(self), range).stream().map(File::getName).collect(joining(File.separator)));
+	}
+
 	public static File resolve(File self, String name) {
 		return new File(self, name);
 	}
 
 	public static File resolveSibling(File self, String name) {
 		return new File(self.getParentFile(), name);
+	}
+
+	public static File resolveAsChild(File self, File folder) {
+		return self.isAbsolute() ? self : new File(folder, self.getPath());
 	}
 
 	public static List<File> listFiles(File self, Closure<?> closure) {
@@ -228,7 +240,7 @@ public class ScriptShellMethods {
 	}
 
 	public static FastFile memoize(File self) {
-		return new FastFile(self.getPath());
+		return new FastFile(self);
 	}
 
 	public static File moveTo(File self, File destination) throws IOException {
@@ -244,7 +256,11 @@ public class ScriptShellMethods {
 	}
 
 	public static void createFileIfNotExists(File self) throws IOException {
-		FileUtilities.createFileIfNotExists(self);
+		if (!self.isFile()) {
+			// create parent folder structure if necessary & create file
+			Files.createDirectories(self.getParentFile().toPath());
+			Files.createFile(self.toPath());
+		}
 	}
 
 	public static File relativize(File self, File other) throws IOException {
@@ -270,15 +286,15 @@ public class ScriptShellMethods {
 	}
 
 	public static String getText(ByteBuffer self) {
-		return Charset.forName("UTF-8").decode(self.duplicate()).toString();
+		return UTF_8.decode(self.duplicate()).toString();
 	}
 
 	public static ByteBuffer get(URL self) throws IOException {
-		return WebRequest.fetch(self, 0, null, null);
+		return WebRequest.fetch(self, 0, null, null, null);
 	}
 
 	public static ByteBuffer get(URL self, Map<String, String> requestParameters) throws IOException {
-		return WebRequest.fetch(self, 0, requestParameters, null);
+		return WebRequest.fetch(self, 0, null, requestParameters, null);
 	}
 
 	public static ByteBuffer post(URL self, Map<String, ?> parameters, Map<String, String> requestParameters) throws IOException {
@@ -316,7 +332,7 @@ public class ScriptShellMethods {
 	}
 
 	public static File saveAs(String self, File file) throws IOException {
-		return saveAs(Charset.forName("UTF-8").encode(self), file);
+		return saveAs(UTF_8.encode(self), file);
 	}
 
 	public static File saveAs(URL self, File file) throws IOException {
@@ -338,7 +354,7 @@ public class ScriptShellMethods {
 		return JsonReader.jsonToJava(self);
 	}
 
-	public static File getStructurePathTail(File self) throws IOException {
+	public static File getStructurePathTail(File self) throws Exception {
 		return MediaDetection.getStructurePathTail(self);
 	}
 
@@ -370,18 +386,15 @@ public class ScriptShellMethods {
 	}
 
 	public static Collection<?> sortBySimilarity(Collection<?> self, final Object prime, final Closure<String> toStringFunction) {
-		final SimilarityMetric metric = new NameSimilarityMetric();
 		List<Object> values = new ArrayList<Object>(self);
-		Collections.sort(values, new Comparator<Object>() {
 
-			@Override
-			public int compare(Object o1, Object o2) {
-				String s1 = toStringFunction != null ? toStringFunction.call(o1) : o1.toString();
-				String s2 = toStringFunction != null ? toStringFunction.call(o2) : o2.toString();
-
-				return Float.compare(metric.getSimilarity(s2, prime), metric.getSimilarity(s1, prime));
-			}
+		SimilarityMetric metric = new NameSimilarityMetric();
+		values.sort((o1, o2) -> {
+			String s1 = toStringFunction != null ? toStringFunction.call(o1) : o1.toString();
+			String s2 = toStringFunction != null ? toStringFunction.call(o2) : o2.toString();
+			return Float.compare(metric.getSimilarity(s2, prime), metric.getSimilarity(s1, prime));
 		});
+
 		return values;
 	}
 
@@ -395,14 +408,18 @@ public class ScriptShellMethods {
 
 	public static Object getMetadata(File self) {
 		try {
-			return new MetaAttributes(self).getObject();
+			return xattr.getMetaInfo(self);
 		} catch (Exception e) {
 			return null;
 		}
 	}
 
 	public static boolean isEpisode(File self) {
-		return MediaDetection.isEpisode(String.join("/", self.getParent(), self.getName()), true);
+		return MediaDetection.isEpisode(self, true);
+	}
+
+	public static boolean isMovie(File self) {
+		return MediaDetection.isMovie(self, true);
 	}
 
 }

@@ -1,26 +1,30 @@
 package net.filebot.mac;
 
 import static ca.weblite.objc.util.CocoaUtils.*;
+import static net.filebot.Logging.*;
 
 import java.awt.EventQueue;
 import java.awt.SecondaryLoop;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.io.File;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.swing.JMenuBar;
 import javax.swing.UIManager;
 
+import com.apple.eawt.Application;
+import com.apple.eawt.FullScreenUtilities;
+import com.apple.eawt.QuitStrategy;
+import com.apple.eio.FileManager;
+import com.sun.jna.Pointer;
+
 import ca.weblite.objc.Client;
 import ca.weblite.objc.Proxy;
-
-import com.sun.jna.Pointer;
 
 public class MacAppUtilities {
 
@@ -86,7 +90,7 @@ public class MacAppUtilities {
 
 		// Enter the loop to block the current event handler, but leave UI responsive
 		if (!secondaryLoop.enter()) {
-			throw new RuntimeException("SecondaryLoop.enter()");
+			throw new IllegalStateException("SecondaryLoop");
 		}
 
 		return result;
@@ -94,56 +98,54 @@ public class MacAppUtilities {
 
 	public static void setWindowCanFullScreen(Window window) {
 		try {
-			Class<?> fullScreenUtilities = Class.forName("com.apple.eawt.FullScreenUtilities");
-			Method setWindowCanFullScreen = fullScreenUtilities.getMethod("setWindowCanFullScreen", new Class<?>[] { Window.class, boolean.class });
-			setWindowCanFullScreen.invoke(null, window, true);
+			FullScreenUtilities.setWindowCanFullScreen(window, true);
 		} catch (Throwable t) {
-			Logger.getLogger(MacAppUtilities.class.getName()).log(Level.WARNING, "setWindowCanFullScreen not supported: " + t);
+			debug.log(Level.WARNING, t.getMessage(), t);
 		}
 	}
 
 	public static void requestForeground() {
 		try {
-			Class<?> application = Class.forName("com.apple.eawt.Application");
-			Object instance = application.getMethod("getApplication").invoke(null);
-			Method requestForeground = application.getMethod("requestForeground", new Class<?>[] { boolean.class });
-			requestForeground.invoke(instance, true);
+			Application.getApplication().requestForeground(true);
 		} catch (Throwable t) {
-			Logger.getLogger(MacAppUtilities.class.getName()).log(Level.WARNING, "requestForeground not supported: " + t);
+			debug.log(Level.WARNING, t.getMessage(), t);
 		}
 	}
 
 	public static void revealInFinder(File file) {
 		try {
-			Class<?> fileManager = Class.forName("com.apple.eio.FileManager");
-			Method revealInFinder = fileManager.getMethod("revealInFinder", new Class<?>[] { File.class });
-			revealInFinder.invoke(null, file);
+			FileManager.revealInFinder(file);
 		} catch (Throwable t) {
-			Logger.getLogger(MacAppUtilities.class.getName()).log(Level.WARNING, "revealInFinder not supported: " + t);
+			debug.log(Level.WARNING, t.getMessage(), t);
 		}
 	}
 
 	public static void setDefaultMenuBar(JMenuBar menu) {
 		try {
-			Class<?> application = Class.forName("com.apple.eawt.Application");
-			Object instance = application.getMethod("getApplication").invoke(null);
-			Method setDefaultMenuBar = application.getMethod("setDefaultMenuBar", new Class<?>[] { JMenuBar.class });
-			setDefaultMenuBar.invoke(instance, menu);
+			Application.getApplication().setDefaultMenuBar(menu);
 		} catch (Throwable t) {
-			Logger.getLogger(MacAppUtilities.class.getName()).log(Level.WARNING, "setDefaultMenuBar not supported: " + t);
+			debug.log(Level.WARNING, t.getMessage(), t);
 		}
 	}
 
-	public static void setQuitStrategy(String field) {
+	public static void setQuitStrategyCloseAll() {
 		try {
-			Class<?> application = Class.forName("com.apple.eawt.Application");
-			Object instance = application.getMethod("getApplication").invoke(null);
-			Class<?> quitStrategy = Class.forName("com.apple.eawt.QuitStrategy");
-			Method setQuitStrategy = application.getMethod("setQuitStrategy", quitStrategy);
-			Object closeAllWindows = quitStrategy.getField(field).get(null);
-			setQuitStrategy.invoke(instance, closeAllWindows);
+			Application.getApplication().setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS);
 		} catch (Throwable t) {
-			Logger.getLogger(MacAppUtilities.class.getName()).log(Level.WARNING, "setQuitStrategy not supported: " + t);
+			debug.log(Level.WARNING, t.getMessage(), t);
+		}
+	}
+
+	public static void setOpenFileHandler(Consumer<List<File>> handler) {
+		try {
+			Application.getApplication().setOpenFileHandler(evt -> {
+				List<File> files = evt.getFiles();
+				if (files.size() > 0) {
+					handler.accept(files);
+				}
+			});
+		} catch (Throwable t) {
+			debug.log(Level.WARNING, t.getMessage(), t);
 		}
 	}
 
@@ -152,7 +154,7 @@ public class MacAppUtilities {
 		UIManager.put("TitledBorder.border", UIManager.getBorder("InsetBorder.aquaVariant"));
 
 		// make sure Application Quit Events get forwarded to normal Window Listeners
-		setQuitStrategy("CLOSE_ALL_WINDOWS");
+		setQuitStrategyCloseAll();
 	}
 
 	public static boolean isLockedFolder(File folder) {

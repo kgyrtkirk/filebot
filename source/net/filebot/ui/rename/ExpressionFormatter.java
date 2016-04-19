@@ -1,17 +1,20 @@
-
 package net.filebot.ui.rename;
 
+import static net.filebot.Logging.*;
+import static net.filebot.media.MediaDetection.*;
+import static net.filebot.util.FileUtilities.*;
 
 import java.io.File;
 import java.text.Format;
 import java.util.Map;
+import java.util.logging.Level;
 
 import javax.script.ScriptException;
 
+import net.filebot.Settings.ApplicationFolder;
 import net.filebot.format.ExpressionFormat;
 import net.filebot.format.MediaBindingBean;
 import net.filebot.similarity.Match;
-
 
 class ExpressionFormatter implements MatchFormatter {
 
@@ -21,7 +24,6 @@ class ExpressionFormatter implements MatchFormatter {
 	private Format preview;
 	private Class<?> target;
 
-
 	public ExpressionFormatter(String expression, Format preview, Class<?> target) {
 		if (expression == null || expression.isEmpty())
 			throw new IllegalArgumentException("Expression must not be null or empty");
@@ -29,9 +31,7 @@ class ExpressionFormatter implements MatchFormatter {
 		this.expression = expression;
 		this.preview = preview;
 		this.target = target;
-
 	}
-
 
 	@Override
 	public boolean canFormat(Match<?, ?> match) {
@@ -39,12 +39,10 @@ class ExpressionFormatter implements MatchFormatter {
 		return target.isInstance(match.getValue()) && (match.getCandidate() == null || match.getCandidate() instanceof File);
 	}
 
-
 	@Override
 	public String preview(Match<?, ?> match) {
 		return preview != null ? preview.format(match.getValue()) : match.getValue().toString();
 	}
-
 
 	@Override
 	public synchronized String format(Match<?, ?> match, Map<?, ?> context) throws ScriptException {
@@ -54,15 +52,53 @@ class ExpressionFormatter implements MatchFormatter {
 		}
 
 		// evaluate the expression using the given bindings
-		Object bindingBean = new MediaBindingBean(match.getValue(), (File) match.getCandidate(), (Map<File, Object>) context);
-		String result = format.format(bindingBean).trim();
+		Object bindingBean = new MediaBindingBean(match.getValue(), (File) match.getCandidate(), (Map) context);
+		String destination = format.format(bindingBean).trim();
 
 		// if result is empty, check for script exceptions
-		if (result.isEmpty() && format.caughtScriptException() != null) {
+		if (destination.isEmpty() && format.caughtScriptException() != null) {
 			throw format.caughtScriptException();
 		}
 
-		return result;
+		return getPath((File) match.getCandidate(), destination);
+	}
+
+	private String getPath(File source, String destination) {
+		if (source == null) {
+			return destination;
+		}
+
+		// resolve against parent folder
+		File parent = new File(destination).getParentFile();
+		if (parent == null || parent.isAbsolute() || destination.startsWith(".")) {
+			return destination;
+		}
+
+		// resolve against home folder
+		if (destination.startsWith("~")) {
+			return ApplicationFolder.UserHome.resolve(destination.substring(1)).getAbsolutePath();
+		}
+
+		// try to resolve against structure root folder by default
+		try {
+			File structureRoot = getStructureRoot(source);
+			if (structureRoot != null) {
+				for (File f : listPath(parent)) {
+					if (isVolumeRoot(structureRoot)) {
+						break;
+					}
+					if (isStructureRoot(f)) {
+						structureRoot = structureRoot.getParentFile();
+					}
+				}
+				return new File(structureRoot, destination).getAbsolutePath();
+			}
+		} catch (Exception e) {
+			debug.log(Level.SEVERE, "Failed to resolve structure root: " + source, e);
+		}
+
+		// resolve against parent folder by default
+		return destination;
 	}
 
 }

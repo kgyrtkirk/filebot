@@ -1,15 +1,19 @@
 package net.filebot.format;
 
-import groovy.lang.Closure;
+import static java.util.stream.Collectors.*;
+import static net.filebot.util.FileUtilities.*;
+import static net.filebot.util.RegularExpressions.*;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import groovy.lang.Closure;
 
 /**
  * Global functions available in the {@link ExpressionFormat}
@@ -19,91 +23,52 @@ public class ExpressionFormatFunctions {
 	/**
 	 * General helpers and utilities
 	 */
-	public static Object c(Closure<?> c) {
-		try {
-			return c.call();
-		} catch (Exception e) {
+	public static Object call(Object object) {
+		if (object instanceof Closure<?>) {
+			try {
+				return ((Closure<?>) object).call();
+			} catch (Exception e) {
+				return null;
+			}
+		}
+		if (object instanceof CharSequence && object.toString().isEmpty()) {
 			return null;
 		}
+		return object;
 	}
 
-	public static Object any(Object a0, Object a1, Object... args) {
-		for (Object it : new Object[] { a0, a1 }) {
-			try {
-				Object result = callIfCallable(it);
-				if (result != null) {
-					return result;
-				}
-			} catch (Exception e) {
-				// ignore
-			}
-		}
-
-		for (Object it : args) {
-			try {
-				Object result = callIfCallable(it);
-				if (result != null) {
-					return result;
-				}
-			} catch (Exception e) {
-				// ignore
-			}
-		}
-
-		return null;
+	public static Object any(Object c1, Object c2, Object... cN) {
+		return stream(c1, c2, cN).findFirst().orElse(null);
 	}
 
-	public static List<Object> allOf(Object a0, Object a1, Object... args) {
-		List<Object> values = new ArrayList<Object>();
-
-		for (Object it : new Object[] { a0, a1 }) {
-			try {
-				Object result = callIfCallable(it);
-				if (result != null) {
-					values.add(result);
-				}
-			} catch (Exception e) {
-				// ignore
-			}
-		}
-
-		for (Object it : args) {
-			try {
-				Object result = callIfCallable(it);
-				if (result != null) {
-					values.add(result);
-				}
-			} catch (Exception e) {
-				// ignore
-			}
-		}
-
-		return values;
+	public static List<Object> allOf(Object c1, Object c2, Object... cN) {
+		return stream(c1, c2, cN).collect(toList());
 	}
 
-	private static Object callIfCallable(Object obj) throws Exception {
-		if (obj instanceof Closure<?>) {
-			return ((Closure<?>) obj).call();
-		}
-		return obj;
+	public static String concat(Object c1, Object c2, Object... cN) {
+		return stream(c1, c2, cN).map(Objects::toString).collect(joining());
+	}
+
+	protected static Stream<Object> stream(Object c1, Object c2, Object... cN) {
+		return Stream.concat(Stream.of(c1, c2), Stream.of(cN)).map(ExpressionFormatFunctions::call).filter(Objects::nonNull);
 	}
 
 	public static Map<String, String> csv(String path) throws IOException {
 		Map<String, String> map = new LinkedHashMap<String, String>();
-		for (String line : Files.readAllLines(Paths.get(path), StandardCharsets.UTF_8)) {
-			for (String delim : new String[] { "\t", ";" }) {
-				String[] field = line.split(delim, 2);
+		streamLines(new File(path)).forEach(line -> {
+			for (Pattern delim : new Pattern[] { TAB, SEMICOLON }) {
+				String[] field = delim.split(line, 2);
 				if (field.length >= 2) {
-					map.put(field[0], field[1]);
+					map.put(field[0].trim(), field[1].trim());
 					break;
 				}
 			}
-		}
+		});
 		return map;
 	}
 
 	public static List<String> readLines(String path) throws IOException {
-		return Files.readAllLines(Paths.get(path), StandardCharsets.UTF_8);
+		return streamLines(new File(path)).collect(toList());
 	}
 
 }

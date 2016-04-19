@@ -1,20 +1,25 @@
 package net.filebot.web;
 
+import static net.filebot.CachedResource.*;
 import static org.junit.Assert.*;
 
+import java.net.URL;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-import net.filebot.web.TMDbClient.Artwork;
-import net.filebot.web.TMDbClient.MovieInfo;
-
 import org.junit.Ignore;
 import org.junit.Test;
 
+import net.filebot.Cache;
+import net.filebot.CacheType;
+import net.filebot.CachedResource;
+import net.filebot.web.TMDbClient.MovieInfo;
+
 public class TMDbClientTest {
 
-	private final TMDbClient tmdb = new TMDbClient("66308fb6e3fd850dde4c7d21df2e8306");
+	TMDbClient tmdb = new TMDbClient("66308fb6e3fd850dde4c7d21df2e8306");
 
 	@Test
 	public void searchByName() throws Exception {
@@ -61,7 +66,7 @@ public class TMDbClientTest {
 
 	@Test
 	public void searchByIMDB() throws Exception {
-		Movie movie = tmdb.getMovieDescriptor(new Movie(null, 0, 418279, -1), Locale.ENGLISH);
+		Movie movie = tmdb.getMovieDescriptor(new Movie(418279), Locale.ENGLISH);
 
 		assertEquals("Transformers", movie.getName());
 		assertEquals(2007, movie.getYear(), 0);
@@ -71,10 +76,10 @@ public class TMDbClientTest {
 
 	@Test
 	public void getMovieInfo() throws Exception {
-		MovieInfo movie = tmdb.getMovieInfo(new Movie(null, 0, 418279, -1), Locale.ENGLISH, true);
+		MovieInfo movie = tmdb.getMovieInfo(new Movie(418279), Locale.ENGLISH, true);
 
 		assertEquals("Transformers", movie.getName());
-		assertEquals("2007-07-02", movie.getReleased().toString());
+		assertEquals("2007-06-27", movie.getReleased().toString());
 		assertEquals("PG-13", movie.getCertification());
 		assertTrue(movie.getSpokenLanguages().contains(new Locale("en")));
 		assertTrue(movie.getSpokenLanguages().contains(new Locale("es")));
@@ -84,9 +89,9 @@ public class TMDbClientTest {
 
 	@Test
 	public void getArtwork() throws Exception {
-		List<Artwork> artwork = tmdb.getArtwork("tt0418279");
-		assertEquals("backdrops", artwork.get(0).getCategory());
-		assertEquals("http://image.tmdb.org/t/p/original/dXTeZELpoVMDOTTLnNoCpsCngwW.jpg", artwork.get(0).getUrl().toString());
+		Artwork a = tmdb.getArtwork(16320, "backdrops", Locale.ROOT).get(0);
+		assertEquals("[backdrops, 1920x1080]", a.getTags().toString());
+		assertEquals("https://image.tmdb.org/t/p/original/424MxHQe5Hfu92hTeRvZb5Giv0X.jpg", a.getUrl().toString());
 	}
 
 	@Ignore
@@ -96,6 +101,15 @@ public class TMDbClientTest {
 			List<Movie> results = tmdb.searchMovie("Serenity", it);
 			assertEquals(16320, results.get(0).getTmdbId());
 		}
+	}
+
+	@Ignore
+	@Test
+	public void etag() throws Exception {
+		Cache cache = Cache.getCache("test", CacheType.Persistent);
+		Cache etagStorage = Cache.getCache("etag", CacheType.Persistent);
+		CachedResource<String, byte[]> resource = cache.bytes("http://devel.squid-cache.org/old_projects.html#etag", URL::new).fetch(fetchIfNoneMatch(etagStorage::get, etagStorage::put)).expire(Duration.ZERO);
+		assertArrayEquals(resource.get(), resource.get());
 	}
 
 }

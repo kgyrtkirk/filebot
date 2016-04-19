@@ -177,7 +177,8 @@ h1 .description {
 .social .twitter {
 	position: relative;
 	top: 3px;
-	width: 90px;
+	right: 5px;
+	width: 75px;
 }
 
 .social .facebook {
@@ -387,6 +388,10 @@ div.screencast:hover .play {
 	text-align: center;
 }
 
+.metrics a {
+	margin: 2px;
+}
+
 .footer p {
 	font-size: xx-small;
 	text-align: center;
@@ -401,8 +406,8 @@ div.screencast:hover .play {
 	float: right;
 	height: 0px;
 	position: relative;
-	right: 0.2em;
-	bottom: 0.8em;
+	right: 4px;
+	bottom: 14px;
 }
 
 #bitcoinate a img {
@@ -414,8 +419,8 @@ div.screencast:hover .play {
 	float: left;
 	height: 0px;
 	position: relative;
-	top: -20px;
-	left: 10px;
+	bottom: 15px;
+	left: 6px;
 }
 
 .message.box {

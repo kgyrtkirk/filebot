@@ -1,32 +1,29 @@
 package net.filebot.similarity;
 
-import static java.lang.Math.*;
+import static java.util.Arrays.*;
 import static java.util.Collections.*;
 import static java.util.regex.Pattern.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.media.MediaDetection.*;
+import static net.filebot.media.XattrMetaInfo.*;
 import static net.filebot.similarity.Normalization.*;
 import static net.filebot.util.FileUtilities.*;
 import static net.filebot.util.StringUtilities.*;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.filebot.media.MediaDetection;
+import com.ibm.icu.text.Transliterator;
+
 import net.filebot.media.SmartSeasonEpisodeMatcher;
 import net.filebot.similarity.SeasonEpisodeMatcher.SxE;
 import net.filebot.vfs.FileInfo;
@@ -35,8 +32,7 @@ import net.filebot.web.EpisodeFormat;
 import net.filebot.web.Movie;
 import net.filebot.web.SeriesInfo;
 import net.filebot.web.SimpleDate;
-
-import com.ibm.icu.text.Transliterator;
+import one.util.streamex.StreamEx;
 
 public enum EpisodeMetrics implements SimilarityMetric {
 
@@ -85,7 +81,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 	}),
 
 	// Match episode airdate
-	AirDate(new DateMetric() {
+	AirDate(new DateMetric(getDateMatcher()) {
 
 		private final Map<Object, SimpleDate> transformCache = synchronizedMap(new HashMap<Object, SimpleDate>(64, 4));
 
@@ -163,7 +159,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			}
 
 			// 1:SxE && Title, 2:SxE
-			return (float) ((max(sxe, 0) * title) + (floor(sxe) / 10));
+			return (float) ((Math.max(sxe, 0) * title) + (Math.floor(sxe) / 10));
 		}
 
 		public Object getTitle(Object o) {
@@ -193,44 +189,28 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			sum /= f1.length * f2.length;
 
 			// normalize into 3 similarity levels
-			return (float) (ceil(sum * 3) / 3);
+			return (float) (Math.ceil(sum * 3) / 3);
 		}
 
 		protected String[] normalize(Object[] objects) {
-			String[] names = new String[objects.length];
-			for (int i = 0; i < objects.length; i++) {
-				names[i] = normalizeObject(objects[i]).replaceAll("\\s", "");
-			}
-			return names;
+			// normalize objects (and make sure to keep word boundaries)
+			return stream(objects).map(EpisodeMetrics::normalizeObject).toArray(String[]::new);
 		}
 
 		protected Object[] fields(Object object) {
 			if (object instanceof Episode) {
-				Episode episode = (Episode) object;
-				Set<String> keywords = new LinkedHashSet<String>();
-				keywords.add(removeTrailingBrackets(episode.getSeriesName()));
-				keywords.add(removeTrailingBrackets(episode.getTitle()));
-				for (String it : episode.getSeriesNames()) {
-					keywords.add(removeTrailingBrackets(it));
-				}
-
-				// create array with size 4
-				Object[] f = new Object[4];
-				Iterator<String> keywordItr = keywords.iterator();
-				for (int i = 0; i < f.length; i++) {
-					f[i] = keywordItr.hasNext() ? keywordItr.next() : null;
-				}
-				return f;
+				Episode e = (Episode) object;
+				return StreamEx.of(e.getSeriesName(), e.getTitle()).append(e.getSeriesNames()).map(Normalization::removeTrailingBrackets).distinct().limit(5).toArray();
 			}
 
 			if (object instanceof File) {
-				File file = (File) object;
-				return new Object[] { file.getParentFile().getAbsolutePath(), file };
+				File f = (File) object;
+				return new Object[] { f.getParentFile().getAbsolutePath(), f };
 			}
 
 			if (object instanceof Movie) {
-				Movie movie = (Movie) object;
-				return new Object[] { movie.getName(), movie.getYear() };
+				Movie m = (Movie) object;
+				return new Object[] { m.getName(), m.getYear() };
 			}
 
 			return new Object[] { object };
@@ -249,13 +229,13 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			float max = 0;
 			for (String s1 : f1) {
 				for (String s2 : f2) {
-					max = max(super.getSimilarity(s1, s2), max);
+					max = Math.max(super.getSimilarity(s1, s2), max);
 				}
 			}
 
 			// normalize absolute similarity to similarity rank (4 ranks in total),
 			// so we are less likely to fall for false positives in this pass, and move on to the next one
-			return (float) (floor(max * 4) / 4);
+			return (float) (Math.floor(max * 4) / 4);
 		}
 
 		@Override
@@ -292,7 +272,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 		public float getSimilarity(Object o1, Object o2) {
 			// normalize absolute similarity to similarity rank (4 ranks in total),
 			// so we are less likely to fall for false positives in this pass, and move on to the next one
-			return (float) (floor(super.getSimilarity(o1, o2) * 4) / 4);
+			return (float) (Math.floor(super.getSimilarity(o1, o2) * 4) / 4);
 		}
 
 		@Override
@@ -305,7 +285,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 	// Match by generic name similarity (absolute)
 	SeriesName(new NameSimilarityMetric() {
 
-		private SeriesNameMatcher seriesNameMatcher = new SeriesNameMatcher(Locale.ROOT, false);
+		private final SeriesNameMatcher seriesNameMatcher = getSeriesNameMatcher(false);
 
 		@Override
 		public float getSimilarity(Object o1, Object o2) {
@@ -316,13 +296,13 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			float max = 0;
 			for (String s1 : f1) {
 				for (String s2 : f2) {
-					max = max(super.getSimilarity(s1, s2), max);
+					max = Math.max(super.getSimilarity(s1, s2), max);
 				}
 			}
 
 			// normalize absolute similarity to similarity rank (4 ranks in total),
 			// so we are less likely to fall for false positives in this pass, and move on to the next one
-			return (float) (floor(max * 4) / 4);
+			return (float) (Math.floor(max * 4) / 4);
 		}
 
 		@Override
@@ -331,63 +311,34 @@ public enum EpisodeMetrics implements SimilarityMetric {
 		}
 
 		protected String[] getNormalizedEffectiveIdentifiers(Object object) {
-			List<?> identifiers = getEffectiveIdentifiers(object);
-			String[] names = new String[identifiers.size()];
-
-			for (int i = 0; i < names.length; i++) {
-				names[i] = normalizeObject(identifiers.get(i));
-			}
-			return names;
+			return getEffectiveIdentifiers(object).stream().map(EpisodeMetrics::normalizeObject).toArray(String[]::new);
 		}
 
 		protected List<?> getEffectiveIdentifiers(Object object) {
-			List<String> names = null;
-
 			if (object instanceof Episode) {
-				names = ((Episode) object).getSeriesNames();
+				Episode episode = (Episode) object;
+
+				// strip release info from known series name to make sure it matches the stripped filename
+				return stripReleaseInfo(episode.getSeriesNames(), true);
 			} else if (object instanceof File) {
 				File file = (File) object;
 
-				// check direct mappings first
-				try {
-					List<String> directMapping = MediaDetection.matchSeriesByDirectMapping(singleton(file));
-					if (directMapping.size() > 0) {
-						return directMapping;
-					}
-				} catch (Exception e) {
-					Logger.getLogger(EpisodeMetrics.class.getName()).log(Level.WARNING, e.getMessage());
-				}
-
 				// guess potential series names from path
-				names = new ArrayList<String>(3);
-
-				for (File f : listPathTail(file, 3, true)) {
+				return listPathTail(file, 3, true).stream().map(f -> {
 					String fn = getName(f);
 					String sn = seriesNameMatcher.matchByEpisodeIdentifier(fn);
-					names.add(sn != null ? sn : fn);
-				}
+					return sn != null ? sn : fn;
+				}).collect(collectingAndThen(toList(), v -> stripReleaseInfo(v, true)));
 			}
 
-			// equally strip away strip potential any clutter
-			if (names != null) {
-				try {
-					return MediaDetection.releaseInfo.cleanRelease(names, true);
-				} catch (NoSuchElementException e) {
-					// keep default value in case all tokens are stripped away
-				} catch (IOException e) {
-					Logger.getLogger(EpisodeMetrics.class.getName()).log(Level.WARNING, e.getMessage());
-				}
-			}
-
-			// simplify file name, if possible
 			return emptyList();
 		}
 	}),
 
-	NameBalancer(new MetricCascade(NameSubstringSequence, Name, SeriesName)),
+	SeriesNameBalancer(new MetricCascade(NameSubstringSequence, Name, SeriesName)),
 
 	// Match by generic name similarity (absolute)
-	AbsolutePath(new NameSimilarityMetric() {
+	FilePath(new NameSimilarityMetric() {
 
 		@Override
 		protected String normalize(Object object) {
@@ -398,6 +349,29 @@ public enum EpisodeMetrics implements SimilarityMetric {
 		}
 	}),
 
+	FilePathBalancer(new NameSimilarityMetric() {
+
+		@Override
+		public float getSimilarity(Object o1, Object o2) {
+			String s1 = normalizeObject(o1);
+			String s2 = normalizeObject(o2);
+
+			s1 = stripReleaseInfo(s1, false);
+			s2 = stripReleaseInfo(s2, false);
+
+			int length = Math.min(s1.length(), s2.length());
+			s1 = s1.substring(0, length);
+			s2 = s2.substring(0, length);
+
+			return (float) (Math.floor(super.getSimilarity(s1, s2) * 4) / 4);
+		};
+
+		@Override
+		protected String normalize(Object object) {
+			return object.toString();
+		}
+	}),
+
 	NumericSequence(new SequenceMatchSimilarity() {
 
 		@Override
@@ -405,7 +379,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			float lowerBound = super.getSimilarity(normalize(o1, true), normalize(o2, true));
 			float upperBound = super.getSimilarity(normalize(o1, false), normalize(o2, false));
 
-			return max(lowerBound, upperBound);
+			return Math.max(lowerBound, upperBound);
 		};
 
 		@Override
@@ -431,11 +405,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			}
 
 			// simplify file name if possible and extract numbers
-			List<String> numbers = new ArrayList<String>(4);
-			Scanner scanner = new Scanner(normalizeObject(object)).useDelimiter("\\D+");
-			while (scanner.hasNextInt()) {
-				numbers.add(String.valueOf(scanner.nextInt()));
-			}
+			List<Integer> numbers = matchIntegers(normalizeObject(object));
 			return join(numbers, " ");
 		}
 	}),
@@ -453,7 +423,10 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			for (String s1 : f1) {
 				for (String s2 : f2) {
 					if (s1 != null && s2 != null) {
-						max = max(super.getSimilarity(s1, s2), max);
+						max = Math.max(super.getSimilarity(s1, s2), max);
+						if (max >= 1) {
+							return max;
+						}
 					}
 				}
 			}
@@ -463,11 +436,10 @@ public enum EpisodeMetrics implements SimilarityMetric {
 		protected String[] fields(Object object) {
 			if (object instanceof Episode) {
 				Episode episode = (Episode) object;
-				String[] f = new String[4];
+				String[] f = new String[3];
 				f[0] = episode.getSeriesName();
-				f[1] = EpisodeFormat.SeasonEpisode.formatSxE(episode);
+				f[1] = episode.getSpecial() == null ? EpisodeFormat.SeasonEpisode.formatSxE(episode) : episode.getSpecial().toString();
 				f[2] = episode.getAbsolute() == null ? null : episode.getAbsolute().toString();
-				f[3] = episode.getSeason() == null || episode.getEpisode() == null ? null : String.format("%02d%02d", episode.getSeason(), episode.getEpisode());
 				return f;
 			}
 
@@ -477,6 +449,23 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			}
 
 			return new String[] { normalizeObject(object) };
+		}
+	}),
+
+	// Prioritize proper episodes over specials
+	SpecialNumber(new SimilarityMetric() {
+
+		@Override
+		public float getSimilarity(Object o1, Object o2) {
+			return getSpecialFactor(o1) + getSpecialFactor(o2);
+		}
+
+		public int getSpecialFactor(Object object) {
+			if (object instanceof Episode) {
+				Episode episode = (Episode) object;
+				return episode.getSpecial() != null ? -1 : 1;
+			}
+			return 0;
 		}
 	}),
 
@@ -519,7 +508,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 		public float getSimilarity(Object o1, Object o2) {
 			// adjust differentiation accuracy to about a year
 			float f = super.getSimilarity(o1, o2);
-			return f >= 0.8 ? 1 : f >= 0 ? 0 : -1;
+			return f >= 0.9 ? 1 : f >= 0 ? 0 : -1;
 		}
 
 		@Override
@@ -547,21 +536,21 @@ public enum EpisodeMetrics implements SimilarityMetric {
 
 		@Override
 		public float getSimilarity(Object o1, Object o2) {
-			float r1 = getRating(o1);
-			float r2 = getRating(o2);
+			float r1 = getScore(o1);
+			float r2 = getScore(o2);
 
 			if (r1 < 0 || r2 < 0)
 				return -1;
 
-			return max(r1, r2);
+			return Math.max(r1, r2);
 		}
 
-		public float getRating(Object object) {
+		public float getScore(Object object) {
 			if (object instanceof Episode) {
 				SeriesInfo seriesInfo = ((Episode) object).getSeriesInfo();
 				if (seriesInfo != null && seriesInfo.getRating() != null && seriesInfo.getRatingCount() != null) {
 					if (seriesInfo.getRatingCount() >= 20) {
-						return (float) floor(seriesInfo.getRating() / 3); // BOOST POPULAR SHOWS and PUT INTO 3 GROUPS
+						return (float) Math.floor(seriesInfo.getRating() / 3); // BOOST POPULAR SHOWS and PUT INTO 3 GROUPS
 					}
 					if (seriesInfo.getRatingCount() >= 1) {
 						return 0; // PENALIZE SHOWS WITH FEW RATINGS
@@ -573,13 +562,36 @@ public enum EpisodeMetrics implements SimilarityMetric {
 		}
 	}),
 
+	VoteRate(new SimilarityMetric() {
+
+		@Override
+		public float getSimilarity(Object o1, Object o2) {
+			float r1 = getScore(o1);
+			float r2 = getScore(o2);
+
+			return Math.max(r1, r2) >= 0.1 ? 1 : 0;
+		}
+
+		public float getScore(Object object) {
+			if (object instanceof Episode) {
+				SeriesInfo seriesInfo = ((Episode) object).getSeriesInfo();
+				if (seriesInfo != null && seriesInfo.getRating() != null && seriesInfo.getRatingCount() != null && seriesInfo.getStartDate() != null) {
+					long days = ChronoUnit.DAYS.between(seriesInfo.getStartDate().toLocalDate(), LocalDate.now());
+					if (days > 0) {
+						return (float) ((seriesInfo.getRatingCount().doubleValue() / days) * seriesInfo.getRating());
+					}
+				}
+			}
+			return 0;
+		}
+	}),
+
 	// Match by (region) or (year) hints
 	RegionHint(new SimilarityMetric() {
 
-		private Pattern hint = compile("[(](\\p{Alpha}+|\\p{Digit}+)[)]$");
+		private final Pattern hint = compile("[(](\\p{Alpha}+|\\p{Digit}+)[)]$");
 
-		private SeriesNameMatcher seriesNameMatcher = new SeriesNameMatcher();
-		private Pattern punctuation = compile("[\\p{Punct}\\p{Space}]+");
+		private final SeriesNameMatcher seriesNameMatcher = getSeriesNameMatcher(true);
 
 		@Override
 		public float getSimilarity(Object o1, Object o2) {
@@ -601,10 +613,9 @@ public enum EpisodeMetrics implements SimilarityMetric {
 				Set<String> h = new HashSet<String>();
 				for (File f : listPathTail((File) o, 3, true)) {
 					// try to focus on series name
-					String n = f.getName();
-					String sn = seriesNameMatcher.matchByEpisodeIdentifier(n);
-
-					String[] tokens = punctuation.split(sn != null ? sn : n);
+					String fn = f.getName();
+					String sn = seriesNameMatcher.matchByEpisodeIdentifier(fn);
+					String[] tokens = PUNCTUATION_OR_SPACE.split(sn != null ? sn : fn);
 					for (String s : tokens) {
 						if (s.length() > 0) {
 							h.add(s.trim().toLowerCase());
@@ -630,7 +641,7 @@ public enum EpisodeMetrics implements SimilarityMetric {
 
 			// deserialize MetaAttributes if enabled and available
 			if (object instanceof File) {
-				Object metaObject = MediaDetection.readMetaInfo((File) object);
+				Object metaObject = xattr.getMetaInfo((File) object);
 				if (metaObject != null) {
 					return super.getProperties(metaObject);
 				}
@@ -667,23 +678,26 @@ public enum EpisodeMetrics implements SimilarityMetric {
 			return result;
 		}
 
-		String name = object.toString();
-
-		// use name without extension
+		String name;
 		if (object instanceof File) {
 			name = getName((File) object);
 		} else if (object instanceof FileInfo) {
 			name = ((FileInfo) object).getName();
+		} else {
+			name = object.toString();
 		}
 
 		// remove checksums, any [...] or (...)
 		name = removeEmbeddedChecksum(name);
 
+		// remove obvious release info
+		name = stripFormatInfo(name);
+
 		synchronized (transliterator) {
 			name = transliterator.transform(name);
 		}
 
-		// remove/normalize special characters
+		// remove or normalize special characters
 		name = normalizePunctuation(name);
 
 		// normalize to lower case
@@ -702,9 +716,9 @@ public enum EpisodeMetrics implements SimilarityMetric {
 		// 7 pass: prefer episodes that were aired closer to the last modified date of the file
 		// 8 pass: resolve remaining collisions via absolute string similarity
 		if (includeFileMetrics) {
-			return new SimilarityMetric[] { FileSize, new MetricCascade(FileName, EpisodeFunnel), EpisodeBalancer, AirDate, MetaAttributes, SubstringFields, NameBalancer, SeriesName, RegionHint, Numeric, NumericSequence, SeriesRating, TimeStamp, AbsolutePath };
+			return new SimilarityMetric[] { FileSize, new MetricCascade(FileName, EpisodeFunnel), EpisodeBalancer, AirDate, MetaAttributes, SubstringFields, SeriesNameBalancer, SeriesName, RegionHint, SpecialNumber, Numeric, NumericSequence, SeriesRating, VoteRate, TimeStamp, FilePathBalancer, FilePath };
 		} else {
-			return new SimilarityMetric[] { EpisodeFunnel, EpisodeBalancer, AirDate, MetaAttributes, SubstringFields, NameBalancer, SeriesName, RegionHint, Numeric, NumericSequence, SeriesRating, TimeStamp, AbsolutePath };
+			return new SimilarityMetric[] { EpisodeFunnel, EpisodeBalancer, AirDate, MetaAttributes, SubstringFields, SeriesNameBalancer, SeriesName, RegionHint, SpecialNumber, Numeric, NumericSequence, SeriesRating, VoteRate, TimeStamp, FilePathBalancer, FilePath };
 		}
 	}
 

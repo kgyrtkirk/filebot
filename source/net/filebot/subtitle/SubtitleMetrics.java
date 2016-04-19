@@ -1,8 +1,9 @@
 package net.filebot.subtitle;
 
-import static java.lang.Math.*;
 import static java.util.Collections.*;
+import static net.filebot.Logging.*;
 import static net.filebot.media.MediaDetection.*;
+import static net.filebot.media.XattrMetaInfo.*;
 import static net.filebot.similarity.EpisodeMetrics.*;
 import static net.filebot.util.FileUtilities.*;
 
@@ -11,12 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.filebot.media.MetaAttributes;
 import net.filebot.mediainfo.MediaInfo;
 import net.filebot.mediainfo.MediaInfo.StreamKind;
 import net.filebot.similarity.CrossPropertyMetric;
@@ -123,29 +121,23 @@ public enum SubtitleMetrics implements SimilarityMetric {
 
 		@Override
 		protected float similarity(String match, String s1, String s2) {
-			return (float) match.length() / max(s1.length(), s2.length()) > 0.8 ? 1 : 0;
+			return (float) match.length() / Math.max(s1.length(), s2.length()) > 0.8 ? 1 : 0;
 		}
 
-		private final Map<File, String> xattrCache = new WeakHashMap<File, String>(64);
-
 		@Override
-		public String normalize(Object obj) {
-			if (obj instanceof File) {
-				synchronized (xattrCache) {
-					return xattrCache.computeIfAbsent((File) obj, (f) -> {
-						try {
-							String originalName = new MetaAttributes(f).getOriginalName();
-							return super.normalize(getNameWithoutExtension(originalName));
-						} catch (Exception e) {
-							return super.normalize(getNameWithoutExtension(f.getName()));
-						}
-					});
+		public String normalize(Object object) {
+			if (object instanceof File) {
+				File file = (File) object;
+				String name = xattr.getOriginalName(file);
+				if (name == null) {
+					name = file.getName();
 				}
-			} else if (obj instanceof OpenSubtitlesSubtitleDescriptor) {
-				String name = ((OpenSubtitlesSubtitleDescriptor) obj).getName();
+				return super.normalize(getNameWithoutExtension(name));
+			} else if (object instanceof OpenSubtitlesSubtitleDescriptor) {
+				String name = ((OpenSubtitlesSubtitleDescriptor) object).getName();
 				return super.normalize(name);
 			}
-			return super.normalize(obj);
+			return super.normalize(object);
 		}
 	}),
 
@@ -172,17 +164,17 @@ public enum SubtitleMetrics implements SimilarityMetric {
 		private Map<String, Object> getSubtitleProperties(OpenSubtitlesSubtitleDescriptor subtitle) {
 			try {
 				Map<String, Object> props = new HashMap<String, Object>();
-				float fps = round(subtitle.getMovieFPS()); // round because most FPS values in the database are bad anyway
+				float fps = Math.round(subtitle.getMovieFPS()); // round because most FPS values in the database are bad anyway
 				if (fps > 0) {
 					props.put(FPS, fps);
 				}
-				long seconds = (long) floor(subtitle.getMovieTimeMS() / (double) 1000);
+				long seconds = (long) Math.floor(subtitle.getMovieTimeMS() / (double) 1000);
 				if (seconds > 0) {
 					props.put(SECONDS, seconds);
 				}
 				return props;
 			} catch (Exception e) {
-				Logger.getLogger(SubtitleMetrics.class.getName()).log(Level.WARNING, e.toString());
+				debug.warning("Failed to read subtitle properties: " + e);
 			}
 			return emptyMap();
 		}
@@ -194,20 +186,19 @@ public enum SubtitleMetrics implements SimilarityMetric {
 				return mediaInfoCache.computeIfAbsent(file, (f) -> {
 					try {
 						Map<String, Object> props = new HashMap<String, Object>();
-						MediaInfo mediaInfo = new MediaInfo();
-						if (mediaInfo.open(file)) {
-							float fps = round(Float.parseFloat(mediaInfo.get(StreamKind.Video, 0, "FrameRate")));
-							if (fps > 0) {
-								props.put(FPS, fps);
-							}
-							long seconds = (long) floor(Long.parseLong(mediaInfo.get(StreamKind.Video, 0, "Duration")) / (double) 1000);
-							if (seconds > 0) {
-								props.put(SECONDS, seconds);
-							}
-							return props;
+						MediaInfo mediaInfo = new MediaInfo().open(file);
+
+						float fps = Math.round(Float.parseFloat(mediaInfo.get(StreamKind.Video, 0, "FrameRate")));
+						if (fps > 0) {
+							props.put(FPS, fps);
 						}
+						long seconds = (long) Math.floor(Long.parseLong(mediaInfo.get(StreamKind.Video, 0, "Duration")) / (double) 1000);
+						if (seconds > 0) {
+							props.put(SECONDS, seconds);
+						}
+						return props;
 					} catch (Exception e) {
-						Logger.getLogger(SubtitleMetrics.class.getName()).log(Level.WARNING, e.toString());
+						debug.warning("Failed to read video properties: " + e.getMessage());
 					}
 					return emptyMap();
 				});

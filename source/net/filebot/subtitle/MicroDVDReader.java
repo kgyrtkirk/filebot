@@ -1,22 +1,23 @@
-
 package net.filebot.subtitle;
 
-
+import static net.filebot.util.RegularExpressions.*;
 import static net.filebot.util.StringUtilities.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class MicroDVDReader extends SubtitleReader {
 
 	private double fps = 23.976;
-
 
 	public MicroDVDReader(Readable source) {
 		super(source);
 	}
 
+	@Override
+	public String getFormatName() {
+		return "MicroDVD";
+	}
 
 	@Override
 	public SubtitleElement readNext() throws Exception {
@@ -60,7 +61,7 @@ public class MicroDVDReader extends SubtitleReader {
 		}
 
 		// translate '|' to new lines
-		String[] lines = text.split("[|]");
+		String[] lines = PIPE.split(text);
 
 		// convert frame interval to time interval
 		return new SubtitleElement(Math.round(startFrame * fps), Math.round(endFrame * fps), join(lines, "\n"));

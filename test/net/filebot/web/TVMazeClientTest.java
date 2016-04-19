@@ -1,5 +1,6 @@
 package net.filebot.web;
 
+import static net.filebot.web.EpisodeUtilities.*;
 import static org.junit.Assert.*;
 
 import java.util.List;
@@ -12,13 +13,13 @@ public class TVMazeClientTest {
 	/**
 	 * 145 episodes / 7 seasons
 	 */
-	private static TVMazeSearchResult buffySearchResult = new TVMazeSearchResult(427, "Buffy the Vampire Slayer");
+	SearchResult buffySearchResult = new SearchResult(427, "Buffy the Vampire Slayer");
 
 	@Test
 	public void search() throws Exception {
 		List<SearchResult> results = client.search("Buffy", Locale.ENGLISH);
 
-		TVMazeSearchResult result = (TVMazeSearchResult) results.get(0);
+		SearchResult result = results.get(0);
 
 		assertEquals(buffySearchResult.getName(), result.getName());
 		assertEquals(buffySearchResult.getId(), result.getId());
@@ -28,7 +29,7 @@ public class TVMazeClientTest {
 
 	@Test
 	public void getEpisodeList() throws Exception {
-		List<Episode> list = EpisodeUtilities.filterBySeason(client.getEpisodeList(buffySearchResult, SortOrder.Airdate, Locale.ENGLISH), 7);
+		List<Episode> list = filterBySeason(client.getEpisodeList(buffySearchResult, SortOrder.Airdate, Locale.ENGLISH), 7);
 
 		assertEquals(22, list.size());
 

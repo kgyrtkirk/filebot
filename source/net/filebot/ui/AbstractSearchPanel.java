@@ -1,7 +1,7 @@
 package net.filebot.ui;
 
 import static javax.swing.ScrollPaneConstants.*;
-import static net.filebot.ui.NotificationLogging.*;
+import static net.filebot.Logging.*;
 import static net.filebot.util.ui.SwingUI.*;
 
 import java.awt.Dimension;
@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.TreeSet;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
@@ -96,7 +95,7 @@ public abstract class AbstractSearchPanel<S, E> extends JComponent {
 								searchHistory.clear();
 								searchHistory.addAll(get());
 							} catch (Exception e) {
-								Logger.getLogger(getClass().getName()).log(Level.WARNING, e.getMessage(), e);
+								debug.log(Level.WARNING, e.getMessage(), e);
 							}
 						}
 
@@ -110,7 +109,7 @@ public abstract class AbstractSearchPanel<S, E> extends JComponent {
 			searchTextField.getSelectButton().setSelectedIndex(Integer.parseInt(getSettings().get("engine.selected", "0")));
 		} catch (Exception e) {
 			// log and ignore
-			Logger.getLogger(getClass().getName()).log(Level.WARNING, e.getMessage(), e);
+			debug.log(Level.WARNING, e.getMessage(), e);
 		}
 
 		// save selected client on change
@@ -207,7 +206,7 @@ public abstract class AbstractSearchPanel<S, E> extends JComponent {
 
 				switch (results.size()) {
 				case 0:
-					UILogger.log(Level.WARNING, String.format("'%s' has not been found.", requestProcessor.request.getSearchText()));
+					log.log(Level.WARNING, String.format("'%s' has not been found.", requestProcessor.request.getSearchText()));
 					break;
 				case 1:
 					selectedSearchResult = results.iterator().next();
@@ -231,7 +230,7 @@ public abstract class AbstractSearchPanel<S, E> extends JComponent {
 				new FetchTask(requestProcessor).execute();
 			} catch (Exception e) {
 				tab.close();
-				UILogger.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
+				log.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
 			}
 
 		}
@@ -277,12 +276,12 @@ public abstract class AbstractSearchPanel<S, E> extends JComponent {
 
 				// close tab if no elements were fetched
 				if (get().size() <= 0) {
-					UILogger.warning(statusMessage);
+					log.warning(statusMessage);
 					tab.close();
 				}
 			} catch (Exception e) {
 				tab.close();
-				UILogger.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
+				log.log(Level.WARNING, ExceptionUtilities.getRootCauseMessage(e), e);
 			} finally {
 				tab.setLoading(false);
 			}
@@ -368,6 +367,7 @@ public abstract class AbstractSearchPanel<S, E> extends JComponent {
 			selectDialog.setLocation(getOffsetLocation(selectDialog.getOwner()));
 			selectDialog.setIconImage(getImage(getIcon()));
 			selectDialog.setMinimumSize(new Dimension(250, 150));
+			selectDialog.pack();
 		}
 
 		public long getDuration() {

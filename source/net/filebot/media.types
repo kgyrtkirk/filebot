@@ -69,9 +69,10 @@
 		<extension>wma</extension>
 	</type>
 	<type name="audio/ogm">
+		<extension>ogg</extension>
 		<extension>ogm</extension>
 		<extension>ogv</extension>
-		<extension>ogg</extension>
+		<extension>oga</extension>
 	</type>
 	<type name="audio/wav">
 		<extension>wav</extension>
@@ -166,7 +167,11 @@
 		<extension>smi</extension>
 		<extension>sami</extension>
 	</type>
+	<type name="subtitle/WebVTT">
+		<extension>vtt</extension>
+	</type>
 	<type name="subtitle/VobSub">
+		<extension>vobsub</extension>
 		<extension>sub</extension>
 		<extension>idx</extension>
 	</type>

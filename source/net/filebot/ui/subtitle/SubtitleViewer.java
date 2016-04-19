@@ -3,6 +3,9 @@ package net.filebot.ui.subtitle;
 import static java.awt.Font.*;
 import static java.util.Collections.*;
 import static java.util.regex.Pattern.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.similarity.Normalization.*;
+import static net.filebot.util.RegularExpressions.*;
 import static net.filebot.util.ui.SwingUI.*;
 
 import java.awt.Color;
@@ -10,7 +13,6 @@ import java.awt.Component;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,7 +36,6 @@ import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
-import javax.swing.event.MouseInputAdapter;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableColumnModel;
@@ -130,34 +131,26 @@ public class SubtitleViewer extends JFrame {
 
 			@Override
 			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-				return super.getTableCellRendererComponent(table, value.toString().replaceAll("\\s+", " "), isSelected, hasFocus, row, column);
+				return super.getTableCellRendererComponent(table, replaceSpace(value.toString(), " "), isSelected, hasFocus, row, column);
 			}
 		});
 
 		// focus around selected time stamp
-		installAction(table, KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), new AbstractAction("focus") {
+		installAction(table, KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), newAction("focus", evt -> {
+			// disable row filter
+			setTableFilter(null);
 
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				// disable row filter
-				setTableFilter(null);
+			// ensure selected row is visible and roughly in the center of the table
+			Rectangle focus = table.getCellRect(Math.max(table.getSelectedRow() - 7, 0), 0, true);
+			focus.height = table.getSize().height;
+			table.scrollRectToVisible(focus);
+		}));
 
-				// ensure selected row is visible and roughly in the center of the table
-				Rectangle focus = table.getCellRect(Math.max(table.getSelectedRow() - 7, 0), 0, true);
-				focus.height = table.getSize().height;
-				table.scrollRectToVisible(focus);
+		table.addMouseListener(mouseClicked(evt -> {
+			if (SwingUtilities.isLeftMouseButton(evt) && evt.getClickCount() == 2) {
+				table.getActionMap().get("focus").actionPerformed(null);
 			}
-		});
-
-		table.addMouseListener(new MouseInputAdapter() {
-
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 2) {
-					table.getActionMap().get("focus").actionPerformed(null);
-				}
-			}
-		});
+		}));
 
 		return table;
 	}
@@ -205,15 +198,7 @@ public class SubtitleViewer extends JFrame {
 
 	private void setTableFilter(String filter) {
 		// filter by words
-		List<SubtitleFilter> filterList = new ArrayList<SubtitleFilter>();
-
-		if (filter != null) {
-			for (String word : filter.split("\\s+")) {
-				if (word.length() > 0) {
-					filterList.add(new SubtitleFilter(word));
-				}
-			}
-		}
+		List<SubtitleFilter> filterList = filter == null ? emptyList() : SPACE.splitAsStream(filter).filter(s -> s.length() > 0).map(SubtitleFilter::new).collect(toList());
 
 		TableRowSorter sorter = (TableRowSorter) subtitleTable.getRowSorter();
 		sorter.setRowFilter(filterList.isEmpty() ? null : RowFilter.andFilter(filterList));

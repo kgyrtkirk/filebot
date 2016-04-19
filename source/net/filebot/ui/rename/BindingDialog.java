@@ -1,8 +1,11 @@
 package net.filebot.ui.rename;
 
+import static java.util.stream.Collectors.*;
+import static net.filebot.Logging.*;
 import static net.filebot.MediaTypes.*;
 import static net.filebot.UserFiles.*;
-import static net.filebot.ui.NotificationLogging.*;
+import static net.filebot.media.XattrMetaInfo.*;
+import static net.filebot.util.RegularExpressions.*;
 import static net.filebot.util.ui.SwingUI.*;
 
 import java.awt.Color;
@@ -14,7 +17,6 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.text.Format;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
@@ -51,10 +54,8 @@ import javax.swing.table.TableRowSorter;
 import net.filebot.ResourceManager;
 import net.filebot.format.ExpressionFormat;
 import net.filebot.format.MediaBindingBean;
-import net.filebot.media.MediaDetection;
 import net.filebot.mediainfo.MediaInfo;
 import net.filebot.mediainfo.MediaInfo.StreamKind;
-import net.filebot.mediainfo.MediaInfoException;
 import net.filebot.util.DefaultThreadFactory;
 import net.filebot.util.FileUtilities.ExtensionFileFilter;
 import net.filebot.util.ui.LazyDocumentListener;
@@ -165,6 +166,7 @@ class BindingDialog extends JDialog {
 	private JTable createBindingTable(TableModel model) {
 		JTable table = new JTable(model);
 		table.setAutoCreateRowSorter(true);
+		table.setAutoCreateColumnsFromModel(true);
 		table.setFillsViewportHeight(true);
 		table.setBackground(Color.white);
 
@@ -209,8 +211,8 @@ class BindingDialog extends JDialog {
 	}
 
 	private List<String> getSampleExpressions() {
-		ResourceBundle bundle = ResourceBundle.getBundle(getClass().getName());
-		return Arrays.asList(bundle.getString("expressions").split(","));
+		String expressions = ResourceBundle.getBundle(getClass().getName()).getString("expressions");
+		return COMMA.splitAsStream(expressions).collect(toList());
 	}
 
 	public boolean submit() {
@@ -262,10 +264,10 @@ class BindingDialog extends JDialog {
 			// check episode and media file
 			if (getInfoObject() == null) {
 				// illegal episode string
-				UILogger.warning(String.format("Failed to parse episode: '%s'", infoTextField.getText()));
+				log.warning(format("Failed to parse episode: '%s'", infoTextField.getText()));
 			} else if (getMediaFile() == null && !mediaFileTextField.getText().isEmpty()) {
 				// illegal file path
-				UILogger.warning(String.format("Invalid media file: '%s'", mediaFileTextField.getText()));
+				log.warning(format("Invalid media file: '%s'", mediaFileTextField.getText()));
 			} else {
 				// everything seems to be in order
 				finish(true);
@@ -293,22 +295,11 @@ class BindingDialog extends JDialog {
 
 		private Map<StreamKind, List<Map<String, String>>> getMediaInfo(File file) {
 			try {
-				MediaInfo mediaInfo = new MediaInfo();
-
-				// read all media info
-				if (mediaInfo.open(file)) {
-					try {
-						return mediaInfo.snapshot();
-					} finally {
-						mediaInfo.close();
-					}
-				}
-			} catch (MediaInfoException e) {
-				UILogger.log(Level.SEVERE, e.getMessage(), e);
+				return MediaInfo.snapshot(file);
+			} catch (Exception e) {
+				log.log(Level.SEVERE, e.getMessage(), e);
+				return null;
 			}
-
-			// could not retrieve media info
-			return null;
 		}
 
 		@Override
@@ -332,8 +323,15 @@ class BindingDialog extends JDialog {
 
 					JTable table = new JTable(new ParameterTableModel(parameters));
 					table.setAutoCreateRowSorter(true);
+					table.setAutoCreateColumnsFromModel(true);
 					table.setFillsViewportHeight(true);
+
+					table.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+					table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
 					table.setBackground(Color.white);
+					table.setGridColor(new Color(0xEEEEEE));
+					table.setRowHeight(25);
 
 					// set media info exclude filter
 					TableRowSorter<?> sorter = (TableRowSorter<?>) table.getRowSorter();
@@ -381,7 +379,7 @@ class BindingDialog extends JDialog {
 				mediaFileTextField.setText(file.get(0).getAbsolutePath());
 
 				// set info object from xattr if possible
-				Object object = MediaDetection.readMetaInfo(file.get(0));
+				Object object = xattr.getMetaInfo(file.get(0));
 				if (object != null && infoObjectFormat.format(object) != null) {
 					setInfoObject(object);
 				}

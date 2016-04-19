@@ -1,21 +1,24 @@
 package net.filebot.util;
 
+import static java.nio.charset.StandardCharsets.*;
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
+import static java.util.stream.Collectors.*;
+import static net.filebot.Logging.*;
+import static net.filebot.util.RegularExpressions.*;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileVisitOption;
@@ -37,14 +40,15 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import org.apache.commons.io.FileUtils;
 
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
@@ -53,11 +57,11 @@ public final class FileUtilities {
 
 	public static File moveRename(File source, File destination) throws IOException {
 		// resolve destination
-		destination = resolveDestination(source, destination, true);
+		destination = resolveDestination(source, destination);
 
 		if (source.isDirectory()) {
 			// move folder
-			org.apache.commons.io.FileUtils.moveDirectory(source, destination);
+			FileUtils.moveDirectory(source, destination);
 			return destination;
 		}
 
@@ -67,7 +71,7 @@ public final class FileUtilities {
 			try {
 				return Files.move(source.toPath(), destination.toPath(), StandardCopyOption.ATOMIC_MOVE).toFile();
 			} catch (AtomicMoveNotSupportedException e) {
-				Logger.getLogger(FileUtilities.class.getName()).log(Level.WARNING, e.toString());
+				debug.warning(e.getMessage());
 			}
 		}
 
@@ -77,11 +81,11 @@ public final class FileUtilities {
 
 	public static File copyAs(File source, File destination) throws IOException {
 		// resolve destination
-		destination = resolveDestination(source, destination, true);
+		destination = resolveDestination(source, destination);
 
 		if (source.isDirectory()) {
 			// copy folder
-			org.apache.commons.io.FileUtils.copyDirectory(source, destination);
+			FileUtils.copyDirectory(source, destination);
 			return destination;
 		}
 
@@ -89,28 +93,21 @@ public final class FileUtilities {
 		return Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING).toFile();
 	}
 
-	public static File resolveDestination(File source, File destination) {
+	public static File resolve(File source, File destination) {
 		// resolve destination
 		if (!destination.isAbsolute()) {
 			// same folder, different name
 			destination = new File(source.getParentFile(), destination.getPath());
 		}
-
 		return destination;
 	}
 
-	public static File resolveDestination(File source, File destination, boolean mkdirs) throws IOException {
+	public static File resolveDestination(File source, File destination) throws IOException {
 		// resolve destination
-		if (!destination.isAbsolute()) {
-			// same folder, different name
-			destination = new File(source.getParentFile(), destination.getPath());
-		}
+		destination = resolve(source, destination);
 
-		// create parent folder if necessary
-		if (mkdirs) {
-			// make sure that the folder structure is created, and throw exception if the folder structure can't be created
-			Files.createDirectories(destination.getParentFile().toPath());
-		}
+		// create parent folder if necessary and make sure that the folder structure is created, and throw exception if the folder structure can't be created
+		Files.createDirectories(destination.getParentFile().toPath());
 
 		return destination;
 	}
@@ -157,57 +154,30 @@ public final class FileUtilities {
 
 	public static boolean delete(File file) {
 		// delete files or files
-		return org.apache.commons.io.FileUtils.deleteQuietly(file);
+		return FileUtils.deleteQuietly(file);
 	}
 
-	public static void createFolders(File folder) throws IOException {
-		if (!folder.isDirectory()) {
-			Files.createDirectories(folder.toPath());
-		}
-	}
-
-	public static void createFileIfNotExists(File file) throws IOException {
-		if (!file.isFile()) {
-			// create parent folder structure if necessary & create file
-			Files.createDirectories(file.getParentFile().toPath());
-			Files.createFile(file.toPath());
-		}
+	public static File createFolders(File folder) throws IOException {
+		return Files.createDirectories(folder.toPath()).toFile();
 	}
 
 	public static byte[] readFile(File source) throws IOException {
-		InputStream in = new FileInputStream(source);
-
-		try {
-			long size = source.length();
-			if (size < 0 || size > Integer.MAX_VALUE) {
-				throw new IllegalArgumentException("Unable to read file: " + source);
-			}
-
-			byte[] data = new byte[(int) size];
-
-			int position = 0;
-			int read = 0;
-
-			while (position < data.length && (read = in.read(data, position, data.length - position)) >= 0) {
-				position += read;
-			}
-
-			return data;
-		} finally {
-			in.close();
-		}
+		return Files.readAllBytes(source.toPath());
 	}
 
-	public static String readAll(Reader source) throws IOException {
-		StringBuilder text = new StringBuilder();
-		char[] buffer = new char[2048];
+	public static Stream<String> streamLines(File file) throws IOException {
+		BufferedReader reader = new BufferedReader(new UnicodeReader(new BufferedInputStream(new FileInputStream(file)), false, UTF_8), BUFFER_SIZE);
+		return reader.lines().onClose(() -> {
+			try {
+				reader.close();
+			} catch (Exception e) {
+				debug.log(Level.SEVERE, "Failed to close file: " + file, e);
+			}
+		});
+	}
 
-		int read = 0;
-		while ((read = source.read(buffer)) >= 0) {
-			text.append(buffer, 0, read);
-		}
-
-		return text.toString();
+	public static String readTextFile(File file) throws IOException {
+		return streamLines(file).collect(joining(System.lineSeparator()));
 	}
 
 	public static File writeFile(ByteBuffer data, File destination) throws IOException {
@@ -215,18 +185,6 @@ public final class FileUtilities {
 			channel.write(data);
 		}
 		return destination;
-	}
-
-	public static List<String[]> readCSV(InputStream source, String charsetName, String separatorPattern) {
-		Scanner scanner = new Scanner(source, charsetName);
-		Pattern separator = Pattern.compile(separatorPattern);
-		List<String[]> rows = new ArrayList<String[]>(65536);
-
-		while (scanner.hasNextLine()) {
-			rows.add(separator.split(scanner.nextLine()));
-		}
-
-		return rows;
 	}
 
 	public static Reader createTextReader(File file) throws IOException {
@@ -239,7 +197,7 @@ public final class FileUtilities {
 			return charset.getReader();
 
 		// assume UTF-8 by default
-		return new InputStreamReader(new FileInputStream(file), "UTF-8");
+		return new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
 	}
 
 	public static String getText(ByteBuffer data) throws IOException {
@@ -257,7 +215,7 @@ public final class FileUtilities {
 		}
 
 		// assume UTF-8 by default
-		return Charset.forName("UTF-8").decode(data).toString();
+		return UTF_8.decode(data).toString();
 	}
 
 	/**
@@ -317,6 +275,8 @@ public final class FileUtilities {
 	}
 
 	public static String getName(File file) {
+		if (file == null)
+			return null;
 		if (file.getName().isEmpty() || UNC_PREFIX.equals(file.getParent()))
 			return getFolderName(file);
 
@@ -491,7 +451,7 @@ public final class FileUtilities {
 					files.add(it);
 				}
 				listFiles(it, files, 0, maxDepth, addHidden, addFiles, addFolders);
-			} else if (addFiles) {
+			} else if (addFiles && it.isFile()) {
 				files.add(it);
 			}
 		}
@@ -563,7 +523,7 @@ public final class FileUtilities {
 	/**
 	 * Invalid file name characters: \, /, :, *, ?, ", <, >, |, \r, \n and excessive characters
 	 */
-	public static final Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\/:*?\"<>|\\r\\n]|[ ]+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
+	public static final Pattern ILLEGAL_CHARACTERS = Pattern.compile("[\\\\/:*?\"<>|\\r\\n]|\\p{Cntrl}|\\s+$|(?<=[^.])[.]+$|(?<=.{250})(.+)(?=[.]\\p{Alnum}{3}$)");
 
 	/**
 	 * Strip file name of invalid characters
@@ -574,7 +534,7 @@ public final class FileUtilities {
 	 */
 	public static String validateFileName(CharSequence filename) {
 		// strip invalid characters from file name
-		return ILLEGAL_CHARACTERS.matcher(filename).replaceAll("").replaceAll("\\s+", " ").trim();
+		return SPACE.matcher(ILLEGAL_CHARACTERS.matcher(filename).replaceAll("")).replaceAll(" ").trim();
 	}
 
 	public static boolean isInvalidFileName(CharSequence filename) {
@@ -628,7 +588,7 @@ public final class FileUtilities {
 	}
 
 	public static String replacePathSeparators(CharSequence path, String replacement) {
-		return Pattern.compile("\\s*[\\\\/]+\\s*").matcher(path).replaceAll(replacement);
+		return SLASH.matcher(path).replaceAll(replacement);
 	}
 
 	public static String md5(String string) {
@@ -679,7 +639,7 @@ public final class FileUtilities {
 		else if (size >= KILO)
 			return String.format("%,d KB", size / KILO);
 		else
-			return String.format("%,d Byte", size);
+			return String.format("%,d bytes", size);
 	}
 
 	public static final FileFilter FOLDERS = new FileFilter() {
@@ -807,7 +767,7 @@ public final class FileUtilities {
 
 		@Override
 		public boolean accept(File dir, String name) {
-			return pattern.matcher(name).find();
+			return pattern.matcher(name).matches();
 		}
 
 		@Override

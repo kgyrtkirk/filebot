@@ -1,10 +1,10 @@
 package net.filebot.util;
 
-import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import javax.xml.namespace.QName;
 import javax.xml.xpath.XPathConstants;
@@ -20,12 +20,16 @@ public final class XPathUtilities {
 		return (Node) evaluateXPath(xpath, node, XPathConstants.NODE);
 	}
 
-	public static List<Node> selectNodes(String xpath, Object node) {
-		return new NodeListDecorator((NodeList) evaluateXPath(xpath, node, XPathConstants.NODESET));
-	}
-
 	public static String selectString(String xpath, Object node) {
 		return ((String) evaluateXPath(xpath, node, XPathConstants.STRING)).trim();
+	}
+
+	public static Stream<Node> streamNodes(String xpath, Object node) {
+		return stream((NodeList) evaluateXPath(xpath, node, XPathConstants.NODESET));
+	}
+
+	public static Node[] selectNodes(String xpath, Object node) {
+		return streamNodes(xpath, node).toArray(Node[]::new);
 	}
 
 	public static List<String> selectStrings(String xpath, Object node) {
@@ -47,25 +51,15 @@ public final class XPathUtilities {
 	 * @return text content of the child node or null if no child with the given name was found
 	 */
 	public static Node getChild(String nodeName, Node parentNode) {
-		for (Node child : new NodeListDecorator(parentNode.getChildNodes())) {
-			if (nodeName.equals(child.getNodeName()))
-				return child;
-		}
-
-		return null;
+		return stream(parentNode.getChildNodes()).filter(n -> nodeName.equals(n.getNodeName())).findFirst().orElse(null);
 	}
 
-	public static List<Node> getChildren(String nodeName, Node parentNode) {
-		List<Node> children = new ArrayList<Node>();
-
-		if (parentNode != null) {
-			for (Node child : new NodeListDecorator(parentNode.getChildNodes())) {
-				if (nodeName.equals(child.getNodeName()))
-					children.add(child);
-			}
+	public static Node[] getChildren(String nodeName, Node parentNode) {
+		if (parentNode == null) {
+			return new Node[0];
+		} else {
+			return stream(parentNode.getChildNodes()).filter(n -> nodeName.equals(n.getNodeName())).toArray(Node[]::new);
 		}
-
-		return children;
 	}
 
 	public static String getAttribute(String attribute, Node node) {
@@ -126,14 +120,6 @@ public final class XPathUtilities {
 		return list;
 	}
 
-	public static Integer getInteger(String textContent) {
-		try {
-			return new Scanner(textContent).useDelimiter("\\D+").nextInt();
-		} catch (NumberFormatException | NoSuchElementException | NullPointerException e) {
-			return null;
-		}
-	}
-
 	public static Double getDecimal(String textContent) {
 		try {
 			return new Double(textContent);
@@ -150,31 +136,27 @@ public final class XPathUtilities {
 		}
 	}
 
-	/**
-	 * Dummy constructor to prevent instantiation.
-	 */
-	private XPathUtilities() {
-		throw new UnsupportedOperationException();
+	public static Stream<Node> streamElements(Node parent) {
+		return stream(parent.getChildNodes()).filter(n -> n.getNodeType() == Node.ELEMENT_NODE);
 	}
 
-	protected static class NodeListDecorator extends AbstractList<Node> {
+	public static Stream<Node> stream(NodeList nodes) {
+		return IntStream.range(0, nodes.getLength()).mapToObj(nodes::item);
+	}
 
-		private final NodeList nodes;
-
-		public NodeListDecorator(NodeList nodes) {
-			this.nodes = nodes;
+	public static <K extends Enum<K>> EnumMap<K, String> getEnumMap(Node node, Class<K> cls) {
+		EnumMap<K, String> map = new EnumMap<K, String>(cls);
+		for (K key : cls.getEnumConstants()) {
+			String value = getTextContent(key.name(), node);
+			if (value != null && value.length() > 0) {
+				map.put(key, value);
+			}
 		}
+		return map;
+	}
 
-		@Override
-		public Node get(int index) {
-			return nodes.item(index);
-		}
-
-		@Override
-		public int size() {
-			return nodes.getLength();
-		}
-
+	private XPathUtilities() {
+		throw new UnsupportedOperationException();
 	}
 
 }

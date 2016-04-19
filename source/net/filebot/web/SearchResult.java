@@ -4,10 +4,12 @@ import static java.util.Collections.*;
 
 import java.io.Serializable;
 import java.util.AbstractList;
+import java.util.Collection;
 import java.util.List;
 
-public abstract class SearchResult implements Serializable {
+public class SearchResult implements Serializable {
 
+	protected int id;
 	protected String name;
 	protected String[] aliasNames;
 
@@ -15,9 +17,22 @@ public abstract class SearchResult implements Serializable {
 		// used by serializer
 	}
 
-	public SearchResult(String name, String[] aliasNames) {
+	public SearchResult(int id, String name) {
+		this(id, name, EMPTY_STRING_ARRAY);
+	}
+
+	public SearchResult(int id, String name, Collection<String> aliasNames) {
+		this(id, name, aliasNames.toArray(EMPTY_STRING_ARRAY));
+	}
+
+	public SearchResult(int id, String name, String[] aliasNames) {
+		this.id = id;
 		this.name = name;
 		this.aliasNames = (aliasNames == null || aliasNames.length == 0) ? EMPTY_STRING_ARRAY : aliasNames.clone();
+	}
+
+	public int getId() {
+		return id;
 	}
 
 	public String getName() {
@@ -50,11 +65,26 @@ public abstract class SearchResult implements Serializable {
 	}
 
 	@Override
-	public abstract SearchResult clone();
+	public int hashCode() {
+		return id;
+	}
+
+	@Override
+	public boolean equals(Object other) {
+		if (getClass().isInstance(other)) {
+			return getId() == ((SearchResult) other).getId();
+		}
+		return false;
+	}
 
 	@Override
 	public String toString() {
 		return name;
+	}
+
+	@Override
+	public SearchResult clone() {
+		return new SearchResult(id, name, aliasNames);
 	}
 
 	private static final String[] EMPTY_STRING_ARRAY = new String[0];
